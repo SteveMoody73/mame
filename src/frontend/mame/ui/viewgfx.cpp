@@ -16,8 +16,10 @@
 #include "rendfont.h"
 #include "rendutil.h"
 #include "ui/viewgfx.h"
-
-
+#include "emuopts.h"
+#include "png.h"
+#include "tilemap.h"
+#include "drawgfx.h"
 
 /***************************************************************************
     CONSTANTS
@@ -55,6 +57,7 @@ struct ui_gfx_state
 {
 	bool            started;        // have we called ui_gfx_count_devices() yet?
 	uint8_t           mode;           // which mode are we in?
+	bool			save;			// Call the save function
 
 	// intermediate bitmaps
 	bool            bitmap_dirty;   // is the bitmap dirty?
@@ -67,8 +70,8 @@ struct ui_gfx_state
 		device_palette_interface *interface; // pointer to current palette
 		int   devcount;             // how many palette devices exist
 		int   devindex;             // which palette device is visible
-		uint8_t which;                // which subset (pens or indirect colors)?
-		uint8_t columns;              // number of items per row
+		uint8_t which;              // which subset (pens or indirect colors)?
+		uint8_t columns;            // number of items per row
 		int   offset;               // current offset of top left item
 	} palette;
 
@@ -116,18 +119,25 @@ static void ui_gfx_exit(running_machine &machine);
 static void palette_set_device(running_machine &machine, ui_gfx_state &state);
 static void palette_handle_keys(running_machine &machine, ui_gfx_state &state);
 static void palette_handler(mame_ui_manager &mui, render_container &container, ui_gfx_state &state);
+static void palette_handle_save(running_machine &machine, ui_gfx_state &state);
 
 // graphics set handling
 static void gfxset_handle_keys(running_machine &machine, ui_gfx_state &state, int xcells, int ycells);
 static void gfxset_draw_item(running_machine &machine, gfx_element &gfx, int index, bitmap_rgb32 &bitmap, int dstx, int dsty, int color, int rotate, device_palette_interface *dpalette);
 static void gfxset_update_bitmap(running_machine &machine, ui_gfx_state &state, int xcells, int ycells, gfx_element &gfx);
 static void gfxset_handler(mame_ui_manager &mui, render_container &container, ui_gfx_state &state);
+static void gfxset_handle_save(running_machine &machine, ui_gfx_state &state);
+static void gfxset_draw_save_item(gfx_element &gfx, int index, bitmap_ind16 &bitmap, int dstx, int dsty, int color, int rotate);
+static void gfxset_update_save_bitmap(bitmap_ind16 &bitmap, ui_gfx_state &state, int xcells, int ycells, gfx_element &gfx);
+static void gfxset_save_snapshot(bitmap_ind16 &bitmap, emu_file &file, int entries, const rgb_t *palette);
 
 // tilemap handling
 static void tilemap_handle_keys(running_machine &machine, ui_gfx_state &state, int viswidth, int visheight);
 static void tilemap_update_bitmap(running_machine &machine, ui_gfx_state &state, int width, int height);
 static void tilemap_handler(mame_ui_manager &mui, render_container &container, ui_gfx_state &state);
+static void tilemap_handle_save(mame_ui_manager &mui, render_container &container, ui_gfx_state &state);
 
+static osd_file::error open_next_file(running_machine &machine, emu_file &file, const char *basename, const char *extension);
 
 
 /***************************************************************************
@@ -280,6 +290,12 @@ again:
 			// if we have a palette, display it
 			if (state.palette.devcount > 0)
 			{
+				if (state.save == true)
+				{
+					palette_handle_save(mui.machine(), state);
+					state.save = false;
+				}
+
 				palette_handler(mui, container, state);
 				break;
 			}
@@ -291,6 +307,11 @@ again:
 			// if we have graphics sets, display them
 			if (state.gfxset.devcount > 0)
 			{
+				if (state.save == true)
+				{
+					gfxset_handle_save(mui.machine(), state);
+					state.save = false;
+				}
 				gfxset_handler(mui, container, state);
 				break;
 			}
@@ -302,6 +323,11 @@ again:
 			// if we have tilemaps, display them
 			if (mui.machine().tilemap().count() > 0)
 			{
+				if (state.save == true)
+				{
+					tilemap_handle_save(mui, container, state);
+					state.save = false;
+				}
 				tilemap_handler(mui, container, state);
 				break;
 			}
@@ -505,7 +531,6 @@ static void palette_handler(mame_ui_manager &mui, render_container &container, u
 	palette_handle_keys(mui.machine(), state);
 }
 
-
 //-------------------------------------------------
 //  palette_handle_keys - handle key inputs for
 //  the palette viewer
@@ -581,6 +606,102 @@ static void palette_handle_keys(running_machine &machine, ui_gfx_state &state)
 		state.palette.offset = ((total + rowcount - 1) / rowcount) * rowcount - screencount;
 	if (state.palette.offset < 0)
 		state.palette.offset = 0;
+}
+
+//-------------------------------------------------
+//  palette_handle_save - save all the palettes
+//-------------------------------------------------
+static void palette_handle_save(running_machine &machine, ui_gfx_state &state)
+{
+	device_palette_interface *palette = state.palette.interface;
+	palette_device *paldev = dynamic_cast<palette_device *>(&palette->device());
+
+	int x, y;
+
+	int total = state.palette.which ? palette->indirect_entries() : palette->entries();
+	const rgb_t *raw_color = palette->palette()->entry_list_raw();
+
+	char filename[200];
+
+	for (int palidx = 0; palidx < state.palette.devcount; palidx++)
+	{
+		state.palette.devindex = palidx;
+		palette_set_device(machine, state);
+		palette = state.palette.interface;
+		state.palette.which = (palette->indirect_entries() > 0);
+
+		int total = state.palette.which ? palette->indirect_entries() : palette->entries();
+
+		// Create a text file to save to
+		sprintf(filename, "palette%d colors %d", palidx, total);
+		emu_file file("rips", OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+		osd_file::error filerr = open_next_file(machine, file, filename, "txt");
+		if (filerr == osd_file::error::NONE)
+		{
+			// now loop through the palette colors
+			for (y = 0; y < state.palette.columns; y++)
+			{
+				for (x = 0; x < state.palette.columns; x++)
+				{
+					int index = state.palette.offset + y * state.palette.columns + x;
+					if (index < total)
+					{
+						pen_t pen = state.palette.which ? palette->indirect_color(index) : raw_color[index];
+					}
+				}
+			}
+
+			osd_printf_error("Saved palette %d of %d \n", palidx, state.palette.devcount);
+		}
+
+
+
+		bitmap_ind16 *img_bitmap = NULL;
+
+		img_bitmap = global_alloc(bitmap_ind16(imgwidth, imgheight));
+
+
+		if (img_bitmap == NULL)
+			return;
+
+		int maxcolors = gfx.colors();
+		if (maxcolors > 16)
+			maxcolors = 16;	// Limit the number of sets that can be generated
+
+							//GFXDECODE_ENTRY("gfx1", 0, charlayout, 0x80, 16) /* colors 0x80-0xbf */
+							//GFXDECODE_ENTRY("gfx2", 0, tilelayout, 0x00, 8) /* colors 0x00-0x3f */
+							//GFXDECODE_ENTRY("gfx3", 0, spritelayout, 0x40, 4) /* colors 0x40-0x7f */
+
+		for (int color = 0; color < maxcolors; color++)
+		{
+			// set the set number and color number
+			state.gfxset.set = set;
+			info.color[set] = color;
+
+			// update the bitmap
+			gfxset_update_save_bitmap(*img_bitmap, state, xcells, ycells, gfx);
+
+			int entries = gfx.palette().entries();
+			const rgb_t *palette = gfx.palette().palette()->entry_list_raw() + gfx.colorbase() + color * gfx.granularity();
+
+
+			//int depth = gfx.depth();
+			//int usecolor = gfx.colorbase() + gfx.granularity() * (color % gfx.colors());
+
+			// save the file
+			sprintf(filename, "gfxset%d tiles %dx%d colors %d set %X", set, gfx.width(), gfx.height(), gfx.colors(), color);
+
+			emu_file file("rips", OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+			osd_file::error filerr = open_next_file(machine, file, filename, "png");
+			if (filerr == osd_file::error::NONE)
+			{
+				gfxset_save_snapshot(*img_bitmap, file, entries, palette);
+				osd_printf_error("Saved gfxset %d of %d colours %d set %X, %dx%d tiles %d items\n", set, info.setcount - 1, gfx.colors(), color, gfx.width(), gfx.height(), gfx.elements());
+			}
+		}
+		global_free(img_bitmap);
+	}
+	osd_printf_error("Finished saving gfxsets\n");
 }
 
 
@@ -884,6 +1005,8 @@ static void gfxset_handle_keys(running_machine &machine, ui_gfx_state &state, in
 	{ info.color[set] = info.color_count[set] - 1; state.bitmap_dirty = true; }
 	if (info.color[set] < 0)
 	{ info.color[set] = 0; state.bitmap_dirty = true; }
+	if (machine.ui_input().pressed(IPT_UI_SNAPSHOT))
+		state.save = true;
 }
 
 
@@ -1011,12 +1134,300 @@ static void gfxset_draw_item(running_machine &machine, gfx_element &gfx, int ind
 			s = src + effy * gfx.rowbytes();
 
 			// extract the pixel
+			xxx
 			*dest++ = 0xff000000 | palette[s[effx]];
 		}
 	}
 }
 
+//-------------------------------------------------
+//  gfxset_handle_save - save all the gfxsets
+//-------------------------------------------------
+static void gfxset_handle_save(running_machine &machine, ui_gfx_state &state)
+{
+	int dev = state.gfxset.devindex;
+	ui_gfx_info &info = state.gfxdev[dev];
+	device_gfx_interface &interface = *info.interface;
+	int imgwidth = 0;
+	int imgheight = 0;
+	int cellxpix, cellypix;
+	int xcells, ycells;
+	char filename[200];
 
+/*
+	// Alternative method, use tilemaps directly
+	tilemap_manager &tiles = machine.tilemap();
+	int tilecount = tiles.count();
+
+	if (tilecount > 0)
+	{
+		for (int t = 0; t < tilecount; t++)
+		{
+			tilemap_t *tilemap = tiles.find(t);
+			int mapwidth = tilemap->width();
+			int mapheight = tilemap->height();
+			palette_device &paldev = tilemap->palette();
+			palette_t *palette = paldev.palette();
+
+			int entries = palette->num_colors();
+			rgb_t *pal = (rgb_t *)malloc(sizeof(rgb_t) * entries);
+			for (int e = 0; e < entries; e++)
+				pal[e] = palette->entry_color(e);
+
+			// allocate new image for the tilemap
+			bitmap_ind16 &map = tilemap->pixmap();
+			sprintf(filename, "tilemap_%d", t);
+
+			emu_file file("", OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+			osd_file::error filerr = open_next_file(machine, file, filename, "png");
+			if (filerr == osd_file::error::NONE)
+			{
+				gfxset_save_snapshot(map, file, entries, pal);
+				//osd_printf_error("Saved gfxset %d of %d COLORS %d, %dx%d tiles %s\n", set, info.setcount - 1, color, gfx.width(), gfx.height());
+			}
+			free(pal);
+
+		}
+	}
+
+	// For now don't save other tiles
+	return;
+*/
+
+	for (int set = 0; set < info.setcount; set++)
+	{
+		gfx_element &gfx = *interface.gfx(set);
+
+		bitmap_ind16 *img_bitmap = NULL;
+
+		// compute the number of source pixels in a cell
+		cellxpix = (info.rotate[set] & ORIENTATION_SWAP_XY) ? gfx.height() : gfx.width();
+		cellypix = (info.rotate[set] & ORIENTATION_SWAP_XY) ? gfx.width() : gfx.height();
+
+		// compute the largest pixel scale factor that still fits
+		xcells = 16;
+
+		// in the Y direction, allow space for non full row
+		ycells = (gfx.elements() + xcells - 1) / xcells;
+
+		// calculate the width and height of the new image.
+		imgwidth = cellxpix * xcells;
+		imgheight = cellypix * ycells;
+
+		// allocate new image
+		img_bitmap = global_alloc(bitmap_ind16(imgwidth, imgheight));
+
+		if (img_bitmap == NULL)
+			return;
+
+		int maxcolors = gfx.colors();
+		if (maxcolors > 16)
+			maxcolors = 16;	// Limit the number of sets that can be generated
+
+		//GFXDECODE_ENTRY("gfx1", 0, charlayout, 0x80, 16) /* colors 0x80-0xbf */
+		//GFXDECODE_ENTRY("gfx2", 0, tilelayout, 0x00, 8) /* colors 0x00-0x3f */
+		//GFXDECODE_ENTRY("gfx3", 0, spritelayout, 0x40, 4) /* colors 0x40-0x7f */
+
+		for (int color = 0; color < maxcolors; color++)
+		{
+			// set the set number and color number
+			state.gfxset.set = set;
+			info.color[set] = color;
+
+			// update the bitmap
+			gfxset_update_save_bitmap(*img_bitmap, state, xcells, ycells, gfx);
+
+			int entries = gfx.palette().entries();
+			const rgb_t *palette = gfx.palette().palette()->entry_list_raw() + gfx.colorbase() + color * gfx.granularity();
+
+
+			//int depth = gfx.depth();
+			//int usecolor = gfx.colorbase() + gfx.granularity() * (color % gfx.colors());
+
+			// save the file
+			sprintf(filename, "gfxset%d tiles %dx%d colors %d set %X", set, gfx.width(), gfx.height(), gfx.colors(), color);
+
+			emu_file file("rips", OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+			osd_file::error filerr = open_next_file(machine, file, filename, "png");
+			if (filerr == osd_file::error::NONE)
+			{
+				gfxset_save_snapshot(*img_bitmap, file, entries, palette);
+				osd_printf_error("Saved gfxset %d of %d colours %d set %X, %dx%d tiles %d items\n", set, info.setcount - 1, gfx.colors(), color, gfx.width(), gfx.height(), gfx.elements());
+			}
+		}
+		global_free(img_bitmap);
+	}
+	osd_printf_error("Finished saving gfxsets\n");
+}
+
+//-------------------------------------------------
+//  gfxset_update_save_bitmap - redraw the graphics
+//  save bitmap
+//-------------------------------------------------
+
+static void gfxset_update_save_bitmap(bitmap_ind16 &bitmap, ui_gfx_state &state, int xcells, int ycells, gfx_element &gfx)
+{
+	int dev = state.gfxset.devindex;
+	int set = state.gfxset.set;
+	ui_gfx_info &info = state.gfxdev[dev];
+	int cellxpix, cellypix;
+	int x, y;
+
+	// compute the number of source pixels in a cell
+	cellxpix = (info.rotate[set] & ORIENTATION_SWAP_XY) ? gfx.height() : gfx.width();
+	cellypix = (info.rotate[set] & ORIENTATION_SWAP_XY) ? gfx.width() : gfx.height();
+
+	// loop over rows
+	for (y = 0; y < ycells; y++)
+	{
+		rectangle cellbounds;
+
+		// make a rect that covers this row
+		cellbounds.set(0, bitmap.width() - 1, y * cellypix, (y + 1) * cellypix - 1);
+
+		// only display if there is data to show
+		if (info.offset[set] + y * xcells < gfx.elements())
+		{
+			// draw the individual cells
+			for (x = 0; x < xcells; x++)
+			{
+				int index = info.offset[set] + y * xcells + x;
+
+				// update the bounds for this cell
+				cellbounds.min_x = x * cellxpix;
+				cellbounds.max_x = (x + 1) * cellxpix - 1;
+
+				// only render if there is data
+				if (index < gfx.elements())
+					gfxset_draw_save_item(gfx, index, bitmap, cellbounds.min_x, cellbounds.min_y, info.color[set], info.rotate[set]);
+
+				// otherwise, fill with transparency
+				else
+					bitmap.fill(0, cellbounds);
+			}
+		}
+
+		// otherwise, fill with transparency
+		else
+			bitmap.fill(0, cellbounds);
+	}
+}
+
+
+//-------------------------------------------------
+//  gfxset_draw_save item - draw a single item into
+//  the bitmap
+//-------------------------------------------------
+/*
+static void gfxset_draw_save_item_new(gfx_element &gfx, int index, bitmap_ind16 &bitmap, int dstx, int dsty, int color, int rotate)
+{
+	int width = (rotate & ORIENTATION_SWAP_XY) ? gfx.height() : gfx.width();
+	int height = (rotate & ORIENTATION_SWAP_XY) ? gfx.width() : gfx.height();
+	const pen_t *pens = gfx.palette().pens();
+
+	int y;
+	//void opaque(bitmap, cellbounds, index, 0, 0, 0, INT32 destx, INT32 desty);
+
+	// loop over rows in the cell
+	const UINT8 *src = gfx.get_data(index);
+	for (y = 0; y < height; y++)
+	{
+		draw_scanline8(bitmap, (INT32)dstx, (INT32)(dsty + y), INT32(width), src + (y * width), pens);
+	}
+}
+*/
+
+static void gfxset_draw_save_item(gfx_element &gfx, int index, bitmap_ind16 &bitmap, int dstx, int dsty, int color, int rotate)
+{
+	int width = (rotate & ORIENTATION_SWAP_XY) ? gfx.height() : gfx.width();
+	int height = (rotate & ORIENTATION_SWAP_XY) ? gfx.width() : gfx.height();
+	//const rgb_t *palette = gfx.palette().palette()->entry_list_raw() + gfx.colorbase() + color * gfx.granularity();
+	int x, y;
+
+	// loop over rows in the cell
+	for (y = 0; y < height; y++)
+	{
+		uint16_t *dest = &bitmap.pix16(dsty + y, dstx);
+		const uint8_t *src = gfx.get_data(index);
+
+		// loop over columns in the cell
+		for (x = 0; x < width; x++)
+		{
+			int effx = x, effy = y;
+			const uint8_t *s;
+
+			// compute effective x,y values after rotation
+			if (!(rotate & ORIENTATION_SWAP_XY))
+			{
+				if (rotate & ORIENTATION_FLIP_X)
+					effx = gfx.width() - 1 - effx;
+				if (rotate & ORIENTATION_FLIP_Y)
+					effy = gfx.height() - 1 - effy;
+			}
+			else
+			{
+				int temp;
+				if (rotate & ORIENTATION_FLIP_X)
+					effx = gfx.height() - 1 - effx;
+				if (rotate & ORIENTATION_FLIP_Y)
+					effy = gfx.width() - 1 - effy;
+				temp = effx; effx = effy; effy = temp;
+			}
+
+			// get a pointer to the start of this source row
+			s = src + effy * gfx.rowbytes();
+
+			// extract the pixel
+			// Temporary addition. Set the alpha when palette index is 15
+			// The clears the alpha on the GNG sprites
+			int index = s[effx];
+			//rgb_t pixels = palette[index];
+			//if (index == 15)
+			//	pixels.set_a(0);
+			//*dest++ = pixels;
+			*dest++ = index;
+		}
+	}
+}
+
+/*
+static void gfxset_save_snapshot(bitmap_argb32 &bitmap, emu_file &file)
+{
+	png_info pnginfo = { nullptr };
+
+	png_error error = png_write_bitmap(file, &pnginfo, bitmap, 0, nullptr);
+	if (error != PNGERR_NONE)
+		osd_printf_error("Error generating PNG for snapshot: png_error = %d\n", error);
+
+	// free any data allocated
+	png_free(&pnginfo);
+}
+
+static void gfxset_save_snapshot(bitmap_rgb32 &bitmap, emu_file &file)
+{
+	png_info pnginfo = { nullptr };
+
+	png_error error = png_write_bitmap(file, &pnginfo, bitmap, 0, nullptr);
+	if (error != PNGERR_NONE)
+		osd_printf_error("Error generating PNG for snapshot: png_error = %d\n", error);
+
+	// free any data allocated
+	png_free(&pnginfo);
+}
+*/
+
+
+static void gfxset_save_snapshot(bitmap_ind16 &bitmap, emu_file &file, int entries, const rgb_t *pal)
+{
+	png_info pnginfo = { nullptr };
+
+	png_error error = png_write_bitmap(file, &pnginfo, bitmap, entries, pal);
+	if (error != PNGERR_NONE)
+		osd_printf_error("Error generating PNG for snapshot: png_error = %d\n", error);
+
+	// free any data allocated
+	//png_free(&pnginfo);
+}
 
 /***************************************************************************
     TILEMAP VIEWER
@@ -1286,6 +1697,10 @@ static void tilemap_handle_keys(running_machine &machine, ui_gfx_state &state, i
 		state.tilemap.yoffs += mapheight;
 	while (state.tilemap.yoffs >= mapheight)
 		state.tilemap.yoffs -= mapheight;
+
+	// handle save gfx
+	if (machine.ui_input().pressed(IPT_UI_SNAPSHOT))
+		state.save = true;
 }
 
 
@@ -1331,4 +1746,198 @@ static void tilemap_update_bitmap(running_machine &machine, ui_gfx_state &state,
 		state.texture->set_bitmap(*state.bitmap, state.bitmap->cliprect(), TEXFORMAT_RGB32);
 		state.bitmap_dirty = false;
 	}
+}
+//-------------------------------------------------
+//  tilemap_handl_save - handler for the tilemap
+//  saver
+//-------------------------------------------------
+static void tilemap_handle_save(mame_ui_manager &mui, render_container &container, ui_gfx_state &state)
+{
+	uint32_t mapwidth, mapheight;
+	char filename[100];
+
+	for (int map = 0; map < mui.machine().tilemap().count(); map++)
+	{
+		// get the size of the tilemap itself
+		tilemap_t *tilemap = mui.machine().tilemap().find(map);
+		mapwidth = tilemap->width();
+		mapheight = tilemap->height();
+
+		if (state.tilemap.rotate & ORIENTATION_SWAP_XY)
+		{
+			uint32_t temp = mapwidth; mapwidth = mapheight; mapheight = temp;
+		}
+
+		// allocate new image
+		/*
+		bitmap_argb32 *img_bitmap = NULL;
+		img_bitmap = global_alloc(bitmap_argb32(mapwidth, mapheight));
+
+		if (img_bitmap == NULL)
+			return;
+
+		bitmap_ind16 &tile_bitmap = tilemap->pixmap();
+		bitmap_ind8 &alpha_bitmap = tilemap->flagsmap();
+		const rgb_t *palette = tilemap->palette().palette()->entry_list_raw();
+
+		// loop over rows in the cell
+		for (int y = 0; y < mapheight; y++)
+		{
+			UINT32 *dest = &img_bitmap->pix32(y, 0);
+			UINT16 *color = &tile_bitmap.pix16(y, 0);
+			UINT8 *alpha = &alpha_bitmap.pix8(y, 0);
+
+			// loop over columns in the cell
+			for (int x = 0; x < mapwidth; x++)
+			{
+				rgb_t pixel = palette[color[x]];
+				if (color[x] == alpha[x])
+					pixel.set_a(0xff);
+
+				*dest++ = pixel;
+			}
+		}
+
+		//tilemap->draw_debug(*mui.machine().first_screen(), *img_bitmap, 0, 0);
+		*/
+		// save the file
+		sprintf(filename, "tilemap_%d_of_%d_size_%dx%d", map, mui.machine().tilemap().count() - 1, mapwidth, mapheight);
+
+		emu_file file("rips", OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+		osd_file::error filerr = open_next_file(mui.machine(), file, filename, "png");
+		if (filerr == osd_file::error::NONE)
+		{
+			//gfxset_save_snapshot(*img_bitmap, file);
+			gfxset_save_snapshot(tilemap->pixmap(), file, tilemap->palette().entries(), tilemap->palette().palette()->entry_list_raw());
+			osd_printf_error("Saved tilemap %d of %d size %dx%d\n", map, mui.machine().tilemap().count() - 1, mapwidth, mapheight);
+		}
+
+		//global_free(img_bitmap);
+	}
+	osd_printf_error("Saving tilemaps finished\n");
+}
+
+//-------------------------------------------------
+//  open_next_file - open the next non-existing
+//  file of type filetype according to our
+//  numbering scheme
+//-------------------------------------------------
+
+static osd_file::error open_next_file(running_machine &machine, emu_file &file, const char *basename, const char *extension)
+{
+	uint32_t origflags = file.openflags();
+
+	// handle defaults
+	const char *snapname = machine.options().snap_name();
+	if (snapname == nullptr || snapname[0] == 0)
+		snapname = "%g/%i";
+	std::string snapstr(snapname);
+
+	// strip any extension in the provided name
+	int index = snapstr.find_last_of('.');
+	if (index != -1)
+		snapstr = snapstr.substr(0, index);
+
+	// handle %d in the template (for image devices)
+	std::string snapdev("%d_");
+	int pos = snapstr.find(snapdev);
+
+	if (pos != -1)
+	{
+		// if more %d are found, revert to default and ignore them all
+		if (snapstr.find(snapdev.c_str(), pos + 3) != -1)
+			snapstr.assign("%g/%i");
+		// else if there is a single %d, try to create the correct snapname
+		else
+		{
+			int name_found = 0;
+
+			// find length of the device name
+			int end1 = snapstr.find("/", pos + 3);
+			int end2 = snapstr.find("%", pos + 3);
+			int end;
+
+			if ((end1 != -1) && (end2 != -1))
+				end = std::min(end1, end2);
+			else if (end1 != -1)
+				end = end1;
+			else if (end2 != -1)
+				end = end2;
+			else
+				end = snapstr.length();
+
+			if (end - pos < 3)
+				fatalerror("Something very wrong is going on!!!\n");
+
+			// copy the device name to an std::string
+			std::string snapdevname;
+			snapdevname.assign(snapstr.substr(pos + 3, end - pos - 3));
+			//printf("check template: %s\n", snapdevname.c_str());
+
+			// verify that there is such a device for this system
+			for (device_image_interface &image : image_interface_iterator(machine.root_device()))
+			{
+				// get the device name
+				std::string tempdevname(image.brief_instance_name());
+				//printf("check device: %s\n", tempdevname.c_str());
+
+				if (snapdevname.compare(tempdevname) == 0)
+				{
+					// verify that such a device has an image mounted
+					if (image.basename() != nullptr)
+					{
+						std::string filename(image.basename());
+
+						// strip extension
+						filename = filename.substr(0, filename.find_last_of('.'));
+
+						// setup snapname and remove the %d_
+						strreplace(snapstr, snapdevname.c_str(), filename.c_str());
+						snapstr.erase(pos, 3);
+						//printf("check image: %s\n", filename.c_str());
+
+						name_found = 1;
+					}
+				}
+			}
+
+			// or fallback to default
+			if (name_found == 0)
+				snapstr.assign("%g/%i");
+		}
+	}
+
+	// add our own extension
+	snapstr.append(".").append(extension);
+
+	// substitute path and gamename up front
+	strreplace(snapstr, "/", PATH_SEPARATOR);
+	strreplace(snapstr, "%g", machine.basename());
+
+	// determine if the template has an index; if not, we always use the same name
+	std::string fname;
+	if (snapstr.find("%i") == -1)
+		fname.assign(snapstr);
+
+	// otherwise, we scan for the next available filename
+	else
+	{
+		// try until we succeed
+		file.set_openflags(OPEN_FLAG_READ);
+		for (int seq = 0; ; seq++)
+		{
+			// build up the filename
+			fname.assign(snapstr);
+			strreplace(fname, "%i", string_format("%s_%04d", basename, seq).c_str());
+
+			// try to open the file; stop when we fail
+			osd_file::error filerr = file.open(fname.c_str());
+			if (filerr != osd_file::error::NONE)
+				break;
+		}
+	}
+
+	// create the final file
+	file.set_openflags(origflags);
+	return file.open(fname.c_str());
 }
