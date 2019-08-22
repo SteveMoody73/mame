@@ -1217,6 +1217,11 @@ static void gfxset_handle_save(running_machine &machine, ui_gfx_state &state)
 		if (maxcolors > 16)
 			maxcolors = 16;	// Limit the number of sets that can be generated
 
+		if (gfx.palette().indirect_entries() > 0)
+				state.palette.which = 1;
+
+		int num_colors = state.palette.which ? gfx.palette().indirect_entries() : gfx.palette().entries();
+
 		for (int color = 0; color < maxcolors; color++)
 		{
 			// set the set number and color number
@@ -1226,12 +1231,13 @@ static void gfxset_handle_save(running_machine &machine, ui_gfx_state &state)
 			// update the bitmap
 			gfxset_update_save_bitmap(*img_bitmap, state, xcells, ycells, gfx);
 
+			state.palette.which = 0;
+			state.palette.devindex = 0;
+			palette_set_device(machine, state);
+
 			int entries = gfx.palette().entries();
+
 			const rgb_t *palette = gfx.palette().palette()->entry_list_raw() + gfx.colorbase() + color * gfx.granularity();
-
-
-			//int depth = gfx.depth();
-			//int usecolor = gfx.colorbase() + gfx.granularity() * (color % gfx.colors());
 
 			// save the file
 			sprintf(filename, "gfxset%d tiles %dx%d colors %d set %X", set, gfx.width(), gfx.height(), gfx.colors(), color);
@@ -1240,7 +1246,7 @@ static void gfxset_handle_save(running_machine &machine, ui_gfx_state &state)
 			osd_file::error filerr = open_next_file(machine, file, filename, "png");
 			if (filerr == osd_file::error::NONE)
 			{
-				gfxset_save_snapshot_ind16(*img_bitmap, file, entries, palette);
+				gfxset_save_snapshot_ind16(*img_bitmap, file, num_colors, palette);
 				osd_printf_error("Saved gfxset %d of %d colours %d set %d, %dx%d tiles %d items\n", set + 1, info.setcount, gfx.colors(), color, gfx.width(), gfx.height(), gfx.elements());
 			}
 		}
