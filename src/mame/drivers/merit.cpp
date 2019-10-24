@@ -120,7 +120,7 @@ public:
 	void init_key_2();
 	void init_dtrvwz5();
 
-	DECLARE_CUSTOM_INPUT_MEMBER(rndbit_r);
+	DECLARE_READ_LINE_MEMBER(rndbit_r);
 
 private:
 	void dodge_nvram_init(nvram_device &nvram, void *base, size_t size);
@@ -411,7 +411,7 @@ WRITE8_MEMBER(merit_state::casino5_bank_w)
 	}
 }
 
-CUSTOM_INPUT_MEMBER(merit_state::rndbit_r)
+READ_LINE_MEMBER(merit_state::rndbit_r)
 {
 	return machine().rand();
 }
@@ -638,7 +638,7 @@ static INPUT_PORTS_START( meritpoker )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_CUSTOM_MEMBER(DEVICE_SELF, merit_state,rndbit_r, nullptr)
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_MEMBER(merit_state, rndbit_r)
 
 	PORT_START("DSW")
 	PORT_DIPUNKNOWN_DIPLOC( 0x01, IP_ACTIVE_LOW, "SW1:1" )
@@ -846,7 +846,7 @@ static INPUT_PORTS_START( pitboss ) /* PCB pinout maps 12 lamp outputs - Where a
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON5 ) PORT_COCKTAIL PORT_CODE(KEYCODE_G) PORT_NAME("P2 Button 5")
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON6 ) PORT_COCKTAIL PORT_CODE(KEYCODE_W) PORT_NAME("P2 Play")
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_CUSTOM_MEMBER(DEVICE_SELF, merit_state,rndbit_r, nullptr)
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_MEMBER(merit_state, rndbit_r)
 
 	PORT_START("DSW")
 	PORT_DIPNAME( 0x01, 0x01, DEF_STR( Coin_A ) )   PORT_DIPLOCATION("SW:1")
@@ -909,7 +909,7 @@ static INPUT_PORTS_START( mroundup ) // todo: Find were Player 2 "Play" is mappe
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON5 ) PORT_COCKTAIL PORT_CODE(KEYCODE_G) PORT_NAME("P2 Button 5")
 	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_UNKNOWN ) // pulling this LOW causes "unathorized conversion" msg.
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_CUSTOM_MEMBER(DEVICE_SELF, merit_state,rndbit_r, nullptr)
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_MEMBER(merit_state, rndbit_r)
 
 	PORT_START("DSW")
 	PORT_DIPNAME( 0x01, 0x01, "Enable Draw Poker" )     PORT_DIPLOCATION("SW1:1")
@@ -1054,7 +1054,7 @@ static INPUT_PORTS_START( casino5 )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_CUSTOM_MEMBER(DEVICE_SELF, merit_state,rndbit_r, nullptr)
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_MEMBER(merit_state, rndbit_r)
 
 	PORT_START("DSW")
 	PORT_DIPNAME( 0x01, 0x01, "Enable Draw Poker" )     PORT_DIPLOCATION("SW1:1")
@@ -1409,10 +1409,11 @@ MACHINE_START_MEMBER(merit_state,casino5)
 	membank("bank2")->set_entry(0);
 }
 
-MACHINE_CONFIG_START(merit_state::pitboss)
-	MCFG_DEVICE_ADD("maincpu",Z80, CPU_CLOCK)
-	MCFG_DEVICE_PROGRAM_MAP(pitboss_map)
-	MCFG_DEVICE_IO_MAP(trvwhiz_io_map)
+void merit_state::pitboss(machine_config &config)
+{
+	Z80(config, m_maincpu, CPU_CLOCK);
+	m_maincpu->set_addrmap(AS_PROGRAM, &merit_state::pitboss_map);
+	m_maincpu->set_addrmap(AS_IO, &merit_state::trvwhiz_io_map);
 
 	I8255A(config, m_ppi[0]);
 	m_ppi[0]->in_pa_callback().set_ioport("IN0");
@@ -1425,115 +1426,116 @@ MACHINE_CONFIG_START(merit_state::pitboss)
 	m_ppi[1]->out_pc_callback().set(FUNC(merit_state::misc_w));
 
 	/* video hardware */
-	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, 512, 0, 512, 256, 0, 256)   /* temporary, CRTC will configure screen */
-	MCFG_SCREEN_UPDATE_DEVICE("crtc", mc6845_device, screen_update)
+	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	m_screen->set_raw(PIXEL_CLOCK, 512, 0, 512, 256, 0, 256);   /* temporary, CRTC will configure screen */
+	m_screen->set_screen_update("crtc", FUNC(mc6845_device::screen_update));
 
-	MCFG_MC6845_ADD("crtc", MC6845, "screen", CRTC_CLOCK)
-	MCFG_MC6845_SHOW_BORDER_AREA(false)
-	MCFG_MC6845_CHAR_WIDTH(8)
-	MCFG_MC6845_BEGIN_UPDATE_CB(merit_state, crtc_begin_update)
-	MCFG_MC6845_UPDATE_ROW_CB(merit_state, crtc_update_row)
-	MCFG_MC6845_OUT_HSYNC_CB(WRITELINE(*this, merit_state, hsync_changed))
-	MCFG_MC6845_OUT_VSYNC_CB(INPUTLINE("maincpu", 0))
+	mc6845_device &crtc(MC6845(config, "crtc", CRTC_CLOCK));
+	crtc.set_screen(m_screen);
+	crtc.set_show_border_area(false);
+	crtc.set_char_width(8);
+	crtc.set_begin_update_callback(FUNC(merit_state::crtc_begin_update), this);
+	crtc.set_update_row_callback(FUNC(merit_state::crtc_update_row), this);
+	crtc.out_hsync_callback().set(FUNC(merit_state::hsync_changed));
+	crtc.out_vsync_callback().set_inputline(m_maincpu, 0);
 
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();
 
-	MCFG_DEVICE_ADD("aysnd", AY8912, CRTC_CLOCK)
-	MCFG_AY8910_PORT_A_WRITE_CB(WRITE8(*this, merit_state, led2_w))
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.33)
-MACHINE_CONFIG_END
+	ay8912_device &aysnd(AY8912(config, "aysnd", CRTC_CLOCK));
+	aysnd.port_a_write_callback().set(FUNC(merit_state::led2_w));
+	aysnd.add_route(ALL_OUTPUTS, "mono", 0.33);
+}
 
-MACHINE_CONFIG_START(merit_state::casino5)
+void merit_state::casino5(machine_config &config)
+{
 	pitboss(config);
 
-	MCFG_DEVICE_MODIFY("maincpu")
-	MCFG_DEVICE_PROGRAM_MAP(casino5_map)
+	m_maincpu->set_addrmap(AS_PROGRAM, &merit_state::casino5_map);
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0);
 
 	MCFG_MACHINE_START_OVERRIDE(merit_state,casino5)
-MACHINE_CONFIG_END
+}
 
-MACHINE_CONFIG_START(merit_state::bigappg)
+void merit_state::bigappg(machine_config &config)
+{
 	pitboss(config);
 
-	MCFG_DEVICE_MODIFY("maincpu")
-	MCFG_DEVICE_PROGRAM_MAP(bigappg_map)
-	MCFG_DEVICE_IO_MAP(tictac_io_map)
+	m_maincpu->set_addrmap(AS_PROGRAM, &merit_state::bigappg_map);
+	m_maincpu->set_addrmap(AS_IO, &merit_state::tictac_io_map);
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0);
-MACHINE_CONFIG_END
+}
 
-MACHINE_CONFIG_START(merit_state::misdraw)
+void merit_state::misdraw(machine_config &config)
+{
 	bigappg(config);
 
-	MCFG_DEVICE_MODIFY("maincpu")
-	MCFG_DEVICE_PROGRAM_MAP(misdraw_map)
+	m_maincpu->set_addrmap(AS_PROGRAM, &merit_state::misdraw_map);
 
 	NVRAM(config, "cpunvram", nvram_device::DEFAULT_ALL_0);
-MACHINE_CONFIG_END
+}
 
-MACHINE_CONFIG_START(merit_state::dodge)
+void merit_state::dodge(machine_config &config)
+{
 	pitboss(config);
 
-	MCFG_DEVICE_MODIFY("maincpu")
-	MCFG_DEVICE_PROGRAM_MAP(dodge_map)
-	MCFG_DEVICE_IO_MAP(tictac_io_map)
+	m_maincpu->set_addrmap(AS_PROGRAM, &merit_state::dodge_map);
+	m_maincpu->set_addrmap(AS_IO, &merit_state::tictac_io_map);
 
 	NVRAM(config, "nvram").set_custom_handler(FUNC(merit_state::dodge_nvram_init));
-MACHINE_CONFIG_END
+}
 
-MACHINE_CONFIG_START(merit_state::tictac)
+void merit_state::tictac(machine_config &config)
+{
 	pitboss(config);
 
-	MCFG_DEVICE_MODIFY("maincpu")
-	MCFG_DEVICE_PROGRAM_MAP(tictac_map)
-	MCFG_DEVICE_IO_MAP(tictac_io_map)
-MACHINE_CONFIG_END
+	m_maincpu->set_addrmap(AS_PROGRAM, &merit_state::tictac_map);
+	m_maincpu->set_addrmap(AS_IO, &merit_state::tictac_io_map);
+}
 
-MACHINE_CONFIG_START(merit_state::trvwhiz)
+void merit_state::trvwhiz(machine_config &config)
+{
 	pitboss(config);
 
-	MCFG_DEVICE_MODIFY("maincpu")
-	MCFG_DEVICE_PROGRAM_MAP(trvwhiz_map)
-	MCFG_DEVICE_IO_MAP(trvwhiz_io_map)
-MACHINE_CONFIG_END
+	m_maincpu->set_addrmap(AS_PROGRAM, &merit_state::trvwhiz_map);
+	m_maincpu->set_addrmap(AS_IO, &merit_state::trvwhiz_io_map);
+}
 
-MACHINE_CONFIG_START(merit_state::dtrvwz5)
+void merit_state::dtrvwz5(machine_config &config)
+{
 	pitboss(config);
 
-	MCFG_DEVICE_MODIFY("maincpu")
-	MCFG_DEVICE_PROGRAM_MAP(dtrvwz5_map)
-	MCFG_DEVICE_IO_MAP(tictac_io_map)
-MACHINE_CONFIG_END
+	m_maincpu->set_addrmap(AS_PROGRAM, &merit_state::dtrvwz5_map);
+	m_maincpu->set_addrmap(AS_IO, &merit_state::tictac_io_map);
+}
 
-MACHINE_CONFIG_START(merit_state::phrcraze)
+void merit_state::phrcraze(machine_config &config)
+{
 	pitboss(config);
 
-	MCFG_DEVICE_MODIFY("maincpu")
-	MCFG_DEVICE_PROGRAM_MAP(phrcraze_map)
-	MCFG_DEVICE_IO_MAP(phrcraze_io_map)
-MACHINE_CONFIG_END
+	m_maincpu->set_addrmap(AS_PROGRAM, &merit_state::phrcraze_map);
+	m_maincpu->set_addrmap(AS_IO, &merit_state::phrcraze_io_map);
+}
 
-MACHINE_CONFIG_START(merit_state::trvwhziv)
+void merit_state::trvwhziv(machine_config &config)
+{
 	pitboss(config);
 
-	MCFG_DEVICE_MODIFY("maincpu")
-	MCFG_DEVICE_PROGRAM_MAP(trvwhziv_map)
-	MCFG_DEVICE_IO_MAP(tictac_io_map)
-MACHINE_CONFIG_END
+	m_maincpu->set_addrmap(AS_PROGRAM, &merit_state::trvwhziv_map);
+	m_maincpu->set_addrmap(AS_IO, &merit_state::tictac_io_map);
+}
 
-MACHINE_CONFIG_START(merit_state::couple)
+void merit_state::couple(machine_config &config)
+{
 	pitboss(config);
 
-	MCFG_DEVICE_MODIFY("maincpu")
-	MCFG_DEVICE_PROGRAM_MAP(couple_map)
-	MCFG_DEVICE_IO_MAP(tictac_io_map)
+	m_maincpu->set_addrmap(AS_PROGRAM, &merit_state::couple_map);
+	m_maincpu->set_addrmap(AS_IO, &merit_state::tictac_io_map);
 
 	m_ppi[1]->out_pc_callback().set(FUNC(merit_state::misc_couple_w));
-MACHINE_CONFIG_END
+}
 
 
 ROM_START( pitboss ) /* Program roms were all printed as 2214-05 with the "7" hand written over the 5, U5 also had an added hand written "A" */

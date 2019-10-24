@@ -3,9 +3,12 @@
 #ifndef MAME_INCLUDES_TAOTAIDO_H
 #define MAME_INCLUDES_TAOTAIDO_H
 
+#pragma once
+
 #include "video/vsystem_spr.h"
 #include "machine/gen_latch.h"
 #include "machine/mb3773.h"
+#include "tilemap.h"
 
 class taotaido_state : public driver_device
 {
@@ -27,6 +30,10 @@ public:
 	{ }
 
 	void taotaido(machine_config &config);
+
+protected:
+	virtual void machine_start() override;
+	virtual void video_start() override;
 
 private:
 	required_device<cpu_device> m_maincpu;
@@ -61,9 +68,6 @@ private:
 
 	TILE_GET_INFO_MEMBER(bg_tile_info);
 	TILEMAP_MAPPER_MEMBER(tilemap_scan_rows);
-
-	virtual void machine_start() override;
-	virtual void video_start() override;
 
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	DECLARE_WRITE_LINE_MEMBER(screen_vblank);

@@ -117,9 +117,10 @@ void ym2610_device::device_start()
 
 	/**** initialize YM2610 ****/
 	m_chip = ym2610_init(this, clock(), rate,
-		&ym2610_device::static_adpcm_a_read_byte, &ym2610_device::static_adpcm_b_read_byte,
-		&ym2610_device::static_timer_handler, &ym2610_device::static_irq_handler, &psgintf);
-	assert_always(m_chip != nullptr, "Error creating YM2610 chip");
+			&ym2610_device::static_adpcm_a_read_byte, &ym2610_device::static_adpcm_b_read_byte,
+			&ym2610_device::static_timer_handler, &ym2610_device::static_irq_handler, &psgintf);
+	if (!m_chip)
+		throw emu_fatalerror("ym2610_device(%s): Error creating YM2610 chip", tag());
 }
 
 //-------------------------------------------------
@@ -164,12 +165,12 @@ device_memory_interface::space_config_vector ym2610_device::memory_space_config(
 }
 
 
-READ8_MEMBER( ym2610_device::read )
+u8 ym2610_device::read(offs_t offset)
 {
 	return ym2610_read(m_chip, offset & 3);
 }
 
-WRITE8_MEMBER( ym2610_device::write )
+void ym2610_device::write(offs_t offset, u8 data)
 {
 	ym2610_write(m_chip, offset & 3, data);
 }

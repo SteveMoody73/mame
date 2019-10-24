@@ -5,30 +5,19 @@
     Namco System NB-1 hardware
 
 ***************************************************************************/
+#ifndef MAME_INCLUDES_NAMCONB1_H
+#define MAME_INCLUDES_NAMCONB1_H
+
+#pragma once
 
 #include "machine/eeprompar.h"
+#include "machine/namcomcu.h"
 #include "machine/timer.h"
 #include "screen.h"
 #include "video/namco_c116.h"
 #include "video/namco_c355spr.h"
 #include "video/namco_c123tmap.h"
 #include "video/namco_c169roz.h"
-
-#define NAMCONB1_HTOTAL     (288)   /* wrong */
-#define NAMCONB1_HBSTART    (288)
-#define NAMCONB1_VTOTAL     (262)   /* needs to be checked */
-#define NAMCONB1_VBSTART    (224)
-
-#define NAMCONB1_TILEMASKREGION     "tilemask"
-#define NAMCONB1_TILEGFXREGION      "tile"
-#define NAMCONB1_SPRITEGFXREGION    "sprite"
-#define NAMCONB1_ROTMASKREGION      "rotmask"
-#define NAMCONB1_ROTGFXREGION       "rot"
-
-#define NAMCONB1_TILEGFX        0
-#define NAMCONB1_SPRITEGFX      1
-#define NAMCONB1_ROTGFX         2
-
 
 
 class namconb1_state : public driver_device
@@ -38,7 +27,6 @@ public:
 		driver_device(mconfig, type, tag),
 		m_gametype(0),
 		m_maincpu(*this, "maincpu"),
-		m_palette(*this, "palette"),
 		m_c116(*this, "c116"),
 		m_c123tmap(*this, "c123tmap"),
 		m_c355spr(*this, "c355spr"),
@@ -58,7 +46,8 @@ public:
 		m_spritebank32(*this, "spritebank32"),
 		m_tilebank32(*this, "tilebank32"),
 		m_rozbank32(*this, "rozbank32"),
-		m_namconb_shareram(*this, "namconb_share") { }
+		m_namconb_shareram(*this, "namconb_share")
+	{ }
 
 	void namconb1(machine_config &config);
 	void namconb2(machine_config &config);
@@ -96,13 +85,12 @@ private:
 	};
 
 	required_device<cpu_device> m_maincpu;
-	required_device<palette_device> m_palette;
 	required_device<namco_c116_device> m_c116;
 	required_device<namco_c123tmap_device> m_c123tmap;
 	required_device<namco_c355spr_device> m_c355spr;
 	optional_device<namco_c169roz_device> m_c169roz; // NB1 only, not NA1
 	required_device<screen_device> m_screen;
-	required_device<cpu_device> m_mcu;
+	required_device<m37710_cpu_device> m_mcu;
 	required_device<eeprom_parallel_28xx_device> m_eeprom;
 	required_ioport m_p1;
 	required_ioport m_p2;
@@ -139,14 +127,7 @@ private:
 	DECLARE_READ8_MEMBER(port6_r);
 	DECLARE_WRITE8_MEMBER(port6_w);
 	DECLARE_READ8_MEMBER(port7_r);
-	DECLARE_READ8_MEMBER(dac7_r);
-	DECLARE_READ8_MEMBER(dac6_r);
-	DECLARE_READ8_MEMBER(dac5_r);
-	DECLARE_READ8_MEMBER(dac4_r);
-	DECLARE_READ8_MEMBER(dac3_r);
-	DECLARE_READ8_MEMBER(dac2_r);
-	DECLARE_READ8_MEMBER(dac1_r);
-	DECLARE_READ8_MEMBER(dac0_r);
+	template <int Bit> uint16_t dac_bit_r();
 
 	DECLARE_WRITE32_MEMBER(rozbank32_w);
 	virtual void machine_start() override;
@@ -161,7 +142,6 @@ private:
 	TIMER_DEVICE_CALLBACK_MEMBER(scantimer);
 	TIMER_DEVICE_CALLBACK_MEMBER(mcu_irq0_cb);
 	TIMER_DEVICE_CALLBACK_MEMBER(mcu_irq2_cb);
-	TIMER_DEVICE_CALLBACK_MEMBER(mcu_adc_cb);
 
 	int NB1objcode2tile(int code);
 	int NB2objcode2tile_machbrkr(int code);
@@ -172,7 +152,8 @@ private:
 	void NB2RozCB_machbrkr(uint16_t code, int *tile, int *mask, int which);
 	void NB2RozCB_outfxies(uint16_t code, int *tile, int *mask, int which);
 	void namcoc75_am(address_map &map);
-	void namcoc75_io(address_map &map);
 	void namconb1_am(address_map &map);
 	void namconb2_am(address_map &map);
 };
+
+#endif // MAME_INCLUDES_NAMCONB1_H

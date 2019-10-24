@@ -40,12 +40,12 @@
 #include "logmacro.h"
 
 
-PALETTE_DECODER_MEMBER(x68k_state, GGGGGRRRRRBBBBBI)
+rgb_t x68k_state::GGGGGRRRRRBBBBBI(uint32_t raw)
 {
-	uint8_t i = raw & 1;
-	uint8_t r = pal6bit(((raw >> 5) & 0x3e) | i);
-	uint8_t g = pal6bit(((raw >> 10) & 0x3e) | i);
-	uint8_t b = pal6bit(((raw >> 0) & 0x3e) | i);
+	uint8_t const i = raw & 1;
+	uint8_t const r = pal6bit(((raw >> 5) & 0x3e) | i);
+	uint8_t const g = pal6bit(((raw >> 10) & 0x3e) | i);
+	uint8_t const b = pal6bit(((raw >> 0) & 0x3e) | i);
 	return rgb_t(r, g, b);
 }
 
@@ -277,7 +277,10 @@ bool x68k_state::draw_gfx_scanline( bitmap_ind16 &bitmap, rectangle cliprect, ui
 						if(((m_video.reg[2] & 0x1800) == 0x1000) && (colour & 1))
 							m_special.pix16(scanline, pixel) = colour;
 						else
+						{
 							bitmap.pix16(scanline, pixel) = colour;
+							m_special.pix16(scanline, pixel) = 0;
+						}
 					}
 					loc++;
 					loc &= 0x3ff;
@@ -322,7 +325,15 @@ bool x68k_state::draw_gfx_scanline( bitmap_ind16 &bitmap, rectangle cliprect, ui
 							else if(((m_video.reg[2] & 0x1800) == 0x1000) && (colour & 1))
 								m_special.pix16(scanline, pixel) = colour;
 							else
+							{
+								m_special.pix16(scanline, pixel) = 0;
 								bitmap.pix16(scanline, pixel) = colour;
+							}
+						}
+						else if(((m_video.reg[2] & 0x1800) == 0x1000) && m_special.pix16(scanline, pixel))
+						{
+							bitmap.pix16(scanline, pixel) = m_special.pix16(scanline, pixel);
+							m_special.pix16(scanline, pixel) = 0;
 						}
 						loc++;
 						loc &= 0x1ff;
@@ -360,7 +371,15 @@ bool x68k_state::draw_gfx_scanline( bitmap_ind16 &bitmap, rectangle cliprect, ui
 								else if(((m_video.reg[2] & 0x1800) == 0x1000) && (colour & 1))
 									m_special.pix16(scanline, pixel) = colour;
 								else
+								{
 									bitmap.pix16(scanline, pixel) = colour;
+									m_special.pix16(scanline, pixel) = 0;
+								}
+							}
+							else if(((m_video.reg[2] & 0x1800) == 0x1000) && m_special.pix16(scanline, pixel))
+							{
+								bitmap.pix16(scanline, pixel) = m_special.pix16(scanline, pixel);
+								m_special.pix16(scanline, pixel) = 0;
 							}
 							loc++;
 							loc &= 0x1ff;
@@ -418,7 +437,7 @@ void x68k_state::draw_gfx(bitmap_rgb32 &bitmap,rectangle cliprect)
 			{
 				colour = m_gfxbitmap.pix16(scanline, pixel);
 				if(colour || (m_video.gfx_pri == 2))
-					bitmap.pix32(scanline, pixel) = GGGGGRRRRRBBBBBI_decoder(colour);
+					bitmap.pix32(scanline, pixel) = GGGGGRRRRRBBBBBI(colour);
 			}
 			else if(gfxblend)
 			{

@@ -276,6 +276,7 @@ TODO:
 #include "cpu/m68000/m68000.h"
 #include "cpu/m6809/m6809.h"
 #include "cpu/z80/z80.h"
+#include "machine/adc0804.h"
 #include "machine/gen_latch.h"
 #include "sound/ym2151.h"
 #include "speaker.h"
@@ -391,16 +392,16 @@ WRITE16_MEMBER(wecleman_state::selected_ip_w)
 }
 
 /* $140021.b - Return the previously selected input port's value */
-READ16_MEMBER(wecleman_state::selected_ip_r)
+uint8_t wecleman_state::selected_ip_r()
 {
 	switch ( (m_selected_ip >> 5) & 3 )
 	{                                                                   // From WEC Le Mans Schems:
 		case 0:  return ioport("ACCEL")->read();        // Accel - Schems: Accelevr
-		case 1:  return ~0;                                             // ????? - Schems: Not Used
+		case 1:  return 0;                                              // ????? - Schems: Not Used
 		case 2:  return ioport("STEER")->read();        // Wheel - Schems: Handlevr
-		case 3:  return ~0;                                             // Table - Schems: Turnvr
+		case 3:  return 0;                                              // Table - Schems: Turnvr
 
-		default: return ~0;
+		default: return 0;
 	}
 }
 
@@ -520,8 +521,9 @@ WRITE16_MEMBER(wecleman_state::blitter_w)
 void wecleman_state::wecleman_map(address_map &map)
 {
 	map(0x000000, 0x03ffff).rom(); // ROM (03c000-03ffff used as RAM sometimes!)
-	map(0x040000, 0x043fff).ram(); // RAM
-	map(0x040494, 0x040495).w(FUNC(wecleman_state::wecleman_videostatus_w)).share("videostatus");   // cloud blending control (HACK)
+	map(0x040000, 0x040493).ram(); // RAM
+	map(0x040494, 0x040495).ram().w(FUNC(wecleman_state::wecleman_videostatus_w)).share("videostatus");   // cloud blending control (HACK)
+	map(0x040496, 0x043fff).ram(); // RAM
 	map(0x060000, 0x060005).w(FUNC(wecleman_state::wecleman_protection_w)).share("protection_ram");
 	map(0x060006, 0x060007).r(FUNC(wecleman_state::wecleman_protection_r)); // MCU read
 	map(0x080000, 0x080011).ram().w(FUNC(wecleman_state::blitter_w)).share("blitter_regs");   // Blitter
@@ -538,8 +540,7 @@ void wecleman_state::wecleman_map(address_map &map)
 	map(0x140012, 0x140013).portr("IN1");    // ??
 	map(0x140014, 0x140015).portr("DSWA");   // DSW 2
 	map(0x140016, 0x140017).portr("DSWB");   // DSW 1
-	map(0x140020, 0x140021).writeonly();   // Paired with writes to $140003
-	map(0x140020, 0x140021).r(FUNC(wecleman_state::selected_ip_r)); // Accelerator or Wheel or ..
+	map(0x140021, 0x140021).rw("adc", FUNC(adc0804_device::read), FUNC(adc0804_device::write));
 	map(0x140030, 0x140031).nopw();    // toggles between 0 & 1 on hitting bumps and crashes (vibration?)
 }
 
@@ -571,7 +572,7 @@ void wecleman_state::hotchase_map(address_map &map)
 	map(0x140012, 0x140013).portr("IN1");    // ?? bit 4 from sound cpu
 	map(0x140014, 0x140015).portr("DSW2");   // DSW 2
 	map(0x140016, 0x140017).portr("DSW1");   // DSW 1
-	map(0x140020, 0x140021).r(FUNC(wecleman_state::selected_ip_r)).nopw(); // Paired with writes to $140003
+	map(0x140021, 0x140021).rw("adc", FUNC(adc0804_device::read), FUNC(adc0804_device::write)); // Paired with writes to $140003
 	map(0x140022, 0x140023).nopr(); // read and written at $601c0, unknown purpose
 	map(0x140030, 0x140031).nopw();    // signal to cabinet vibration motors?
 }
@@ -763,7 +764,7 @@ static INPUT_PORTS_START( wecleman )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_SERVICE2 ) PORT_NAME("Right SW")  // right sw
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_SERVICE3 ) PORT_NAME("Left SW")  // left sw
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE4 ) PORT_NAME("Thermo SW")  // thermo
-	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_CUSTOM )   // from sound cpu ?
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("adc", adc0804_device, intr_r)
 	PORT_BIT( 0xf0, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_START("DSWA")  /* $140015.b */
@@ -840,7 +841,7 @@ INPUT_PORTS_END
                             Hot Chase Input Ports
 ***************************************************************************/
 
-CUSTOM_INPUT_MEMBER(wecleman_state::hotchase_sound_status_r)
+READ_LINE_MEMBER(wecleman_state::hotchase_sound_status_r)
 {
 	return m_hotchase_sound_hs;
 }
@@ -860,8 +861,8 @@ static INPUT_PORTS_START( hotchase )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_SERVICE2 ) PORT_NAME("Right SW")   // right sw
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_SERVICE3 ) PORT_NAME("Left SW")  // left sw
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE4 ) PORT_NAME("Thermo SW")  // thermo
-	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_CUSTOM ) // from sound cpu
-	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_CUSTOM_MEMBER(DEVICE_SELF, wecleman_state,hotchase_sound_status_r, nullptr)
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("adc", adc0804_device, intr_r)
+	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_MEMBER(wecleman_state, hotchase_sound_status_r)
 	PORT_BIT( 0xe0, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_START("DSW2")  /* $140015.b */
@@ -1048,36 +1049,39 @@ MACHINE_START_MEMBER(wecleman_state, wecleman)
 	m_led.resolve();
 }
 
-MACHINE_CONFIG_START(wecleman_state::wecleman)
-
+void wecleman_state::wecleman(machine_config &config)
+{
 	/* basic machine hardware */
-	MCFG_DEVICE_ADD("maincpu", M68000, 10000000)   /* Schems show 10MHz */
-	MCFG_DEVICE_PROGRAM_MAP(wecleman_map)
-	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", wecleman_state, wecleman_scanline, "screen", 0, 1)
+	M68000(config, m_maincpu, 10000000);   /* Schems show 10MHz */
+	m_maincpu->set_addrmap(AS_PROGRAM, &wecleman_state::wecleman_map);
+	TIMER(config, "scantimer").configure_scanline(FUNC(wecleman_state::wecleman_scanline), "screen", 0, 1);
 
-	MCFG_DEVICE_ADD("sub", M68000, 10000000)   /* Schems show 10MHz */
-	MCFG_DEVICE_PROGRAM_MAP(wecleman_sub_map)
+	M68000(config, m_subcpu, 10000000);   /* Schems show 10MHz */
+	m_subcpu->set_addrmap(AS_PROGRAM, &wecleman_state::wecleman_sub_map);
 
 	/* Schems: can be reset, no nmi, soundlatch, 3.58MHz */
-	MCFG_DEVICE_ADD("audiocpu", Z80, 3579545)
-	MCFG_DEVICE_PROGRAM_MAP(wecleman_sound_map)
+	Z80(config, m_audiocpu, 3579545);
+	m_audiocpu->set_addrmap(AS_PROGRAM, &wecleman_state::wecleman_sound_map);
 
-	MCFG_QUANTUM_TIME(attotime::from_hz(6000))
+	config.m_minimum_quantum = attotime::from_hz(6000);
 
 	MCFG_MACHINE_START_OVERRIDE(wecleman_state, wecleman)
 	MCFG_MACHINE_RESET_OVERRIDE(wecleman_state, wecleman)
 
+	adc0804_device &adc(ADC0804(config, "adc", 640000)); // unknown "ADCCLK" (generated on video board?)
+	adc.vin_callback().set(FUNC(wecleman_state::selected_ip_r));
+
 	/* video hardware */
-	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_REFRESH_RATE(60)
-	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_SIZE(320 +16, 256)
-	MCFG_SCREEN_VISIBLE_AREA(0 +8, 320-1 +8, 0 +8, 224-1 +8)
-	MCFG_SCREEN_UPDATE_DRIVER(wecleman_state, screen_update_wecleman)
+	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	m_screen->set_refresh_hz(60);
+	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(0));
+	m_screen->set_size(320 +16, 256);
+	m_screen->set_visarea(0 +8, 320-1 +8, 0 +8, 224-1 +8);
+	m_screen->set_screen_update(FUNC(wecleman_state::screen_update_wecleman));
 
-	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_wecleman)
+	GFXDECODE(config, m_gfxdecode, m_palette, gfx_wecleman);
 
-	MCFG_PALETTE_ADD("palette", 2048)
+	PALETTE(config, m_palette).set_entries(2048);
 
 	MCFG_VIDEO_START_OVERRIDE(wecleman_state,wecleman)
 
@@ -1085,17 +1089,15 @@ MACHINE_CONFIG_START(wecleman_state::wecleman)
 	SPEAKER(config, "lspeaker").front_left();
 	SPEAKER(config, "rspeaker").front_right();
 
-	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
+	GENERIC_LATCH_8(config, "soundlatch");
 
-	MCFG_DEVICE_ADD("ymsnd", YM2151, 3579545)
-	MCFG_SOUND_ROUTE(0, "lspeaker", 0.85)
-	MCFG_SOUND_ROUTE(1, "rspeaker", 0.85)
+	YM2151(config, "ymsnd", 3579545).add_route(0, "lspeaker", 0.85).add_route(1, "rspeaker", 0.85);
 
-	MCFG_DEVICE_ADD("k007232_1", K007232, 3579545)
-	MCFG_K007232_PORT_WRITE_HANDLER(WRITE8(*this, wecleman_state, wecleman_volume_callback))
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.20)
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.20)
-MACHINE_CONFIG_END
+	K007232(config, m_k007232[0], 3579545);
+	m_k007232[0]->port_write().set(FUNC(wecleman_state::wecleman_volume_callback));
+	m_k007232[0]->add_route(ALL_OUTPUTS, "lspeaker", 0.20);
+	m_k007232[0]->add_route(ALL_OUTPUTS, "rspeaker", 0.20);
+}
 
 
 /***************************************************************************
@@ -1126,71 +1128,74 @@ MACHINE_RESET_MEMBER(wecleman_state, hotchase)
 }
 
 
-MACHINE_CONFIG_START(wecleman_state::hotchase)
-
+void wecleman_state::hotchase(machine_config &config)
+{
 	/* basic machine hardware */
-	MCFG_DEVICE_ADD("maincpu", M68000, 10000000)   /* 10 MHz - PCB is drawn in one set's readme */
-	MCFG_DEVICE_PROGRAM_MAP(hotchase_map)
-	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", wecleman_state, hotchase_scanline, "screen", 0, 1)
+	M68000(config, m_maincpu, 10000000);   /* 10 MHz - PCB is drawn in one set's readme */
+	m_maincpu->set_addrmap(AS_PROGRAM, &wecleman_state::hotchase_map);
+	TIMER(config, "scantimer").configure_scanline(FUNC(wecleman_state::hotchase_scanline), "screen", 0, 1);
 
-	MCFG_DEVICE_ADD("sub", M68000, 10000000)   /* 10 MHz - PCB is drawn in one set's readme */
-	MCFG_DEVICE_PROGRAM_MAP(hotchase_sub_map)
+	M68000(config, m_subcpu, 10000000);   /* 10 MHz - PCB is drawn in one set's readme */
+	m_subcpu->set_addrmap(AS_PROGRAM, &wecleman_state::hotchase_sub_map);
 
-	MCFG_DEVICE_ADD("audiocpu", MC6809E, 3579545 / 2)    /* 3.579/2 MHz - PCB is drawn in one set's readme */
-	MCFG_DEVICE_PROGRAM_MAP(hotchase_sound_map)
-	MCFG_DEVICE_PERIODIC_INT_DRIVER(wecleman_state, hotchase_sound_timer,  496)
+	MC6809E(config, m_audiocpu, 3579545 / 2);    /* 3.579/2 MHz - PCB is drawn in one set's readme */
+	m_audiocpu->set_addrmap(AS_PROGRAM, &wecleman_state::hotchase_sound_map);
+	m_audiocpu->set_periodic_int(FUNC(wecleman_state::hotchase_sound_timer), attotime::from_hz(496));
 
-	MCFG_QUANTUM_TIME(attotime::from_hz(6000))
+	config.m_minimum_quantum = attotime::from_hz(6000);
 
 	MCFG_MACHINE_RESET_OVERRIDE(wecleman_state, hotchase)
 	MCFG_MACHINE_START_OVERRIDE(wecleman_state, hotchase)
 
-	/* video hardware */
-	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_REFRESH_RATE(60)
-	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_SIZE(320 +16, 256)
-	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
-	MCFG_SCREEN_UPDATE_DRIVER(wecleman_state, screen_update_hotchase)
-	MCFG_SCREEN_PALETTE("palette")
+	adc0804_device &adc(ADC0804(config, "adc", 640000)); // unknown clock (generated on video board?)
+	adc.vin_callback().set(FUNC(wecleman_state::selected_ip_r));
 
-	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_hotchase)
-	MCFG_PALETTE_ADD("palette", 8192)
+	/* video hardware */
+	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	m_screen->set_refresh_hz(60);
+	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(0));
+	m_screen->set_size(320 +16, 256);
+	m_screen->set_visarea(0, 320-1, 0, 224-1);
+	m_screen->set_screen_update(FUNC(wecleman_state::screen_update_hotchase));
+	m_screen->set_palette(m_palette);
+
+	GFXDECODE(config, m_gfxdecode, m_palette, gfx_hotchase);
+	PALETTE(config, m_palette).set_entries(8192);
 
 	MCFG_VIDEO_START_OVERRIDE(wecleman_state, hotchase)
 
-	MCFG_DEVICE_ADD("k051316_1", K051316, 0)
-	MCFG_GFX_PALETTE("palette")
-	MCFG_K051316_OFFSETS(-0xb0 / 2, -16)
-	MCFG_K051316_WRAP(1)
-	MCFG_K051316_CB(wecleman_state, hotchase_zoom_callback_1)
+	K051316(config, m_k051316[0], 0);
+	m_k051316[0]->set_palette(m_palette);
+	m_k051316[0]->set_offsets(-0xb0 / 2, -16);
+	m_k051316[0]->set_wrap(1);
+	m_k051316[0]->set_zoom_callback(FUNC(wecleman_state::hotchase_zoom_callback_1), this);
 
-	MCFG_DEVICE_ADD("k051316_2", K051316, 0)
-	MCFG_GFX_PALETTE("palette")
-	MCFG_K051316_OFFSETS(-0xb0 / 2, -16)
-	MCFG_K051316_CB(wecleman_state, hotchase_zoom_callback_2)
+	K051316(config, m_k051316[1], 0);
+	m_k051316[1]->set_palette(m_palette);
+	m_k051316[1]->set_offsets(-0xb0 / 2, -16);
+	m_k051316[1]->set_zoom_callback(FUNC(wecleman_state::hotchase_zoom_callback_2), this);
 
 	/* sound hardware */
 	SPEAKER(config, "lspeaker").front_left();
 	SPEAKER(config, "rspeaker").front_right();
 
-	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
+	GENERIC_LATCH_8(config, "soundlatch");
 
-	MCFG_DEVICE_ADD("k007232_1", K007232, 3579545)
+	K007232(config, m_k007232[0], 3579545);
 	// SLEV not used, volume control is elsewhere
-	MCFG_SOUND_ROUTE(0, "lspeaker", 0.20)
-	MCFG_SOUND_ROUTE(1, "rspeaker", 0.20)
+	m_k007232[0]->add_route(0, "lspeaker", 0.20);
+	m_k007232[0]->add_route(1, "rspeaker", 0.20);
 
-	MCFG_DEVICE_ADD("k007232_2", K007232, 3579545)
+	K007232(config, m_k007232[1], 3579545);
 	// SLEV not used, volume control is elsewhere
-	MCFG_SOUND_ROUTE(0, "lspeaker", 0.20)
-	MCFG_SOUND_ROUTE(1, "rspeaker", 0.20)
+	m_k007232[1]->add_route(0, "lspeaker", 0.20);
+	m_k007232[1]->add_route(1, "rspeaker", 0.20);
 
-	MCFG_DEVICE_ADD("k007232_3", K007232, 3579545)
+	K007232(config, m_k007232[2], 3579545);
 	// SLEV not used, volume control is elsewhere
-	MCFG_SOUND_ROUTE(0, "lspeaker", 0.20)
-	MCFG_SOUND_ROUTE(1, "rspeaker", 0.20)
-MACHINE_CONFIG_END
+	m_k007232[2]->add_route(0, "lspeaker", 0.20);
+	m_k007232[2]->add_route(1, "rspeaker", 0.20);
+}
 
 
 /***************************************************************************
@@ -1297,7 +1302,7 @@ ROM_END
 
 ROM_START( weclemanb )
 	ROM_REGION( 0x40000, "maincpu", 0 ) /* Main CPU Code */
-	// I doubt these labels are correct, or one set of roms is bad (17h and 23h differ slightly from parent)
+	// This set has been hacked, set was provided using same labels as weclemana
 	ROM_LOAD16_BYTE( "602f08.17h", 0x00000, 0x10000, CRC(43241265) SHA1(3da1ed0d15b03845c07f07ec6838ce160d81633d) ) // sldh
 	ROM_LOAD16_BYTE( "602f11.23h", 0x00001, 0x10000, CRC(3ea7dae0) SHA1(d33d67f4cc65a7680e5f43407136b75512a10230) ) // sldh
 	ROM_LOAD16_BYTE( "602a09.18h", 0x20000, 0x10000, CRC(8a9d756f) SHA1(12605e86ce29e6300b5400720baac7b0293d9e66) )
@@ -1750,8 +1755,8 @@ void wecleman_state::init_hotchase()
 ***************************************************************************/
 
 GAMEL( 1986, wecleman,  0,        wecleman, wecleman, wecleman_state, init_wecleman, ROT0, "Konami", "WEC Le Mans 24 (v2.01)", 0, layout_wecleman )
-GAMEL( 1986, weclemana, wecleman, wecleman, wecleman, wecleman_state, init_wecleman, ROT0, "Konami", "WEC Le Mans 24 (v2.00, set 1)", 0, layout_wecleman )
-GAMEL( 1986, weclemanb, wecleman, wecleman, wecleman, wecleman_state, init_wecleman, ROT0, "Konami", "WEC Le Mans 24 (v2.00, set 2)", 0, layout_wecleman ) // 1988 release (maybe date hacked?)
+GAMEL( 1986, weclemana, wecleman, wecleman, wecleman, wecleman_state, init_wecleman, ROT0, "Konami", "WEC Le Mans 24 (v2.00)", 0, layout_wecleman )
+GAMEL( 1988, weclemanb, wecleman, wecleman, wecleman, wecleman_state, init_wecleman, ROT0, "hack",   "WEC Le Mans 24 (v2.00, hack)", 0, layout_wecleman ) // small section of code inserted, year changed to 1988
 GAMEL( 1986, weclemanc, wecleman, wecleman, wecleman, wecleman_state, init_wecleman, ROT0, "Konami", "WEC Le Mans 24 (v1.26)", 0, layout_wecleman )
 // a version 1.21 is known to exist too, see https://www.youtube.com/watch?v=4l8vYJi1OeU
 

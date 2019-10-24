@@ -17,6 +17,9 @@
 
 class sbus_cgsix_device : public device_t, public device_sbus_card_interface
 {
+public:
+	static constexpr feature_type imperfect_features() { return feature::GRAPHICS; }
+
 protected:
 	// construction/destruction
 	sbus_cgsix_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, const uint32_t vram_size)
@@ -42,11 +45,11 @@ protected:
 	DECLARE_READ32_MEMBER(fbc_r);
 	DECLARE_WRITE32_MEMBER(fbc_w);
 
-protected:
 	uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	uint8_t perform_rasterop(uint8_t src, uint8_t dst);
-	void handle_blit_command();
+	void handle_font_poke();
 	void handle_draw_command();
+	void handle_blit_command();
 
 	void base_map(address_map &map);
 
@@ -344,7 +347,7 @@ protected:
 		uint32_t m_a;
 	};
 
-	enum prim_type
+	enum prim_type : uint32_t
 	{
 		PRIM_POINT = 0,
 		PRIM_LINE,
@@ -461,7 +464,7 @@ protected:
 
 		vertex_t m_prim_buf[0x1000]; // unknown size
 		uint32_t m_vertex_count;
-		prim_type m_curr_prim_type;
+		uint32_t m_curr_prim_type;
 	};
 
 	required_memory_region m_rom;

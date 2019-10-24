@@ -1,16 +1,21 @@
 // license:BSD-3-Clause
 // copyright-holders:David Haywood, Phil Stroffolino, Carlos A. Lozano
+#ifndef MAME_INCLUDES_ARMEDF_H
+#define MAME_INCLUDES_ARMEDF_H
+
+#pragma once
 
 #include "machine/nb1414m4.h"
 #include "machine/gen_latch.h"
 #include "video/bufsprite.h"
 #include "emupal.h"
+#include "tilemap.h"
 
 class armedf_state : public driver_device
 {
 public:
-	armedf_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
+	armedf_state(const machine_config &mconfig, device_type type, const char *tag) :
+		driver_device(mconfig, type, tag),
 		m_maincpu(*this, "maincpu"),
 		m_extra(*this, "extra"),
 		m_nb1414m4(*this, "nb1414m4"),
@@ -21,7 +26,7 @@ public:
 		m_spr_pal_clut(*this, "spr_pal_clut"),
 		m_fg_videoram(*this, "fg_videoram"),
 		m_bg_videoram(*this, "bg_videoram")
-		{ }
+	{ }
 
 	void init_cclimbr2();
 	void init_armedf();
@@ -51,7 +56,7 @@ protected:
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
 
-	/* devices */
+	// devices
 	required_device<cpu_device> m_maincpu;
 	optional_device<cpu_device> m_extra;
 	optional_device<nb1414m4_device> m_nb1414m4;
@@ -60,14 +65,14 @@ protected:
 	required_device<buffered_spriteram16_device> m_spriteram;
 	required_device<generic_latch_8_device> m_soundlatch;
 
-	/* memory pointers */
+	// memory pointers
 	std::unique_ptr<uint8_t[]> m_text_videoram;
 	required_shared_ptr<uint16_t> m_spr_pal_clut;
 	required_shared_ptr<uint16_t> m_fg_videoram;
 	required_shared_ptr<uint16_t> m_bg_videoram;
 	uint16_t m_legion_cmd[4]; // legionjb only!
 
-	/* video-related */
+	// video-related
 	tilemap_t  *m_bg_tilemap;
 	tilemap_t  *m_fg_tilemap;
 	tilemap_t  *m_tx_tilemap;
@@ -120,6 +125,7 @@ protected:
 	void armedf_drawgfx(bitmap_ind16 &dest_bmp,const rectangle &clip,gfx_element *gfx,
 						uint32_t code,uint32_t color, uint32_t clut,int flipx,int flipy,int offsx,int offsy,
 						int transparent_color);
+	void common_map(address_map &map);
 	void armedf_map(address_map &map);
 	void cclimbr2_map(address_map &map);
 	void cclimbr2_soundmap(address_map &map);
@@ -139,11 +145,11 @@ protected:
 class bigfghtr_state : public armedf_state
 {
 public:
-	bigfghtr_state(const machine_config &mconfig, device_type type, const char *tag)
-		: armedf_state(mconfig, type, tag),
+	bigfghtr_state(const machine_config &mconfig, device_type type, const char *tag) :
+		armedf_state(mconfig, type, tag),
 		m_mcu(*this, "mcu"),
 		m_sharedram(*this, "sharedram")
-		{ }
+	{ }
 
 	void bigfghtr(machine_config &config);
 
@@ -159,3 +165,5 @@ private:
 	void bigfghtr_mcu_io_map(address_map &map);
 	void bigfghtr_mcu_map(address_map &map);
 };
+
+#endif // MAME_INCLUDES_ARMEDF_H

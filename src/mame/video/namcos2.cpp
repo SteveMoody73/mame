@@ -61,7 +61,7 @@ void namcos2_state::create_shadow_table()
 	/* set table for sprite color == 0x0f */
 	for (int i = 0; i < 16 * 256; i++)
 	{
-		m_palette->shadow_table()[i] = i + 0x2000;
+		m_c116->shadow_table()[i] = i + 0x2000;
 	}
 }
 
@@ -87,11 +87,13 @@ uint32_t namcos2_state::screen_update(screen_device &screen, bitmap_ind16 &bitma
 	rectangle clip;
 	int pri;
 
-	bitmap.fill(m_palette->black_pen(), cliprect);
+	bitmap.fill(m_c116->black_pen(), cliprect);
 	apply_clip(clip, cliprect);
 
 	/* HACK: enable ROZ layer only if it has priority > 0 */
-	bool roz_enable = ((m_gfx_ctrl & 0x7000) ? true : false);
+	// Phelios contradicts with this so disabled
+	// (level 0 ROZ is actually used by stages 2, 3 and 4 at very least)
+	//bool roz_enable = ((m_gfx_ctrl & 0x7000) ? true : false);
 
 	for (pri = 0; pri < 16; pri++)
 	{
@@ -99,7 +101,7 @@ uint32_t namcos2_state::screen_update(screen_device &screen, bitmap_ind16 &bitma
 		{
 			m_c123tmap->draw(screen, bitmap, clip, pri / 2);
 
-			if (roz_enable)
+			//if (roz_enable)
 			{
 				if (((m_gfx_ctrl & 0x7000) >> 12) == pri / 2)
 				{
@@ -114,22 +116,12 @@ uint32_t namcos2_state::screen_update(screen_device &screen, bitmap_ind16 &bitma
 
 /**************************************************************************/
 
-void namcos2_state::video_start_finallap()
-{
-	create_shadow_table();
-}
-
-void namcos2_state::video_start_finalap2()
-{
-	create_shadow_table();
-}
-
 uint32_t namcos2_state::screen_update_finallap(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
 	rectangle clip;
 	int pri;
 
-	bitmap.fill(m_palette->black_pen(), cliprect);
+	bitmap.fill(m_c116->black_pen(), cliprect);
 	apply_clip(clip, cliprect);
 
 	for (pri = 0; pri < 16; pri++)
@@ -171,7 +163,7 @@ uint32_t namcos2_state::screen_update_luckywld(screen_device &screen, bitmap_ind
 	rectangle clip;
 	int pri;
 
-	bitmap.fill(m_palette->black_pen(), cliprect);
+	bitmap.fill(m_c116->black_pen(), cliprect);
 	apply_clip(clip, cliprect);
 
 	for (pri = 0; pri < 16; pri++)
@@ -201,7 +193,7 @@ uint32_t namcos2_state::screen_update_sgunner(screen_device &screen, bitmap_ind1
 	rectangle clip;
 	int pri;
 
-	bitmap.fill(m_palette->black_pen(), cliprect);
+	bitmap.fill(m_c116->black_pen(), cliprect);
 	apply_clip(clip, cliprect);
 
 	for (pri = 0; pri < 8; pri++)
@@ -230,7 +222,7 @@ uint32_t namcos2_state::screen_update_metlhawk(screen_device &screen, bitmap_ind
 	rectangle clip;
 	int pri;
 
-	bitmap.fill(m_palette->black_pen(), cliprect);
+	bitmap.fill(m_c116->black_pen(), cliprect);
 	apply_clip(clip, cliprect);
 
 	for (pri = 0; pri < 16; pri++)

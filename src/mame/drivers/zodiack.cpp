@@ -129,7 +129,7 @@ INTERRUPT_GEN_MEMBER(zodiack_state::zodiack_sound_nmi_gen)
 
 WRITE8_MEMBER( zodiack_state::master_soundlatch_w )
 {
-	m_soundlatch->write(space, offset, data);
+	m_soundlatch->write(data);
 	m_audiocpu->set_input_line(0, HOLD_LINE);
 }
 
@@ -510,7 +510,7 @@ void zodiack_state::zodiack(machine_config &config)
 	/* basic machine hardware */
 	Z80(config, m_maincpu, XTAL(18'432'000)/6);
 	m_maincpu->set_addrmap(AS_PROGRAM, &zodiack_state::main_map);
-	m_maincpu->set_vblank_int("videopcb:screen", FUNC(zodiack_state::zodiack_main_nmi_gen));
+	m_maincpu->set_vblank_int("screen", FUNC(zodiack_state::zodiack_main_nmi_gen));
 	m_maincpu->set_periodic_int(FUNC(zodiack_state::irq0_line_hold), attotime::from_hz(1*60)); // sound related - unknown source, timing is guessed
 
 	Z80(config, m_audiocpu, XTAL(18'432'000)/6);
@@ -520,8 +520,10 @@ void zodiack_state::zodiack(machine_config &config)
 
 	WATCHDOG_TIMER(config, "watchdog");
 
+	SCREEN(config, "screen", SCREEN_TYPE_RASTER);
+
 	orca_ovg_40c_device &videopcb(ORCA_OVG_40C(config, "videopcb", 0));
-	videopcb.set_palette("videopcb:palette");
+	videopcb.set_screen("screen");
 
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();

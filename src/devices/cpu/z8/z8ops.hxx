@@ -17,7 +17,7 @@
 #define IR              get_intermediate_register(get_register(fetch()))
 #define RR              get_intermediate_register(get_register(fetch()))
 #define IM              fetch()
-#define flag(_flag)     ((m_r[Z8_REGISTER_FLAGS] & Z8_FLAGS##_##_flag) ? 1 : 0)
+#define flag(_flag)     ((m_flags & Z8_FLAGS_##_flag) ? 1 : 0)
 
 #define mode_r1_r2(_func)   \
 	uint8_t dst_src = fetch();\
@@ -37,7 +37,7 @@
 	_func(dst, src);
 
 #define mode_IR2_R1(_func) \
-	uint8_t src = m_r[read(R)];\
+	uint8_t src = read(read(R));\
 	uint8_t dst = R;\
 	_func(dst, src);
 
@@ -245,7 +245,8 @@ void z8_device::add_carry(uint8_t dst, uint8_t src)
 {
 	/* dst <- dst + src + C */
 	uint8_t data = register_read(dst);
-	uint16_t new_data = data + src + flag(C);
+	uint8_t c = flag(C) ? 1 : 0;
+	uint16_t new_data = data + src + c;
 
 	set_flag_c(new_data & 0x100);
 	new_data &= 0xff;
@@ -253,7 +254,7 @@ void z8_device::add_carry(uint8_t dst, uint8_t src)
 	set_flag_s(new_data & 0x80);
 	set_flag_v(((data & 0x80) == (src & 0x80)) && ((new_data & 0x80) != (src & 0x80)));
 	set_flag_d(0);
-	set_flag_h(((data & 0x1f) == 0x0f) && ((new_data & 0x1f) == 0x10));
+	set_flag_h((data & 0x0f) + (src & 0x0f) + c >= 0x10);
 
 	register_write(dst, new_data);
 }
@@ -277,7 +278,7 @@ void z8_device::add(uint8_t dst, uint8_t src)
 	set_flag_s(new_data & 0x80);
 	set_flag_v(((data & 0x80) == (src & 0x80)) && ((new_data & 0x80) != (src & 0x80)));
 	set_flag_d(0);
-	set_flag_h(((data & 0x1f) == 0x0f) && ((new_data & 0x1f) == 0x10));
+	set_flag_h((data & 0x0f) + (src & 0x0f) >= 0x10);
 
 	register_write(dst, new_data);
 }
@@ -400,7 +401,8 @@ void z8_device::subtract_carry(uint8_t dst, uint8_t src)
 {
 	/* dst <- dst - src - C */
 	uint8_t data = register_read(dst);
-	uint16_t new_data = data - src - flag(C);
+	uint8_t c = flag(C) ? 1 : 0;
+	uint16_t new_data = data - src - c;
 
 	set_flag_c(new_data & 0x100);
 	new_data &= 0xff;
@@ -408,7 +410,7 @@ void z8_device::subtract_carry(uint8_t dst, uint8_t src)
 	set_flag_s(new_data & 0x80);
 	set_flag_v(((data & 0x80) != (src & 0x80)) && ((new_data & 0x80) == (src & 0x80)));
 	set_flag_d(1);
-	set_flag_h(!(((data & 0x1f) == 0x0f) && ((new_data & 0x1f) == 0x10)));
+	set_flag_h((data & 0x0f) < (src & 0x0f) + c);
 
 	register_write(dst, new_data);
 }
@@ -432,7 +434,7 @@ void z8_device::subtract(uint8_t dst, uint8_t src)
 	set_flag_s(new_data & 0x80);
 	set_flag_v(((data & 0x80) != (src & 0x80)) && ((new_data & 0x80) == (src & 0x80)));
 	set_flag_d(1);
-	set_flag_h(!(((data & 0x1f) == 0x0f) && ((new_data & 0x1f) == 0x10)));
+	set_flag_h((data & 0x0f) < (src & 0x0f));
 
 	register_write(dst, new_data);
 }
@@ -550,14 +552,14 @@ INSTRUCTION( iret )
 {
 	/* FLAGS <- @SP
 	   SP <- SP + 1 */
-	register_write(Z8_REGISTER_FLAGS, stack_pop_byte());
+	flags_write(stack_pop_byte());
 
 	/* PC <- @SP
 	   SP <- SP + 2 */
 	m_pc = stack_pop_word();
 
 	/* IMR (7) <- 1 */
-	m_r[Z8_REGISTER_IMR] |= Z8_IMR_ENABLE;
+	m_imr |= Z8_IMR_ENABLE;
 }
 
 INSTRUCTION( ret )
@@ -773,10 +775,10 @@ INSTRUCTION( swap_IR1 )         { mode_IR1(swap) }
     CPU CONTROL INSTRUCTIONS
 ***************************************************************************/
 
-INSTRUCTION( ccf )              { m_r[Z8_REGISTER_FLAGS] ^= Z8_FLAGS_C; }
-INSTRUCTION( di )               { m_r[Z8_REGISTER_IMR] &= ~Z8_IMR_ENABLE; }
-INSTRUCTION( ei )               { m_r[Z8_REGISTER_IMR] |= Z8_IMR_ENABLE; }
+INSTRUCTION( ccf )              { m_flags ^= Z8_FLAGS_C; }
+INSTRUCTION( di )               { m_imr &= ~Z8_IMR_ENABLE; }
+INSTRUCTION( ei )               { m_imr |= Z8_IMR_ENABLE; m_irq_initialized = true; }
 INSTRUCTION( nop )              { /* no operation */ }
 INSTRUCTION( rcf )              { set_flag_c(0); }
 INSTRUCTION( scf )              { set_flag_c(1); }
-INSTRUCTION( srp_IM )           { m_r[Z8_REGISTER_RP] = fetch(); }
+INSTRUCTION( srp_IM )           { rp_write(fetch()); }

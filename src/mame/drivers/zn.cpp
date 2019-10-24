@@ -107,7 +107,7 @@ public:
 	void init_coh1000w();
 	void init_primrag2();
 
-	DECLARE_CUSTOM_INPUT_MEMBER(jdredd_gun_mux_read);
+	DECLARE_READ_LINE_MEMBER(jdredd_gun_mux_r);
 
 private:
 	template<int Chip> DECLARE_WRITE_LINE_MEMBER(cat702_dataout) { m_cat702_dataout[Chip] = state; update_sio0_rxd(); }
@@ -370,12 +370,12 @@ void zn_state::zn_map(address_map &map)
 	map(0x1fa30000, 0x1fa30003).noprw(); /* ?? */
 	map(0x1fa40000, 0x1fa40003).nopr(); /* ?? */
 	map(0x1fa60000, 0x1fa60003).nopr(); /* ?? */
-	map(0x1faf0000, 0x1faf07ff).rw("at28c16", FUNC(at28c16_device::read), FUNC(at28c16_device::write)); /* eeprom */
+	map(0x1faf0000, 0x1faf07ff).rw("at28c16", FUNC(at28c16_device::read), FUNC(at28c16_device::write)); /* EEPROM */
 	map(0x1fb20000, 0x1fb20007).r(FUNC(zn_state::unknown_r));
 }
 
-MACHINE_CONFIG_START(zn_state::zn1_1mb_vram)
-
+void zn_state::zn1_1mb_vram(machine_config &config)
+{
 	/* basic machine hardware */
 	CXD8530CQ(config, m_maincpu, XTAL(67'737'600));
 	m_maincpu->set_addrmap(AS_PROGRAM, &zn_state::zn_map);
@@ -398,8 +398,7 @@ MACHINE_CONFIG_START(zn_state::zn1_1mb_vram)
 	m_znmcu->analog2_handler().set_ioport("ANALOG2");
 
 	/* video hardware */
-	MCFG_PSXGPU_ADD( "maincpu", "gpu", CXD8561Q, 0x100000, XTAL(53'693'175) )
-	MCFG_VIDEO_SET_SCREEN(m_gpu_screen)
+	CXD8561Q(config, "gpu", XTAL(53'693'175), 0x100000, subdevice<psxcpu_device>("maincpu")).set_screen(m_gpu_screen);
 
 	SCREEN(config, m_gpu_screen, SCREEN_TYPE_RASTER);
 
@@ -409,25 +408,24 @@ MACHINE_CONFIG_START(zn_state::zn1_1mb_vram)
 
 	GENERIC_LATCH_8(config, m_soundlatch);
 
-	MCFG_SPU_ADD( "spu", XTAL(67'737'600)/2 )
-	MCFG_SOUND_ROUTE(0, "lspeaker", 0.35)
-	MCFG_SOUND_ROUTE(1, "rspeaker", 0.35)
+	spu_device &spu(SPU(config, "spu", XTAL(67'737'600)/2, subdevice<psxcpu_device>("maincpu")));
+	spu.add_route(0, "lspeaker", 0.35);
+	spu.add_route(1, "rspeaker", 0.35);
 
-	MCFG_DEVICE_ADD("at28c16", AT28C16, 0)
-MACHINE_CONFIG_END
+	AT28C16(config, "at28c16", 0);
+}
 
-MACHINE_CONFIG_START(zn_state::zn1_2mb_vram)
+void zn_state::zn1_2mb_vram(machine_config &config)
+{
 	zn1_1mb_vram(config);
-	MCFG_PSXGPU_REPLACE( "maincpu", "gpu", CXD8561Q, 0x200000, XTAL(53'693'175) )
-	MCFG_VIDEO_SET_SCREEN(m_gpu_screen)
-MACHINE_CONFIG_END
+	CXD8561Q(config.replace(), "gpu", XTAL(53'693'175), 0x200000, subdevice<psxcpu_device>("maincpu")).set_screen("screen");
+}
 
-MACHINE_CONFIG_START(zn_state::zn2)
-
+void zn_state::zn2(machine_config &config)
+{
 	/* basic machine hardware */
 	CXD8661R(config, m_maincpu, XTAL(100'000'000));
 	m_maincpu->set_addrmap(AS_PROGRAM, &zn_state::zn_map);
-
 	m_maincpu->subdevice<ram_device>("ram")->set_default_size("4M");
 
 	auto &sio0(*m_maincpu->subdevice<psxsio0_device>("sio0"));
@@ -446,8 +444,7 @@ MACHINE_CONFIG_START(zn_state::zn2)
 	m_znmcu->analog2_handler().set_ioport("ANALOG2");
 
 	/* video hardware */
-	MCFG_PSXGPU_ADD( "maincpu", "gpu", CXD8654Q, 0x200000, XTAL(53'693'175) )
-	MCFG_VIDEO_SET_SCREEN(m_gpu_screen)
+	CXD8654Q(config, "gpu", XTAL(53'693'175), 0x200000, subdevice<psxcpu_device>("maincpu")).set_screen(m_gpu_screen);
 
 	SCREEN(config, m_gpu_screen, SCREEN_TYPE_RASTER);
 
@@ -457,12 +454,12 @@ MACHINE_CONFIG_START(zn_state::zn2)
 
 	GENERIC_LATCH_8(config, m_soundlatch);
 
-	MCFG_SPU_ADD( "spu", XTAL(67'737'600)/2 )
-	MCFG_SOUND_ROUTE(0, "lspeaker", 0.35)
-	MCFG_SOUND_ROUTE(1, "rspeaker", 0.35)
+	spu_device &spu(SPU(config, "spu", XTAL(67'737'600)/2, subdevice<psxcpu_device>("maincpu")));
+	spu.add_route(0, "lspeaker", 0.35);
+	spu.add_route(1, "rspeaker", 0.35);
 
-	MCFG_DEVICE_ADD("at28c16", AT28C16, 0)
-MACHINE_CONFIG_END
+	AT28C16(config, "at28c16", 0);
+}
 
 void zn_state::gameboard_cat702(machine_config &config)
 {
@@ -625,8 +622,8 @@ void zn_state::coh1000c_map(address_map &map)
 
 MACHINE_START_MEMBER(zn_state,coh1000c)
 {
-	m_rombank[0]->configure_entries( 0, 16, m_bankedroms->base() + 0x400000, 0x400000 ); /* banked game rom */
-	m_soundbank->configure_entries( 0, 16, memregion("audiocpu")->base() + 0x8000, 0x4000 ); /* banked audio rom */
+	m_rombank[0]->configure_entries( 0, 16, m_bankedroms->base() + 0x400000, 0x400000 ); /* banked game ROM */
+	m_soundbank->configure_entries( 0, 16, memregion("audiocpu")->base() + 0x8000, 0x4000 ); /* banked audio ROM */
 }
 
 MACHINE_RESET_MEMBER(zn_state,coh1000c)
@@ -637,7 +634,7 @@ MACHINE_RESET_MEMBER(zn_state,coh1000c)
 
 MACHINE_RESET_MEMBER(zn_state,glpracr)
 {
-	m_audiocpu->set_input_line(INPUT_LINE_RESET, ASSERT_LINE); // glpracr qsound rom sockets are empty
+	m_audiocpu->set_input_line(INPUT_LINE_RESET, ASSERT_LINE); // glpracr QSound ROM sockets are empty
 	MACHINE_RESET_CALL_MEMBER(coh1000c);
 }
 
@@ -657,52 +654,55 @@ void zn_state::qsound_portmap(address_map &map)
 	map(0x00, 0x00).r(m_soundlatch, FUNC(generic_latch_8_device::read));
 }
 
-MACHINE_CONFIG_START(zn_state::coh1000c)
+void zn_state::coh1000c(machine_config &config)
+{
 	zn1_1mb_vram(config);
 	gameboard_cat702(config);
 
 	m_maincpu->set_addrmap(AS_PROGRAM, &zn_state::coh1000c_map);
 
-	MCFG_DEVICE_ADD(m_audiocpu, Z80, XTAL(8'000'000))
-	MCFG_DEVICE_PROGRAM_MAP(qsound_map)
-	MCFG_DEVICE_IO_MAP(qsound_portmap)
-	MCFG_DEVICE_PERIODIC_INT_DRIVER(zn_state, qsound_interrupt, 250) // measured (cps2.cpp)
+	Z80(config, m_audiocpu, XTAL(8'000'000));
+	m_audiocpu->set_addrmap(AS_PROGRAM, &zn_state::qsound_map);
+	m_audiocpu->set_addrmap(AS_IO, &zn_state::qsound_portmap);
+	m_audiocpu->set_periodic_int(FUNC(zn_state::qsound_interrupt), attotime::from_hz(250)); // measured (cps2.cpp)
 
 	MCFG_MACHINE_START_OVERRIDE(zn_state, coh1000c)
 	MCFG_MACHINE_RESET_OVERRIDE(zn_state, coh1000c)
 
 	m_soundlatch->data_pending_callback().set_inputline(m_audiocpu, INPUT_LINE_NMI);
 
-	MCFG_DEVICE_ADD("qsound", QSOUND)
-	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_CONFIG_END
+	qsound_device &qsound(QSOUND(config, "qsound"));
+	qsound.add_route(0, "lspeaker", 1.0);
+	qsound.add_route(1, "rspeaker", 1.0);
+}
 
-MACHINE_CONFIG_START(zn_state::glpracr)
+void zn_state::glpracr(machine_config &config)
+{
 	coh1000c(config);
 	MCFG_MACHINE_RESET_OVERRIDE(zn_state, glpracr)
-MACHINE_CONFIG_END
+}
 
-MACHINE_CONFIG_START(zn_state::coh1002c)
+void zn_state::coh1002c(machine_config &config)
+{
 	zn1_2mb_vram(config);
 	gameboard_cat702(config);
 
 	m_maincpu->set_addrmap(AS_PROGRAM, &zn_state::coh1000c_map);
 
-	MCFG_DEVICE_ADD(m_audiocpu, Z80, XTAL(8'000'000))
-	MCFG_DEVICE_PROGRAM_MAP(qsound_map)
-	MCFG_DEVICE_IO_MAP(qsound_portmap)
-	MCFG_DEVICE_PERIODIC_INT_DRIVER(zn_state, qsound_interrupt, 250) // measured (cps2.cpp)
+	Z80(config, m_audiocpu, XTAL(8'000'000));
+	m_audiocpu->set_addrmap(AS_PROGRAM, &zn_state::qsound_map);
+	m_audiocpu->set_addrmap(AS_IO, &zn_state::qsound_portmap);
+	m_audiocpu->set_periodic_int(FUNC(zn_state::qsound_interrupt), attotime::from_hz(250)); // measured (cps2.cpp)
 
 	MCFG_MACHINE_START_OVERRIDE(zn_state, coh1000c)
 	MCFG_MACHINE_RESET_OVERRIDE(zn_state, coh1000c)
 
 	m_soundlatch->data_pending_callback().set_inputline(m_audiocpu, INPUT_LINE_NMI);
 
-	MCFG_DEVICE_ADD("qsound", QSOUND)
-	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_CONFIG_END
+	qsound_device &qsound(QSOUND(config, "qsound"));
+	qsound.add_route(0, "lspeaker", 1.0);
+	qsound.add_route(1, "rspeaker", 1.0);
+}
 
 /*
 
@@ -845,26 +845,27 @@ Notes:
                        Unpopulated sockets on Rival Schools - None
 */
 
-MACHINE_CONFIG_START(zn_state::coh3002c)
+void zn_state::coh3002c(machine_config &config)
+{
 	zn2(config);
 	gameboard_cat702(config);
 
 	m_maincpu->set_addrmap(AS_PROGRAM, &zn_state::coh1000c_map);
 
-	MCFG_DEVICE_ADD(m_audiocpu, Z80, XTAL(8'000'000))
-	MCFG_DEVICE_PROGRAM_MAP(qsound_map)
-	MCFG_DEVICE_IO_MAP(qsound_portmap)
-	MCFG_DEVICE_PERIODIC_INT_DRIVER(zn_state, qsound_interrupt, 250) // measured (cps2.cpp)
+	Z80(config, m_audiocpu, XTAL(8'000'000));
+	m_audiocpu->set_addrmap(AS_PROGRAM, &zn_state::qsound_map);
+	m_audiocpu->set_addrmap(AS_IO, &zn_state::qsound_portmap);
+	m_audiocpu->set_periodic_int(FUNC(zn_state::qsound_interrupt), attotime::from_hz(250)); // measured (cps2.cpp)
 
 	MCFG_MACHINE_START_OVERRIDE(zn_state, coh1000c)
 	MCFG_MACHINE_RESET_OVERRIDE(zn_state, coh1000c)
 
 	m_soundlatch->data_pending_callback().set_inputline(m_audiocpu, INPUT_LINE_NMI);
 
-	MCFG_DEVICE_ADD("qsound", QSOUND)
-	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_CONFIG_END
+	qsound_device &qsound(QSOUND(config, "qsound"));
+	qsound.add_route(0, "lspeaker", 1.0);
+	qsound.add_route(1, "rspeaker", 1.0);
+}
 
 /*
 
@@ -1112,7 +1113,7 @@ void zn_state::coh1000ta_map(address_map &map)
 
 MACHINE_START_MEMBER(zn_state,coh1000ta)
 {
-	m_rombank[0]->configure_entries( 0, 4, m_bankedroms->base(), 0x800000 ); /* banked game rom */
+	m_rombank[0]->configure_entries( 0, 4, m_bankedroms->base(), 0x800000 ); /* banked game ROM */
 	if (m_soundbank.found())
 	{
 		m_soundbank->configure_entry( 0, memregion( "audiocpu" )->base() + 0x20000 ); /* TODO : Bank 0 is addressing First 16 KB of ROM? */
@@ -1142,14 +1143,15 @@ void zn_state::fx1a_sound_map(address_map &map)
 }
 
 
-MACHINE_CONFIG_START(zn_state::coh1000ta)
+void zn_state::coh1000ta(machine_config &config)
+{
 	zn1_1mb_vram(config);
 	gameboard_cat702(config);
 
 	m_maincpu->set_addrmap(AS_PROGRAM, &zn_state::coh1000ta_map);
 
-	MCFG_DEVICE_ADD(m_audiocpu, Z80, XTAL(16'000'000) / 4)    /* 4 MHz */
-	MCFG_DEVICE_PROGRAM_MAP(fx1a_sound_map)
+	Z80(config, m_audiocpu, XTAL(16'000'000) / 4);    /* 4 MHz */
+	m_audiocpu->set_addrmap(AS_PROGRAM, &zn_state::fx1a_sound_map);
 
 	MCFG_MACHINE_START_OVERRIDE(zn_state, coh1000ta)
 	MCFG_MACHINE_RESET_OVERRIDE(zn_state, coh1000ta)
@@ -1163,10 +1165,10 @@ MACHINE_CONFIG_START(zn_state::coh1000ta)
 
 	MB3773(config, "mb3773");
 
-	MCFG_DEVICE_ADD("tc0140syt", TC0140SYT, 0)
-	MCFG_TC0140SYT_MASTER_CPU("maincpu")
-	MCFG_TC0140SYT_SLAVE_CPU("audiocpu")
-MACHINE_CONFIG_END
+	tc0140syt_device &tc0140syt(TC0140SYT(config, "tc0140syt", 0));
+	tc0140syt.set_master_tag(m_maincpu);
+	tc0140syt.set_slave_tag(m_audiocpu);
+}
 
 WRITE8_MEMBER(zn_state::fx1b_fram_w)
 {
@@ -1199,7 +1201,8 @@ void zn_state::init_coh1000tb()
 	save_pointer(NAME(m_fx1b_fram), 0x200);
 }
 
-MACHINE_CONFIG_START(zn_state::coh1000tb)
+void zn_state::coh1000tb(machine_config &config)
+{
 	zn1_1mb_vram(config);
 	gameboard_cat702(config);
 
@@ -1213,17 +1216,17 @@ MACHINE_CONFIG_START(zn_state::coh1000tb)
 	MB3773(config, "mb3773");
 
 	/* sound hardware */
-	MCFG_DEVICE_MODIFY("spu")
-	MCFG_SOUND_ROUTES_RESET()
-	MCFG_SOUND_ROUTE(0, "lspeaker", 0.3)
-	MCFG_SOUND_ROUTE(1, "rspeaker", 0.3)
+	subdevice<spu_device>("spu")->reset_routes();
+	subdevice<spu_device>("spu")->add_route(0, "lspeaker", 0.3);
+	subdevice<spu_device>("spu")->add_route(1, "rspeaker", 0.3);
 
 	TAITO_ZOOM(config, m_zoom);
 	m_zoom->add_route(0, "lspeaker", 1.0);
 	m_zoom->add_route(1, "rspeaker", 1.0);
-MACHINE_CONFIG_END
+}
 
-MACHINE_CONFIG_START(zn_state::coh1002tb)
+void zn_state::coh1002tb(machine_config &config)
+{
 	zn1_2mb_vram(config);
 	gameboard_cat702(config);
 
@@ -1237,15 +1240,14 @@ MACHINE_CONFIG_START(zn_state::coh1002tb)
 	MB3773(config, "mb3773");
 
 	/* sound hardware */
-	MCFG_DEVICE_MODIFY("spu")
-	MCFG_SOUND_ROUTES_RESET()
-	MCFG_SOUND_ROUTE(0, "lspeaker", 0.3)
-	MCFG_SOUND_ROUTE(1, "rspeaker", 0.3)
+	subdevice<spu_device>("spu")->reset_routes();
+	subdevice<spu_device>("spu")->add_route(0, "lspeaker", 0.3);
+	subdevice<spu_device>("spu")->add_route(1, "rspeaker", 0.3);
 
 	TAITO_ZOOM(config, m_zoom);
 	m_zoom->add_route(0, "lspeaker", 1.0);
 	m_zoom->add_route(1, "rspeaker", 1.0);
-MACHINE_CONFIG_END
+}
 
 /*
 
@@ -1473,21 +1475,20 @@ void zn_state::coh1000w_map(address_map &map)
 	map(0x1f7f4000, 0x1f7f4fff).rw(FUNC(zn_state::vt83c461_32_r), FUNC(zn_state::vt83c461_32_w));
 }
 
-MACHINE_CONFIG_START(zn_state::coh1000w)
+void zn_state::coh1000w(machine_config &config)
+{
 	zn1_2mb_vram(config);
 	gameboard_cat702(config);
-
 	m_maincpu->set_addrmap(AS_PROGRAM, &zn_state::coh1000w_map);
-
-	subdevice<ram_device>("maincpu:ram")->set_default_size("8M");
+	m_maincpu->subdevice<ram_device>("ram")->set_default_size("8M");
+	m_maincpu->subdevice<psxdma_device>("dma")->install_read_handler(5, psxdma_device::read_delegate(&zn_state::atpsx_dma_read, this));
+	m_maincpu->subdevice<psxdma_device>("dma")->install_write_handler(5, psxdma_device::write_delegate(&zn_state::atpsx_dma_write, this));
 
 	WATCHDOG_TIMER(config, "watchdog").set_time(attotime::from_msec(600));   /* 600ms Ds1232 TD floating */
 
 	VT83C461(config, m_vt83c461).options(ata_devices, "hdd", nullptr, true);
 	m_vt83c461->irq_handler().set("maincpu:irq", FUNC(psxirq_device::intin10));
-	MCFG_PSX_DMA_CHANNEL_READ( "maincpu", 5, psxdma_device::read_delegate(&zn_state::atpsx_dma_read, this ) )
-	MCFG_PSX_DMA_CHANNEL_WRITE( "maincpu", 5, psxdma_device::write_delegate(&zn_state::atpsx_dma_write, this ) )
-MACHINE_CONFIG_END
+}
 
 /*
 
@@ -1580,7 +1581,7 @@ RA9701 SUB
 |--------------------------------------|
 Notes:
       CAT702              - protection chip labelled 'ET02' (DIP20)
-      ROMs 217, 216 & 326 - surface mounted 32MBit MASK ROM (SOP44)
+      ROMs 217, 216 & 326 - surface mounted 32MBit mask ROM (SOP44)
       ROMs 042 & 046      - 27C2001 EPROM
       ROMs 212 to 215     - 27C4001 EPROM
       MAIN_IF2 & SUB_IF2  - AMD Mach211 CPLD (PLCC44)
@@ -1624,7 +1625,7 @@ PS9805
 Notes:
       *                   - Unpopulated ROM positions.
       CAT702              - protection chip labelled 'MG11' (DIP20)
-      ROM-x               - surface mounted 32MBit MASK ROM (SOP44)
+      ROM-x               - surface mounted 32MBit mask ROM (SOP44)
       ROMs 412 & 049      - 27C040 EPROM
       MASK4A              - smt solder pads (unpopulated)
       MASK4B              - DIP42 socket (unpopulated)
@@ -1661,7 +1662,7 @@ void zn_state::coh1002e_map(address_map &map)
 
 MACHINE_START_MEMBER(zn_state,coh1002e)
 {
-	m_rombank[0]->configure_entries( 0, 4, m_bankedroms->base(), 0x800000 ); /* banked game rom */
+	m_rombank[0]->configure_entries( 0, 4, m_bankedroms->base(), 0x800000 ); /* banked game ROM */
 	if (m_okibank.found())
 		m_okibank->configure_entries( 0, memregion( "oki" )->bytes()/0x10000, memregion( "oki" )->base(), 0x10000 ); /* not verified */
 }
@@ -1685,7 +1686,7 @@ void zn_state::psarc_snd_map(address_map &map)
 
 void zn_state::beastrzrb_snd_map(address_map &map)
 { // Internal ROM Not dumped
-//  AM_RANGE(0x0000, 0x0fff) AM_ROM
+//  map(0x0000, 0x0fff).rom();
 }
 
 void zn_state::oki_map(address_map &map)
@@ -1694,40 +1695,42 @@ void zn_state::oki_map(address_map &map)
 	map(0x30000, 0x3ffff).bankr("okibank");
 }
 
-MACHINE_CONFIG_START(zn_state::coh1002e)
+void zn_state::coh1002e(machine_config &config)
+{
 	zn1_2mb_vram(config);
 	gameboard_cat702(config);
 
 	m_maincpu->set_addrmap(AS_PROGRAM, &zn_state::coh1002e_map);
 
-	MCFG_DEVICE_ADD(m_audiocpu, M68000, XTAL(12'000'000))
-	MCFG_DEVICE_PROGRAM_MAP(psarc_snd_map)
+	M68000(config, m_audiocpu, XTAL(12'000'000));
+	m_audiocpu->set_addrmap(AS_PROGRAM, &zn_state::psarc_snd_map);
 
 	MCFG_MACHINE_START_OVERRIDE(zn_state, coh1002e)
 	MCFG_MACHINE_RESET_OVERRIDE(zn_state, coh1002e)
 
-	MCFG_DEVICE_ADD("ymf", YMF271, XTAL(16'934'400))
-	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_CONFIG_END
+	ymf271_device &ymf(YMF271(config, "ymf", XTAL(16'934'400)));
+	ymf.add_route(0, "lspeaker", 1.0);
+	ymf.add_route(1, "rspeaker", 1.0);
+}
 
-MACHINE_CONFIG_START(zn_state::beastrzrb)
+void zn_state::beastrzrb(machine_config &config)
+{
 	zn1_2mb_vram(config);
 	gameboard_cat702(config); // TODO: hook up bootleg protection
 
 	m_maincpu->set_addrmap(AS_PROGRAM, &zn_state::coh1002e_map);
 
-	MCFG_DEVICE_ADD(m_audiocpu, AT89C4051, XTAL(12'000'000)) // clock unverified
-	MCFG_DEVICE_PROGRAM_MAP(beastrzrb_snd_map)
+	AT89C4051(config, m_audiocpu, XTAL(12'000'000)); // clock unverified
+	m_audiocpu->set_addrmap(AS_PROGRAM, &zn_state::beastrzrb_snd_map);
 
 	MCFG_MACHINE_START_OVERRIDE(zn_state, coh1002e)
 	MCFG_MACHINE_RESET_OVERRIDE(zn_state, coh1002e)
 
-	MCFG_DEVICE_ADD("oki", OKIM6295, 1000000, okim6295_device::PIN7_LOW) // clock frequency & pin 7 not verified
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MCFG_DEVICE_ADDRESS_MAP(0, oki_map)
-MACHINE_CONFIG_END
+	okim6295_device &oki(OKIM6295(config, "oki", 1000000, okim6295_device::PIN7_LOW)); // clock frequency & pin 7 not verified
+	oki.add_route(ALL_OUTPUTS, "lspeaker", 1.0);
+	oki.add_route(ALL_OUTPUTS, "rspeaker", 1.0);
+	oki.set_addrmap(0, &zn_state::oki_map);
+}
 
 
 /*
@@ -1844,7 +1847,7 @@ void zn_state::init_bam2()
 
 MACHINE_START_MEMBER(zn_state,bam2)
 {
-	m_rombank[0]->configure_entries( 0, 16, m_bankedroms->base(), 0x400000 ); /* banked game rom */
+	m_rombank[0]->configure_entries( 0, 16, m_bankedroms->base(), 0x400000 ); /* banked game ROM */
 }
 
 MACHINE_RESET_MEMBER(zn_state,bam2)
@@ -1852,7 +1855,8 @@ MACHINE_RESET_MEMBER(zn_state,bam2)
 	m_rombank[0]->set_entry( 1 );
 }
 
-MACHINE_CONFIG_START(zn_state::bam2)
+void zn_state::bam2(machine_config &config)
+{
 	zn1_2mb_vram(config);
 	gameboard_cat702(config);
 
@@ -1860,7 +1864,7 @@ MACHINE_CONFIG_START(zn_state::bam2)
 
 	MCFG_MACHINE_START_OVERRIDE(zn_state, bam2)
 	MCFG_MACHINE_RESET_OVERRIDE(zn_state, bam2)
-MACHINE_CONFIG_END
+}
 
 /*
 
@@ -1871,7 +1875,7 @@ light-gun type shooting game
 Uses the Sony ZN-1 hardware with Rom board and
 Hard disk Drive
 
-U35 and U36 eproms are 27c1001 are believed to be the bios
+U35 and U36 EPROMs are 27c1001 are believed to be the BIOS
 data.
 
 Disk Drive is a Quantum ????2.1 GB??
@@ -2033,7 +2037,7 @@ Notes:
       *         - Unpopulated DIP42 socket
 */
 
-CUSTOM_INPUT_MEMBER(zn_state::jdredd_gun_mux_read)
+READ_LINE_MEMBER(zn_state::jdredd_gun_mux_r)
 {
 	return m_jdredd_gun_mux;
 }
@@ -2203,14 +2207,16 @@ void zn_state::jdredd_map(address_map &map)
 	map(0x1fbfff90, 0x1fbfff9f).rw("ata", FUNC(ata_interface_device::cs0_r), FUNC(ata_interface_device::cs0_w));
 }
 
-MACHINE_CONFIG_START(zn_state::coh1000a)
+void zn_state::coh1000a(machine_config &config)
+{
 	zn1_2mb_vram(config);
 	gameboard_cat702(config);
 
 	m_maincpu->set_addrmap(AS_PROGRAM, &zn_state::coh1000a_map);
-MACHINE_CONFIG_END
+}
 
-MACHINE_CONFIG_START(zn_state::nbajamex)
+void zn_state::nbajamex(machine_config &config)
+{
 	coh1000a(config);
 
 	m_maincpu->set_addrmap(AS_PROGRAM, &zn_state::nbajamex_map);
@@ -2222,10 +2228,11 @@ MACHINE_CONFIG_START(zn_state::nbajamex)
 
 	ADDRESS_MAP_BANK(config, "nbajamex_bankmap").set_map(&zn_state::nbajamex_bank_map).set_options(ENDIANNESS_LITTLE, 32, 24, 0x800000);
 
-	MCFG_DEVICE_ADD("rax", ACCLAIM_RAX, 0)
-MACHINE_CONFIG_END
+	ACCLAIM_RAX(config, "rax", 0);
+}
 
-MACHINE_CONFIG_START(zn_state::jdredd)
+void zn_state::jdredd(machine_config &config)
+{
 	coh1000a(config);
 
 	m_maincpu->set_addrmap(AS_PROGRAM, &zn_state::jdredd_map);
@@ -2234,7 +2241,7 @@ MACHINE_CONFIG_START(zn_state::jdredd)
 
 	ata_interface_device &ata(ATA_INTERFACE(config, "ata").options(ata_devices, "hdd", nullptr, true));
 	ata.irq_handler().set("maincpu:irq", FUNC(psxirq_device::intin10));
-MACHINE_CONFIG_END
+}
 
 /*
 
@@ -2339,10 +2346,10 @@ Notes:
       ATHG-03.22    - Sound program (27C010 EPROM)
       ATHG-04.21    /
 
-      ATHG-05.4136  - Sound data (16MBit DIP42 MASKROM)
+      ATHG-05.4136  - Sound data (16MBit DIP42 mask ROM)
       ATHG-06.4134  /
 
-      ATHG-07.027   - Graphics data (32MBit DIP42 MASKROM)
+      ATHG-07.027   - Graphics data (32MBit DIP42 mask ROM)
       ATHG-08.028   /
       ATHG-09.210   /
       ATHG-10.029   /
@@ -2375,7 +2382,7 @@ void zn_state::coh1001l_map(address_map &map)
 
 MACHINE_START_MEMBER(zn_state,coh1001l)
 {
-	m_rombank[0]->configure_entries( 0, 4, m_bankedroms->base(), 0x800000 ); /* banked game rom */
+	m_rombank[0]->configure_entries( 0, 4, m_bankedroms->base(), 0x800000 ); /* banked game ROM */
 }
 
 MACHINE_RESET_MEMBER(zn_state,coh1001l)
@@ -2392,14 +2399,15 @@ void zn_state::atlus_snd_map(address_map &map)
 }
 
 
-MACHINE_CONFIG_START(zn_state::coh1001l)
+void zn_state::coh1001l(machine_config &config)
+{
 	zn1_2mb_vram(config);
 	gameboard_cat702(config);
 
 	m_maincpu->set_addrmap(AS_PROGRAM, &zn_state::coh1001l_map);
 
-	MCFG_DEVICE_ADD(m_audiocpu, M68000, XTAL(10'000'000))
-	MCFG_DEVICE_PROGRAM_MAP(atlus_snd_map)
+	M68000(config, m_audiocpu, XTAL(10'000'000));
+	m_audiocpu->set_addrmap(AS_PROGRAM, &zn_state::atlus_snd_map);
 
 	MCFG_MACHINE_START_OVERRIDE(zn_state, coh1001l)
 	MCFG_MACHINE_RESET_OVERRIDE(zn_state, coh1001l)
@@ -2411,7 +2419,7 @@ MACHINE_CONFIG_START(zn_state::coh1001l)
 	ymz.irq_handler().set_inputline(m_audiocpu, 2);
 	ymz.add_route(0, "lspeaker", 0.35);
 	ymz.add_route(1, "rspeaker", 0.35);
-MACHINE_CONFIG_END
+}
 
 /*
 
@@ -2441,7 +2449,7 @@ void zn_state::coh1002v_map(address_map &map)
 
 MACHINE_START_MEMBER(zn_state,coh1002v)
 {
-	m_rombank[0]->configure_entries( 0, 24, m_bankedroms->base(), 0x100000 ); /* banked game rom */
+	m_rombank[0]->configure_entries( 0, 24, m_bankedroms->base(), 0x100000 ); /* banked game ROM */
 }
 
 MACHINE_RESET_MEMBER(zn_state,coh1002v)
@@ -2449,7 +2457,8 @@ MACHINE_RESET_MEMBER(zn_state,coh1002v)
 	m_rombank[0]->set_entry( 0 );
 }
 
-MACHINE_CONFIG_START(zn_state::coh1002v)
+void zn_state::coh1002v(machine_config &config)
+{
 	zn1_2mb_vram(config);
 	gameboard_cat702(config);
 
@@ -2457,7 +2466,7 @@ MACHINE_CONFIG_START(zn_state::coh1002v)
 
 	MCFG_MACHINE_START_OVERRIDE(zn_state, coh1002v)
 	MCFG_MACHINE_RESET_OVERRIDE(zn_state, coh1002v)
-MACHINE_CONFIG_END
+}
 
 /*
 
@@ -2550,7 +2559,7 @@ Tecmo TPS1-7
 |--------------------------------------|
 Notes:
       There are a few unpopulated positions on this game board, including
-      4 unpopulated positions for 4x 32MBit smt SOP44 MASKROMs
+      4 unpopulated positions for 4x 32MBit smt SOP44 mask ROMs
       1 unpopulated position for uPD72103AG near the D43001 RAM
       2 unpopulated positions for 2 connectors near the Z80 ROM possibly for a network link?
       1 unpopulated position for a PAL16V8 near ROM 'CBAJ2'
@@ -2566,8 +2575,8 @@ Notes:
       3 logic chips near main program ROMs.
       2x 4MBit EPROMs labelled 'CBAJ1' and 'CBAJ2'
       1x 2MBit EPROM labelled 'CBAJZ80'
-      9x 32MBit smt SOP44 MASKROMs labelled 'CB-00' through 'CB-08' (Graphics)
-      2x 32MBit smt SOP44 MASKROMs labelled 'CB-SE' and 'CB-V0' (connected to the YMZ280B)
+      9x 32MBit smt SOP44 mask ROMs labelled 'CB-00' through 'CB-08' (Graphics)
+      2x 32MBit smt SOP44 mask ROMs labelled 'CB-SE' and 'CB-V0' (connected to the YMZ280B)
       LH540202 - CMOS 1024 x 9 Asyncronous FIFO (PLCC32)
       D43001   - 32K x8 SRAM, equivalent to 62256 SRAM
 
@@ -2613,8 +2622,8 @@ Notes:
       CAT702 Protection chip labelled 'MG04' (DIP20)
       3 logic chips
       2x 4MBit EPROMs labelled 'SHMJ-B' and 'SHMJ-A'
-      4x 32MBit smt SOP44 MASKROMs labelled 'SH03, 'SH02', 'SH01' & 'SH00'. There is space
-      for 11 more 32MBit smt SOP44 MASKROMs.
+      4x 32MBit smt SOP44 mask ROMs labelled 'SH03, 'SH02', 'SH01' & 'SH00'. There is space
+      for 11 more 32MBit smt SOP44 mask ROMs.
 */
 
 WRITE8_MEMBER(zn_state::coh1002m_bank_w)
@@ -2632,7 +2641,7 @@ void zn_state::coh1002m_map(address_map &map)
 
 MACHINE_START_MEMBER(zn_state,coh1002m)
 {
-	m_rombank[0]->configure_entries( 0, 8, m_bankedroms->base(), 0x800000 ); /* banked game rom */
+	m_rombank[0]->configure_entries( 0, 8, m_bankedroms->base(), 0x800000 ); /* banked game ROM */
 }
 
 MACHINE_RESET_MEMBER(zn_state,coh1002m)
@@ -2640,7 +2649,8 @@ MACHINE_RESET_MEMBER(zn_state,coh1002m)
 	m_rombank[0]->set_entry( 0 );
 }
 
-MACHINE_CONFIG_START(zn_state::coh1002m)
+void zn_state::coh1002m(machine_config &config)
+{
 	zn1_2mb_vram(config);
 	gameboard_cat702(config);
 
@@ -2648,7 +2658,7 @@ MACHINE_CONFIG_START(zn_state::coh1002m)
 
 	MCFG_MACHINE_START_OVERRIDE(zn_state, coh1002m)
 	MCFG_MACHINE_RESET_OVERRIDE(zn_state, coh1002m)
-MACHINE_CONFIG_END
+}
 
 READ8_MEMBER(zn_state::cbaj_sound_main_status_r)
 {
@@ -2696,33 +2706,35 @@ void zn_state::coh1002ml_link_port_map(address_map &map)
 	map.global_mask(0xff);
 }
 
-MACHINE_CONFIG_START(zn_state::coh1002msnd)
+void zn_state::coh1002msnd(machine_config &config)
+{
 	coh1002m(config);
 
 	/* basic machine hardware */
 	m_maincpu->set_addrmap(AS_PROGRAM, &zn_state::coh1002msnd_map);
 
-	MCFG_DEVICE_ADD(m_audiocpu, Z80, XTAL(32'000'000)/8)
-	MCFG_DEVICE_PROGRAM_MAP(cbaj_z80_map)
-	MCFG_DEVICE_IO_MAP(cbaj_z80_port_map)
+	Z80(config, m_audiocpu, XTAL(32'000'000)/8);
+	m_audiocpu->set_addrmap(AS_PROGRAM, &zn_state::cbaj_z80_map);
+	m_audiocpu->set_addrmap(AS_IO, &zn_state::cbaj_z80_port_map);
 
-	FIFO7200(config, m_cbaj_fifo[0], 0x400); // LH540202
-	FIFO7200(config, m_cbaj_fifo[1], 0x400); // "
+	IDT7202(config, m_cbaj_fifo[0]); // LH540202
+	IDT7202(config, m_cbaj_fifo[1]); // "
 
-	MCFG_QUANTUM_TIME(attotime::from_hz(6000))
+	config.m_minimum_quantum = attotime::from_hz(6000);
 
 	/* sound hardware */
-	MCFG_DEVICE_ADD("ymz", YMZ280B, XTAL(16'934'400))
-	MCFG_SOUND_ROUTE(0, "lspeaker", 0.35)
-	MCFG_SOUND_ROUTE(1, "rspeaker", 0.35)
-MACHINE_CONFIG_END
+	ymz280b_device &ymz(YMZ280B(config, "ymz", XTAL(16'934'400)));
+	ymz.add_route(0, "lspeaker", 0.35);
+	ymz.add_route(1, "rspeaker", 0.35);
+}
 
-MACHINE_CONFIG_START(zn_state::coh1002ml)
+void zn_state::coh1002ml(machine_config &config)
+{
 	coh1002m(config);
-	MCFG_DEVICE_ADD("link", Z80, 4000000) // ?
-	MCFG_DEVICE_PROGRAM_MAP(coh1002ml_link_map)
-	MCFG_DEVICE_IO_MAP(coh1002ml_link_port_map)
-MACHINE_CONFIG_END
+	z80_device &link(Z80(config, "link", 4000000)); // ?
+	link.set_addrmap(AS_PROGRAM, &zn_state::coh1002ml_link_map);
+	link.set_addrmap(AS_IO, &zn_state::coh1002ml_link_port_map);
+}
 
 
 /*
@@ -2880,7 +2892,7 @@ static INPUT_PORTS_START( jdredd )
 	PORT_BIT( 0x6f, IP_ACTIVE_LOW, IPT_UNUSED )
 
 	PORT_MODIFY("SERVICE")
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_CUSTOM_MEMBER(DEVICE_SELF, zn_state,jdredd_gun_mux_read, nullptr)
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_MEMBER(zn_state, jdredd_gun_mux_r)
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_PLAYER(1)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_PLAYER(2)
 
@@ -3558,6 +3570,30 @@ ROM_START( sfex2 )
 	CPZN2_BIOS
 
 	ROM_REGION32_LE( 0x80000, "countryrom", 0 )
+	ROM_LOAD( "ex2e_04.2h", 0x0000000, 0x080000, CRC(77e1622b) SHA1(626a6718e7e843b09075b652d4fcbd9c86eea02b) )
+
+	ROM_REGION32_LE( 0x3000000, "bankedroms", 0 )
+	ROM_LOAD( "ex2-05m.3h", 0x0000000, 0x800000, CRC(78726b17) SHA1(2da449df335ef133ebc3997bbad73ef4137f4771) )
+	ROM_LOAD( "ex2-06m.4h", 0x0800000, 0x800000, CRC(be1075ed) SHA1(36dc673372f30f8b3ff5689ae568c5cd01fe2c07) )
+	ROM_LOAD( "ex2-07m.5h", 0x1000000, 0x800000, CRC(6496c6ed) SHA1(054bcecbb04033abea14d9ffe6634b2bd11ca88b) )
+	ROM_LOAD( "ex2-08m.2k", 0x1800000, 0x800000, CRC(3194132e) SHA1(d1324fcf0a8528fc683791d6342697a7e08674f4) )
+	ROM_LOAD( "ex2-09m.3k", 0x2000000, 0x400000, CRC(075ae585) SHA1(6b88851db618fc3e96f1d740c46c1bc5be0ee21b) )
+
+	ROM_REGION( 0x40000, "audiocpu", 0 ) /* 64k for the audio CPU (+banks) */
+	ROM_LOAD( "ex2_02.2e",  0x00000, 0x20000, CRC(9489875e) SHA1(1fc9985ff98232c63ea8d05a69f7d77cdf72919f) )
+
+	ROM_REGION( 0x400000, "qsound", 0 ) /* Q Sound Samples */
+	ROM_LOAD16_WORD_SWAP( "ex2-01m.3a", 0x0000000, 0x400000, CRC(14a5bb0e) SHA1(dfe3c3a53bd4c58743d8039b5344d3afbe2a9c24) )
+
+	ROM_REGION( 0x8, "cat702_2", 0 )
+	ROM_LOAD( "cp08", 0x000000, 0x000008, CRC(a63d6fa6) SHA1(68995438a1e90ff9aa59090e7e031d51c68c4d73) )
+ROM_END
+
+/* 97695-1 */
+ROM_START( sfex2u )
+	CPZN2_BIOS
+
+	ROM_REGION32_LE( 0x80000, "countryrom", 0 )
 	ROM_LOAD( "ex2u_04a.2h", 0x0000000, 0x080000, CRC(8dc5317f) SHA1(c35224caf70662a0e45a74cbead294a51f9b9e16) )
 
 	ROM_REGION32_LE( 0x3000000, "bankedroms", 0 )
@@ -3849,6 +3885,32 @@ ROM_END
 
 /* 97695-1 */
 ROM_START( sfex2p )
+	CPZN2_BIOS
+
+	ROM_REGION32_LE( 0x80000, "countryrom", 0 )
+	ROM_LOAD( "x2pe_04.2h", 0x0000000, 0x080000, CRC(2cbd44ff) SHA1(9f32e447b811df8a8fa8d28d11204fc8ca7f93f8) ) // HN27C4096AG-12
+
+	ROM_REGION32_LE( 0x3000000, "bankedroms", 0 )
+	ROM_LOAD( "x2p-05m.3h", 0x0000000, 0x800000, CRC(4ee3110f) SHA1(704f8dca7d0b698659af9e3271ea5072dfd42b8b) )
+	ROM_LOAD( "x2p-06m.4h", 0x0800000, 0x800000, CRC(4cd53a45) SHA1(39499ea6c9aa51c71f4fe44cc02f93d5a39e14ec) )
+	ROM_LOAD( "x2p-07m.5h", 0x1000000, 0x800000, CRC(11207c2a) SHA1(0182652819f1c3a36e7b42e34ef86d2455a2dd90) )
+	ROM_LOAD( "x2p-08m.2k", 0x1800000, 0x800000, CRC(3560c2cc) SHA1(8b0ce22d954387f7bb032b5220d1014ef68741e8) )
+	ROM_LOAD( "x2p-09m.3k", 0x2000000, 0x800000, CRC(344aa227) SHA1(69dc6f511939bf7fa25c2531ecf307a7565fe7a8) )
+	ROM_LOAD( "x2p-10m.4k", 0x2800000, 0x800000, CRC(2eef5931) SHA1(e5227529fb68eeb1b2f25813694173a75d906b52) )
+
+	ROM_REGION( 0x40000, "audiocpu", 0 ) /* 64k for the audio CPU (+banks) */
+	ROM_LOAD( "x2p_02.2e",  0x00000, 0x20000, CRC(3705de5e) SHA1(847007ca271da64bf13ffbf496d4291429eee27a) )
+	ROM_LOAD( "x2p_03.3e",  0x20000, 0x20000, CRC(6ae828f6) SHA1(41c54165e87b846a845da581f408b96979288158) )
+
+	ROM_REGION( 0x400000, "qsound", 0 ) /* Q Sound Samples */
+	ROM_LOAD16_WORD_SWAP( "x2p-01m.3a", 0x0000000, 0x400000, CRC(14a5bb0e) SHA1(dfe3c3a53bd4c58743d8039b5344d3afbe2a9c24) )
+
+	ROM_REGION( 0x8, "cat702_2", 0 )
+	ROM_LOAD( "cp12", 0x000000, 0x000008, CRC(7cc2ed68) SHA1(a409ae837665700bdc4e3aa7c41a418d5b792940) )
+ROM_END
+
+/* 97695-1 */
+ROM_START( sfex2pu )
 	CPZN2_BIOS
 
 	ROM_REGION32_LE( 0x80000, "countryrom", 0 )
@@ -4164,6 +4226,14 @@ ROM_START( cbaj )
 
 	ROM_REGION( 0x8, "cat702_2", 0 )
 	ROM_LOAD( "mg03", 0x000000, 0x000008, CRC(8be79633) SHA1(f38f881b6139eb8368e593904cb50b6e68bdf2e9) )
+
+	ROM_REGION( 0xc00, "misc", 0 )
+	ROM_LOAD( "gal16v8d-15lp.sop-rom1.uo117",   0x000, 0x117, CRC(cf8ebc23) SHA1(0662f8ba418eb9187fb7a86cc8c0d86220dcdbf0) )
+	ROM_LOAD( "gal16v8d-15lp.sop-rom2b.uo4138", 0x200, 0x117, CRC(098662c1) SHA1(5fcf66b16f840129aa61e9cf2b2951c37a5cbabf) )
+	ROM_LOAD( "gal16v8d-15lp.sop-rom3.uo3125",  0x400, 0x117, CRC(f9c92db7) SHA1(1c2818f0fceedca914a0cbb74c2237a8c3798906) )
+	ROM_LOAD( "gal16v8d-15lp.sop-rom4c.uo4131", 0x600, 0x117, CRC(e87179ef) SHA1(9942ff71d39924d938aa5e7c3d0c1aa9a38c5e77) )
+	ROM_LOAD( "gal16v8d-15lp.sop-rom5b.uo4128", 0x800, 0x117, CRC(f32a1803) SHA1(8251bad3fe5a0ebf6cba4c1a67aa09e391289c65) )
+	ROM_LOAD( "gal16v8d-15lp.sop-rom6a.uo4134", 0xa00, 0x117, CRC(40e1f6f2) SHA1(e7703e6db5d4f23c34c633ec147a88d2b0f681d5) )
 ROM_END
 
 ROM_START( shngmtkb )
@@ -4901,41 +4971,67 @@ ROM_START( beastrzr )
 	PSARC95_BIOS
 
 	ROM_REGION32_LE( 0x1800000, "bankedroms", 0 )
-	ROM_LOAD16_BYTE( "b.roar_u0213",   0x000001, 0x080000, CRC(2c586534) SHA1(a38dfc3a45446d24a1caac89b0f560989d46ded5) ) /* For U0212 & U0213, 8ing used indentical rom labels */
-	ROM_LOAD16_BYTE( "b.roar_u0212",   0x000000, 0x080000, CRC(1c85d7fb) SHA1(aa406a42c424cc16a9e5330c68dda9acf8760088) ) /* even though the content changes between versions   */
-	ROM_LOAD16_BYTE( "b.roar-u0215",   0x100001, 0x080000, CRC(31c8e055) SHA1(2811789ab6221b972d1e3ffe98916587990f7564) )
-	ROM_LOAD16_BYTE( "b.roar-u0214",   0x100000, 0x080000, CRC(1cdc450a) SHA1(9215e5fec52f7c5c0070feb621eb9c77f98e2362) )
-	ROM_LOAD( "ra-b-roar_rom-1.u0217", 0x400000, 0x400000, CRC(11f1ba36) SHA1(d41ae686c2c607640cbadf906215c89134758050) )
-	ROM_LOAD( "ra-b.roar_rom-2.u0216", 0x800000, 0x400000, CRC(d46d46b7) SHA1(1c42cb5dcda4b26c08c4ecf95efeadaf3a1d1dd2) )
+	ROM_LOAD16_BYTE( "b.roar_u0213.u0213",  0x000001, 0x080000, CRC(2c586534) SHA1(a38dfc3a45446d24a1caac89b0f560989d46ded5) ) // sldh - at offset 0x4C9C: Sep 22 1997 11:42:18
+	ROM_LOAD16_BYTE( "b.roar_u0212.u0212",  0x000000, 0x080000, CRC(1c85d7fb) SHA1(aa406a42c424cc16a9e5330c68dda9acf8760088) ) // sldh
+	ROM_LOAD16_BYTE( "b.roar_u0215.u0215",  0x100001, 0x080000, CRC(31c8e055) SHA1(2811789ab6221b972d1e3ffe98916587990f7564) )
+	ROM_LOAD16_BYTE( "b.roar_u0214.u0214",  0x100000, 0x080000, CRC(1cdc450a) SHA1(9215e5fec52f7c5c0070feb621eb9c77f98e2362) )
+	ROM_LOAD( "8ing_ra-b.roar_rom-1.u0217", 0x400000, 0x400000, CRC(11f1ba36) SHA1(d41ae686c2c607640cbadf906215c89134758050) )
+	ROM_LOAD( "8ing_ra-b.roar_rom-2.u0216", 0x800000, 0x400000, CRC(d46d46b7) SHA1(1c42cb5dcda4b26c08c4ecf95efeadaf3a1d1dd2) )
 
 	ROM_REGION( 0x080000, "audiocpu", 0 )
-	ROM_LOAD16_BYTE( "b.roar-u046",  0x000001, 0x040000, CRC(d4bb261a) SHA1(9a295b1354ef15f37ea09bb209cf0cb98437c462) )
-	ROM_LOAD16_BYTE( "b.roar-u042",  0x000000, 0x040000, CRC(4d537f88) SHA1(1760367d70a81606e29885ea315185d2c2a9409b) )
+	ROM_LOAD16_BYTE( "b.roar_u046.u046", 0x000001, 0x040000, CRC(d4bb261a) SHA1(9a295b1354ef15f37ea09bb209cf0cb98437c462) )
+	ROM_LOAD16_BYTE( "b.roar_u042.u042", 0x000000, 0x040000, CRC(4d537f88) SHA1(1760367d70a81606e29885ea315185d2c2a9409b) )
 
 	ROM_REGION( 0x400000, "ymf", 0 )
-	ROM_LOAD( "ra-b.roar3_rom-3.u0326", 0x000000, 0x400000, CRC(b74cc4d1) SHA1(eb5485582a12959ae06927a2f1d8a7e63e0f956f) )
+	ROM_LOAD( "8ing_ra-b.roar_rom-3.u0326", 0x000000, 0x400000, CRC(b74cc4d1) SHA1(eb5485582a12959ae06927a2f1d8a7e63e0f956f) )
 
 	ROM_REGION( 0x8, "cat702_2", 0 )
 	ROM_LOAD( "et02", 0x000000, 0x000008, CRC(187ce61a) SHA1(521122b0f7b3f278dd2a2b1d73c252b952b5f55d) )
+ROM_END
+
+// ROM board: RA9701 SUB, CPU board: Sony ZN-1 1-659-709-12
+ROM_START( beastrzra )
+	PSARC95_BIOS
+
+	ROM_REGION32_LE( 0x1800000, "bankedroms", 0 )
+	ROM_LOAD16_BYTE( "b.roar_u0213.u0213",  0x000001, 0x080000, CRC(5c3ca4d3) SHA1(f246de057c2ea725e5e628dd32597f3bc7d22070) ) // sldh - at offset 0x4C9C: Jun 21 1997 14:09:23
+	ROM_LOAD16_BYTE( "b.roar_u0212.u0212",  0x000000, 0x080000, CRC(45f1269b) SHA1(4754bc97c261dfcb5e379fe765689ea737dd5e1d) ) // sldh
+	ROM_LOAD16_BYTE( "b.roar_u0215.u0215",  0x100001, 0x080000, CRC(31c8e055) SHA1(2811789ab6221b972d1e3ffe98916587990f7564) )
+	ROM_LOAD16_BYTE( "b.roar_u0214.u0214",  0x100000, 0x080000, CRC(1cdc450a) SHA1(9215e5fec52f7c5c0070feb621eb9c77f98e2362) )
+	ROM_LOAD( "8ing_ra-b.roar_rom-1.u0217", 0x400000, 0x400000, BAD_DUMP CRC(11f1ba36) SHA1(d41ae686c2c607640cbadf906215c89134758050) ) // Not dumped on this set, taken from "beastrzr"
+	ROM_LOAD( "8ing_ra-b.roar_rom-2.u0216", 0x800000, 0x400000, BAD_DUMP CRC(d46d46b7) SHA1(1c42cb5dcda4b26c08c4ecf95efeadaf3a1d1dd2) ) // Not dumped on this set, taken from "beastrzr"
+
+	ROM_REGION( 0x080000, "audiocpu", 0 )
+	ROM_LOAD16_BYTE( "b.roar_u046.u046", 0x000001, 0x040000, CRC(d4bb261a) SHA1(9a295b1354ef15f37ea09bb209cf0cb98437c462) )
+	ROM_LOAD16_BYTE( "b.roar_u042.u042", 0x000000, 0x040000, CRC(4d537f88) SHA1(1760367d70a81606e29885ea315185d2c2a9409b) )
+
+	ROM_REGION( 0x400000, "ymf", 0 )
+	ROM_LOAD( "8ing_ra-b.roar_rom-3.u0326", 0x000000, 0x400000, BAD_DUMP CRC(b74cc4d1) SHA1(eb5485582a12959ae06927a2f1d8a7e63e0f956f) ) // Not dumped on this set, taken from "beastrzr"
+
+	ROM_REGION( 0x8, "cat702_2", 0 )
+	ROM_LOAD( "et02", 0x000000, 0x000008, CRC(187ce61a) SHA1(521122b0f7b3f278dd2a2b1d73c252b952b5f55d) )
+
+	ROM_REGION( 0x114, "plds", 0 )
+	ROM_LOAD( "gal16v8b.u0219", 0x000000, 0x000114, NO_DUMP ) // On the ROM board
 ROM_END
 
 ROM_START( bldyroar )
 	PSARC95_BIOS
 
 	ROM_REGION32_LE( 0x1800000, "bankedroms", 0 )
-	ROM_LOAD16_BYTE( "b.roar-u0213",   0x000001, 0x080000, CRC(63769342) SHA1(7231188073b997b039467db85ce7c85383daf591) ) /* For U0212 & U0213, 8ing used indentical rom labels */
-	ROM_LOAD16_BYTE( "b.roar-u0212",   0x000000, 0x080000, CRC(966b7169) SHA1(63e025cacb84e89d30b40ed6cfa5c63d84c298c4) ) /* even though the content changes between versions   */
-	ROM_LOAD16_BYTE( "b.roar-u0215",   0x100001, 0x080000, CRC(31c8e055) SHA1(2811789ab6221b972d1e3ffe98916587990f7564) )
-	ROM_LOAD16_BYTE( "b.roar-u0214",   0x100000, 0x080000, CRC(1cdc450a) SHA1(9215e5fec52f7c5c0070feb621eb9c77f98e2362) )
-	ROM_LOAD( "ra-b-roar_rom-1.u0217", 0x400000, 0x400000, CRC(11f1ba36) SHA1(d41ae686c2c607640cbadf906215c89134758050) )
-	ROM_LOAD( "ra-b.roar_rom-2.u0216", 0x800000, 0x400000, CRC(d46d46b7) SHA1(1c42cb5dcda4b26c08c4ecf95efeadaf3a1d1dd2) )
+	ROM_LOAD16_BYTE( "b.roar_u0213.u0213",  0x000001, 0x080000, CRC(63769342) SHA1(7231188073b997b039467db85ce7c85383daf591) ) // sldh - at offset 0x4C9C: Jun 21 1997 14:18:11
+	ROM_LOAD16_BYTE( "b.roar_u0212.u0212",  0x000000, 0x080000, CRC(966b7169) SHA1(63e025cacb84e89d30b40ed6cfa5c63d84c298c4) ) // sldh
+	ROM_LOAD16_BYTE( "b.roar_u0215.u0215",  0x100001, 0x080000, CRC(31c8e055) SHA1(2811789ab6221b972d1e3ffe98916587990f7564) )
+	ROM_LOAD16_BYTE( "b.roar_u0214.u0214",  0x100000, 0x080000, CRC(1cdc450a) SHA1(9215e5fec52f7c5c0070feb621eb9c77f98e2362) )
+	ROM_LOAD( "8ing_ra-b.roar_rom-1.u0217", 0x400000, 0x400000, CRC(11f1ba36) SHA1(d41ae686c2c607640cbadf906215c89134758050) )
+	ROM_LOAD( "8ing_ra-b.roar_rom-2.u0216", 0x800000, 0x400000, CRC(d46d46b7) SHA1(1c42cb5dcda4b26c08c4ecf95efeadaf3a1d1dd2) )
 
 	ROM_REGION( 0x080000, "audiocpu", 0 )
-	ROM_LOAD16_BYTE( "b.roar-u046",  0x000001, 0x040000, CRC(d4bb261a) SHA1(9a295b1354ef15f37ea09bb209cf0cb98437c462) )
-	ROM_LOAD16_BYTE( "b.roar-u042",  0x000000, 0x040000, CRC(4d537f88) SHA1(1760367d70a81606e29885ea315185d2c2a9409b) )
+	ROM_LOAD16_BYTE( "b.roar_u046.u046", 0x000001, 0x040000, CRC(d4bb261a) SHA1(9a295b1354ef15f37ea09bb209cf0cb98437c462) )
+	ROM_LOAD16_BYTE( "b.roar_u042.u042", 0x000000, 0x040000, CRC(4d537f88) SHA1(1760367d70a81606e29885ea315185d2c2a9409b) )
 
 	ROM_REGION( 0x400000, "ymf", 0 )
-	ROM_LOAD( "ra-b.roar3_rom-3.u0326", 0x000000, 0x400000, CRC(b74cc4d1) SHA1(eb5485582a12959ae06927a2f1d8a7e63e0f956f) )
+	ROM_LOAD( "8ing_ra-b.roar_rom-3.u0326", 0x000000, 0x400000, CRC(b74cc4d1) SHA1(eb5485582a12959ae06927a2f1d8a7e63e0f956f) )
 
 	ROM_REGION( 0x8, "cat702_2", 0 )
 	ROM_LOAD( "et02", 0x000000, 0x000008, CRC(187ce61a) SHA1(521122b0f7b3f278dd2a2b1d73c252b952b5f55d) )
@@ -5392,7 +5488,8 @@ GAME( 1997, rvschoolu, rvschool, coh3002c,    zn6b,     zn_state, empty_init, RO
 GAME( 1997, rvschoola, rvschool, coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom",         "Rival Schools: United By Fate (Asia 971117)",              MACHINE_IMPERFECT_SOUND )
 GAME( 1997, jgakuen,   rvschool, coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom",         "Shiritsu Justice Gakuen: Legion of Heroes (Japan 971216)", MACHINE_IMPERFECT_SOUND )
 GAME( 1997, jgakuen1,  rvschool, coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom",         "Shiritsu Justice Gakuen: Legion of Heroes (Japan 971117)", MACHINE_IMPERFECT_SOUND )
-GAME( 1998, sfex2,     coh3002c, coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom / Arika", "Street Fighter EX2 (USA 980526)",                          MACHINE_IMPERFECT_SOUND )
+GAME( 1998, sfex2,     coh3002c, coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom / Arika", "Street Fighter EX2 (Euro 980312)",                         MACHINE_IMPERFECT_SOUND )
+GAME( 1998, sfex2u,    sfex2,    coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom / Arika", "Street Fighter EX2 (USA 980526)",                          MACHINE_IMPERFECT_SOUND )
 GAME( 1998, sfex2u1,   sfex2,    coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom / Arika", "Street Fighter EX2 (USA 980312)",                          MACHINE_IMPERFECT_SOUND )
 GAME( 1998, sfex2a,    sfex2,    coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom / Arika", "Street Fighter EX2 (Asia 980312)",                         MACHINE_IMPERFECT_SOUND )
 GAME( 1998, sfex2h,    sfex2,    coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom / Arika", "Street Fighter EX2 (Hispanic 980312)",                     MACHINE_IMPERFECT_SOUND )
@@ -5404,7 +5501,8 @@ GAME( 1998, tgmj,      coh3002c, coh3002c,    zn4w,     zn_state, empty_init, RO
 GAME( 1998, techromn,  coh3002c, coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom",         "Tech Romancer (Euro 980914)",                              MACHINE_IMPERFECT_SOUND )
 GAME( 1998, techromnu, techromn, coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom",         "Tech Romancer (USA 980914)",                               MACHINE_IMPERFECT_SOUND )
 GAME( 1998, kikaioh,   techromn, coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom",         "Choukou Senki Kikaioh (Japan 980914)",                     MACHINE_IMPERFECT_SOUND )
-GAME( 1999, sfex2p,    coh3002c, coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom / Arika", "Street Fighter EX2 Plus (USA 990611)",                     MACHINE_IMPERFECT_SOUND )
+GAME( 1999, sfex2p,    coh3002c, coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom / Arika", "Street Fighter EX2 Plus (Euro 990611)",                    MACHINE_IMPERFECT_SOUND )
+GAME( 1999, sfex2pu,   sfex2p,   coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom / Arika", "Street Fighter EX2 Plus (USA 990611)",                     MACHINE_IMPERFECT_SOUND )
 GAME( 1999, sfex2pa,   sfex2p,   coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom / Arika", "Street Fighter EX2 Plus (Asia 990611)",                    MACHINE_IMPERFECT_SOUND )
 GAME( 1999, sfex2ph,   sfex2p,   coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom / Arika", "Street Fighter EX2 Plus (Hispanic 990611)",                MACHINE_IMPERFECT_SOUND )
 GAME( 1999, sfex2pj,   sfex2p,   coh3002c,    zn6b,     zn_state, empty_init, ROT0, "Capcom / Arika", "Street Fighter EX2 Plus (Japan 990611)",                   MACHINE_IMPERFECT_SOUND )
@@ -5474,10 +5572,11 @@ GAME( 1997, gdariusb,  gdarius2, coh1002tb,   znt,      zn_state, init_coh1000tb
 GAME( 1997, gdarius2,  coh1000t, coh1002tb,   znt,      zn_state, init_coh1000tb, ROT0, "Taito", "G-Darius Ver.2 (Ver 2.03J)",     MACHINE_IMPERFECT_SOUND )
 
 /* Eighting / Raizing */
-GAME( 1997, coh1002e,  0,        coh1002e,    znt,      zn_state, empty_init, ROT0, "Eighting / Raizing", "PS Arcade 95",              MACHINE_IS_BIOS_ROOT )
-GAME( 1997, beastrzr,  coh1002e, coh1002e,    znt,      zn_state, empty_init, ROT0, "Eighting / Raizing", "Beastorizer (USA)",         MACHINE_IMPERFECT_SOUND )
-GAME( 1997, bldyroar,  beastrzr, coh1002e,    znt,      zn_state, empty_init, ROT0, "Eighting / Raizing", "Bloody Roar (Japan)",       MACHINE_IMPERFECT_SOUND )
-GAME( 1997, beastrzrb, beastrzr, beastrzrb,   znt,      zn_state, empty_init, ROT0, "bootleg",            "Beastorizer (USA bootleg)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING )
+GAME( 1997, coh1002e,  0,        coh1002e,    znt,      zn_state, empty_init, ROT0, "Eighting / Raizing", "PS Arcade 95",                     MACHINE_IS_BIOS_ROOT )
+GAME( 1997, beastrzr,  coh1002e, coh1002e,    znt,      zn_state, empty_init, ROT0, "Eighting / Raizing", "Beastorizer (USA, Sep 22 1997)",   MACHINE_IMPERFECT_SOUND )
+GAME( 1997, beastrzra, beastrzr, coh1002e,    znt,      zn_state, empty_init, ROT0, "Eighting / Raizing", "Beastorizer (USA, Jun 21 1997)",   MACHINE_IMPERFECT_SOUND )
+GAME( 1997, bldyroar,  beastrzr, coh1002e,    znt,      zn_state, empty_init, ROT0, "Eighting / Raizing", "Bloody Roar (Japan, Jun 21 1997)", MACHINE_IMPERFECT_SOUND )
+GAME( 1997, beastrzrb, beastrzr, beastrzrb,   znt,      zn_state, empty_init, ROT0, "bootleg",            "Beastorizer (USA bootleg)",        MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING )
 
 /* The region on these is determined from the NVRAM, it can't be changed from the test menu, it's pre-programmed */
 GAME( 1998, bldyror2,  coh1002e, coh1002e,    bldyror2, zn_state, empty_init, ROT0, "Eighting / Raizing", "Bloody Roar 2 (World)", MACHINE_IMPERFECT_SOUND ) // locks up if you coin up during the fmw with interlace enabled

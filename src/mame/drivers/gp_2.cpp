@@ -582,7 +582,8 @@ static const z80_daisy_config daisy_chain[] =
 	{ nullptr }
 };
 
-MACHINE_CONFIG_START(gp_2_state::gp_2)
+void gp_2_state::gp_2(machine_config &config)
+{
 	/* basic machine hardware */
 	Z80(config, m_maincpu, 2457600);
 	m_maincpu->set_addrmap(AS_PROGRAM, &gp_2_state::gp_2_map);
@@ -605,8 +606,8 @@ MACHINE_CONFIG_START(gp_2_state::gp_2)
 
 	Z80CTC(config, m_ctc, 2457600);
 	m_ctc->intr_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ0); // Todo: absence of ints will cause a watchdog reset
-	MCFG_TIMER_DRIVER_ADD_PERIODIC("gp1", gp_2_state, zero_timer, attotime::from_hz(120)) // mains freq*2
-MACHINE_CONFIG_END
+	TIMER(config, "gp1").configure_periodic(FUNC(gp_2_state::zero_timer), attotime::from_hz(120)); // mains freq*2
+}
 
 /*-------------------------------------------------------------------
 / Agents 777 (November 1984) - Model #770
@@ -686,6 +687,18 @@ ROM_START(cyclopes)
 	ROM_LOAD( "800.a", 0x0000, 0x1000, CRC(3e9628e5) SHA1(4dad9e082a9f4140162bc155f2b0f0a948ba012f))
 	ROM_LOAD( "800.b", 0x1000, 0x1000, CRC(3f945c46) SHA1(25eb543e0b0edcd0a0dcf8e4aa1405cda55ebe2e))
 	ROM_LOAD( "800.c", 0x2000, 0x1000, CRC(7ea18e65) SHA1(e86d82e3ba659499dfbf14920b196252784724f7))
+
+	ROM_REGION(0x10000, "cpu2", 0)
+	ROM_LOAD ("800.snd", 0x3800, 0x0800, CRC(290db3d2) SHA1(a236594f7a89969981bd5707d6dfbb5120fb8f46))
+	ROM_CONTINUE(0x7800, 0x0800)
+	ROM_RELOAD (0xf000, 0x1000)
+ROM_END
+
+ROM_START(cyclopes1)
+	ROM_REGION(0x4000, "roms", 0)
+	ROM_LOAD( "800a.111585", 0x0000, 0x1000, CRC(13131b90) SHA1(33f6c4aaaa2511a9c78e68f8df9a6461cd92c23f))
+	ROM_LOAD( "800b.111585", 0x1000, 0x1000, CRC(3d515632) SHA1(2c4a7f18760b591a85331fa0304177a730540489))
+	ROM_LOAD( "800c.111585", 0x2000, 0x1000, CRC(2078bd3f) SHA1(fed719ffdbd71242393c0786ad6e763a9e25ff8e))
 
 	ROM_REGION(0x10000, "cpu2", 0)
 	ROM_LOAD ("800.snd", 0x3800, 0x0800, CRC(290db3d2) SHA1(a236594f7a89969981bd5707d6dfbb5120fb8f46))
@@ -840,4 +853,5 @@ GAME( 1985, ladyshota, ladyshot, gp_2, gp_2, gp_2_state, empty_init, ROT0, "Game
 // credit (start) button not working
 GAME( 1985, andromep,  0,        gp_2, gp_2, gp_2_state, empty_init, ROT0, "Game Plan", "Andromeda (set 1)", MACHINE_IS_SKELETON_MECHANICAL)
 GAME( 1985, andromepa, andromep, gp_2, gp_2, gp_2_state, empty_init, ROT0, "Game Plan", "Andromeda (set 2)", MACHINE_IS_SKELETON_MECHANICAL)
-GAME( 1985, cyclopes,  0,        gp_2, gp_2, gp_2_state, empty_init, ROT0, "Game Plan", "Cyclopes",          MACHINE_IS_SKELETON_MECHANICAL)
+GAME( 1985, cyclopes,  0,        gp_2, gp_2, gp_2_state, empty_init, ROT0, "Game Plan", "Cyclopes (12/85)",  MACHINE_IS_SKELETON_MECHANICAL)
+GAME( 1985, cyclopes1, cyclopes, gp_2, gp_2, gp_2_state, empty_init, ROT0, "Game Plan", "Cyclopes (11/85)",  MACHINE_IS_SKELETON_MECHANICAL)

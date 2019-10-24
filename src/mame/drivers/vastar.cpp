@@ -473,12 +473,10 @@ void vastar_state::vastar(machine_config &config)
 	screen.set_size(32*8, 32*8);
 	screen.set_visarea(0*8, 32*8-1, 2*8, 30*8-1);
 	screen.set_screen_update(FUNC(vastar_state::screen_update));
-	screen.set_palette("palette");
+	screen.set_palette(m_palette);
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_vastar);
-	PALETTE(config, m_palette, 256);
-	m_palette->set_prom_region("proms");
-	m_palette->set_init("palette", FUNC(palette_device::palette_init_RRRRGGGGBBBB_proms));
+	PALETTE(config, m_palette, palette_device::RGB_444_PROMS, "proms", 256);
 }
 
 void dogfightp_state::dogfightp(machine_config &config)
@@ -486,13 +484,15 @@ void dogfightp_state::dogfightp(machine_config &config)
 	common(config);
 
 	m_maincpu->set_addrmap(AS_PROGRAM, &dogfightp_state::dogfightp_main_map);
-	m_maincpu->set_vblank_int("videopcb:screen", FUNC(vastar_common_state::vblank_irq));
+	m_maincpu->set_vblank_int("screen", FUNC(vastar_common_state::vblank_irq));
 
 	ls259_device &mainlatch(*subdevice<ls259_device>("mainlatch"));
 	mainlatch.q_out_cb<1>().set("videopcb", FUNC(orca_ovg_40c_device::flipscreen_w));
 
+	SCREEN(config, "screen", SCREEN_TYPE_RASTER);
+
 	orca_ovg_40c_device& videopcb(ORCA_OVG_40C(config, "videopcb", 0));
-	videopcb.set_palette("videopcb:palette");
+	videopcb.set_screen("screen");
 	videopcb.set_percuss_hardware(true);
 }
 

@@ -16,7 +16,7 @@
 #include "cpu/z80/z80.h"
 #include "machine/z80daisy.h"
 
-#include "machine/clock.h"
+#include "imagedev/floppy.h"
 #include "machine/msm5832.h"
 #include "machine/wd_fdc.h"
 #include "machine/z80ctc.h"
@@ -67,7 +67,7 @@ public:
 
 	void aussiebyte(machine_config &config);
 
-	DECLARE_QUICKLOAD_LOAD_MEMBER(aussiebyte);
+	DECLARE_QUICKLOAD_LOAD_MEMBER(quickload_cb);
 
 protected:
 	DECLARE_READ8_MEMBER(memory_read_byte);

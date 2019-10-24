@@ -35,7 +35,7 @@ Notes:
       CDP1802 - RCA CDP1802CE Microprocessor
       TA10171V1 - RCA TA10171V1 NTSC Video Display Controller (VDC) (= RCA CDP1861)
       CDP1822 - RCA CDP1822NCE 256 x4 RAM (= Mitsubishi M58721P)
-      ROM.x   - RCA CDP1831CE 512 x8 MASKROM. All ROMs are marked 'PROGRAM COPYRIGHT (C) RCA CORP. 1977'
+      ROM.x   - RCA CDP1831CE 512 x8 mask ROM. All ROMs are marked 'PROGRAM COPYRIGHT (C) RCA CORP. 1977'
       CD4001  - 4001 Quad 2-Input NOR Buffered B Series Gate (4000-series CMOS TTL logic IC)
       CD4042  - 4042 Quad Clocked D Latch (4000-series CMOS TTL logic IC)
       CD4515  - 4515 4-Bit Latched/4-to-16 Line Decoders (4000-series CMOS TTL logic IC)
@@ -77,7 +77,7 @@ Notes: (all chips shown above)
                 Clock - 223.721562kHz [3.579545/16] (measured on pin 1)
       2111    - NEC D2111AL-4 256 bytes x4 SRAM (DIP18, x6). Total 1.5k
       C       - Composite Video Output to TV from TV Modulator
-      TMM331  - Toshiba TMM331AP 2k x8 MASKROM (DIP24)
+      TMM331  - Toshiba TMM331AP 2k x8 mask ROM (DIP24)
                 Pinout:
                            TMM331
                         |----\/----|
@@ -165,7 +165,7 @@ Notes:
       CDP1802 - RCA CDP1802CE Microprocessor
       CDP1864 - RCA CDP1864CE PAL Video Display Controller (VDC)
       CDP1822 - RCA CDP1822NCE 256 x4 RAM (= Mitsubishi M58721P)
-      ROM.ICx - RCA CDP1833 1k x8 MASKROM. All ROMs are marked 'PROGRAM COPYRIGHT (C) RCA CORP. 1978'
+      ROM.ICx - RCA CDP1833 1k x8 mask ROM. All ROMs are marked 'PROGRAM COPYRIGHT (C) RCA CORP. 1978'
       CD4019  - 4019 Quad AND-OR Select Gate (4000-series CMOS TTL logic IC)
       CDP1858 - RCA CDP1858E Latch/Decoder - 4-bit
       CD4081  - 4081 Quad 2-Input AND Buffered B Series Gate (4000-series CMOS TTL logic IC)
@@ -180,6 +180,12 @@ Notes:
     TODO:
 
     - NE555 discrete sound
+
+
+    Usage
+    - All variants: Boot up, then press F3, then press a letter (Q,W,E,A) to choose an inbuilt game.
+    - If using a cart, boot up, press F3, then follow the instructions that came with the cart (usually press Q).
+    - Currently, Visicom cannot run any carts, and has no support for st2 files.
 
 */
 
@@ -249,7 +255,7 @@ protected:
 	DECLARE_READ_LINE_MEMBER( ef3_r );
 	DECLARE_READ_LINE_MEMBER( ef4_r );
 	DECLARE_WRITE_LINE_MEMBER( q_w );
-	DECLARE_DEVICE_IMAGE_LOAD_MEMBER( studio2_cart_load );
+	DECLARE_DEVICE_IMAGE_LOAD_MEMBER( cart_load );
 
 	/* keyboard state */
 	uint8_t m_keylatch;
@@ -514,10 +520,10 @@ WRITE8_MEMBER( mpt02_state::dma_w )
 /* Machine Initialization */
 
 // trampolines to cartridge
-READ8_MEMBER( studio2_state::cart_400 ) { return m_cart->read_rom(space, offset); }
-READ8_MEMBER( studio2_state::cart_a00 ) { return m_cart->read_rom(space, offset + 0x600); }
-READ8_MEMBER( studio2_state::cart_e00 ) { return m_cart->read_rom(space, offset + 0xa00); }
-READ8_MEMBER( mpt02_state::cart_c00 ) { return m_cart->read_rom(space, offset + 0x800); }
+READ8_MEMBER( studio2_state::cart_400 ) { return m_cart->read_rom(offset); }
+READ8_MEMBER( studio2_state::cart_a00 ) { return m_cart->read_rom(offset + 0x600); }
+READ8_MEMBER( studio2_state::cart_e00 ) { return m_cart->read_rom(offset + 0xa00); }
+READ8_MEMBER( mpt02_state::cart_c00 ) { return m_cart->read_rom(offset + 0x800); }
 
 void studio2_state::machine_start()
 {
@@ -556,7 +562,7 @@ void mpt02_state::machine_reset()
 	m_cti->reset();
 }
 
-DEVICE_IMAGE_LOAD_MEMBER( studio2_state, studio2_cart_load )
+DEVICE_IMAGE_LOAD_MEMBER( studio2_state::cart_load )
 {
 	uint32_t size;
 
@@ -639,16 +645,16 @@ DEVICE_IMAGE_LOAD_MEMBER( studio2_state, studio2_cart_load )
 
 /* Machine Drivers */
 
-MACHINE_CONFIG_START(studio2_state::studio2_cartslot)
-	MCFG_GENERIC_CARTSLOT_ADD("cartslot", generic_plain_slot, "studio2_cart")
-	MCFG_GENERIC_EXTENSIONS("st2,bin,rom")
-	MCFG_GENERIC_LOAD(studio2_state, studio2_cart_load)
+void studio2_state::studio2_cartslot(machine_config &config)
+{
+	GENERIC_CARTSLOT(config, "cartslot", generic_plain_slot, "studio2_cart", "st2,bin,rom").set_device_load(FUNC(studio2_state::cart_load), this);
 
 	/* software lists */
-	MCFG_SOFTWARE_LIST_ADD("cart_list", "studio2")
-MACHINE_CONFIG_END
+	SOFTWARE_LIST(config, "cart_list").set_original("studio2");
+}
 
-MACHINE_CONFIG_START(studio2_state::studio2)
+void studio2_state::studio2(machine_config &config)
+{
 	/* basic machine hardware */
 	CDP1802(config, m_maincpu, 1760000); /* the real clock is derived from an oscillator circuit */
 	m_maincpu->set_addrmap(AS_PROGRAM, &studio2_state::studio2_map);
@@ -672,9 +678,10 @@ MACHINE_CONFIG_START(studio2_state::studio2)
 	BEEP(config, m_beeper, 300).add_route(ALL_OUTPUTS, "mono", 1.00);
 
 	studio2_cartslot(config);
-MACHINE_CONFIG_END
+}
 
-MACHINE_CONFIG_START(visicom_state::visicom)
+void visicom_state::visicom(machine_config &config)
+{
 	/* basic machine hardware */
 	CDP1802(config, m_maincpu, XTAL(3'579'545)/2);
 	m_maincpu->set_addrmap(AS_PROGRAM, &visicom_state::visicom_map);
@@ -699,14 +706,14 @@ MACHINE_CONFIG_START(visicom_state::visicom)
 	SPEAKER(config, "mono").front_center();
 	BEEP(config, m_beeper, 300).add_route(ALL_OUTPUTS, "mono", 1.00);
 
-	MCFG_GENERIC_CARTSLOT_ADD("cartslot", generic_plain_slot, "visicom_cart")
-	MCFG_GENERIC_EXTENSIONS("bin,rom")
+	GENERIC_CARTSLOT(config, m_cart, generic_plain_slot, "visicom_cart", "bin,rom");
 
 	/* software lists */
-	MCFG_SOFTWARE_LIST_ADD("cart_list", "visicom")
-MACHINE_CONFIG_END
+	SOFTWARE_LIST(config, "cart_list").set_original("visicom");
+}
 
-MACHINE_CONFIG_START(mpt02_state::mpt02)
+void mpt02_state::mpt02(machine_config &config)
+{
 	/* basic machine hardware */
 	CDP1802(config, m_maincpu, 1.75_MHz_XTAL);
 	m_maincpu->set_addrmap(AS_PROGRAM, &mpt02_state::mpt02_map);
@@ -735,7 +742,7 @@ MACHINE_CONFIG_START(mpt02_state::mpt02)
 	m_cti->add_route(ALL_OUTPUTS, "mono", 0.25);
 
 	studio2_cartslot(config);
-MACHINE_CONFIG_END
+}
 
 /* ROMs */
 
@@ -759,11 +766,7 @@ ROM_START( mpt02 )
 	ROM_LOAD( "87201.ic12",  0xc00, 0x400, CRC(8006a1e3) SHA1(b67612d98231485fce55d604915abd19b6d64eac) )
 ROM_END
 
-ROM_START( mpt02h )
-	ROM_REGION( 0x1000, CDP1802_TAG, 0 )
-	ROM_LOAD( "86676.ic13",  0x000, 0x400, CRC(a7d0dd3b) SHA1(e1881ab4d67a5d735dd2c8d7e924e41df6f2aeec) )
-ROM_END
-
+#define rom_mpt02h rom_mpt02
 #define rom_mtc9016 rom_mpt02
 #define rom_shmc1200 rom_mpt02
 #define rom_cm1200 rom_mpt02

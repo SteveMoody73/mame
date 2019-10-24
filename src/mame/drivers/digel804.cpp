@@ -74,8 +74,8 @@ public:
 		driver_device(mconfig, type, tag),
 		m_ram(*this, RAM_TAG),
 		m_maincpu(*this, "maincpu"),
-		m_speaker(*this, "speaker"),
 		m_acia(*this, "acia"),
+		m_speaker(*this, "speaker"),
 		m_vfd(*this, "vfd"),
 		m_kb(*this, "74c923"),
 		m_rambank(*this, "bankedram"),
@@ -119,11 +119,11 @@ protected:
 	void z80_io_1_4(address_map &map);
 
 	required_device<ram_device> m_ram;
+	required_device<cpu_device> m_maincpu;
+	required_device<mos6551_device> m_acia;
 
 private:
-	required_device<cpu_device> m_maincpu;
 	required_device<speaker_sound_device> m_speaker;
-	required_device<mos6551_device> m_acia;
 	required_device<roc10937_device> m_vfd;
 	required_device<mm74c922_device> m_kb;
 	required_memory_bank m_rambank;
@@ -395,7 +395,7 @@ INPUT_CHANGED_MEMBER( digel804_state::mode_change )
 {
 	if (!newval && !m_keyen_state)
 	{
-		switch ((int)(uintptr_t)param)
+		switch (param)
 		{
 			case MODE_OFF:
 				m_key_mode = m_remote_mode = m_sim_mode = 1;
@@ -424,44 +424,44 @@ INPUT_CHANGED_MEMBER( digel804_state::mode_change )
 /* ACIA Trampolines */
 READ8_MEMBER( digel804_state::acia_rxd_r )
 {
-	return m_acia->read(space, 0);
+	return m_acia->read(0);
 }
 
 WRITE8_MEMBER( digel804_state::acia_txd_w )
 {
-	m_acia->write(space, 0, data);
+	m_acia->write(0, data);
 }
 
 READ8_MEMBER( digel804_state::acia_status_r )
 {
-	return m_acia->read(space, 1);
+	return m_acia->read(1);
 }
 
 WRITE8_MEMBER( digel804_state::acia_reset_w )
 {
-	m_acia->write(space, 1, data);
+	m_acia->write(1, data);
 }
 
 READ8_MEMBER( digel804_state::acia_command_r )
 {
-	return m_acia->read(space, 2);
+	return m_acia->read(2);
 }
 
 WRITE8_MEMBER( digel804_state::acia_command_w )
 {
 	data |= 0x08;   // HACK for ep804 remote mode
 
-	m_acia->write(space, 2, data);
+	m_acia->write(2, data);
 }
 
 READ8_MEMBER( digel804_state::acia_control_r )
 {
-	return m_acia->read(space, 3);
+	return m_acia->read(3);
 }
 
 WRITE8_MEMBER( digel804_state::acia_control_w )
 {
-	m_acia->write(space, 3, data);
+	m_acia->write(3, data);
 }
 
 
@@ -473,10 +473,10 @@ void digel804_state::z80_mem_804_1_4(address_map &map)
 {
 	map.unmap_value_high();
 	map(0x0000, 0x3fff).rom(); // 3f in mapper = rom J3
-	//AM_RANGE(0x4000, 0x5fff) AM_RAM AM_SHARE("main_ram") // 6f in mapper = RAM D43 (6164)
-	//AM_RANGE(0x6000, 0x7fff) AM_RAM AM_SHARE("main_ram") // 77 in mapper = RAM D44 (6164)
-	//AM_RANGE(0x8000, 0x9fff) AM_RAM AM_SHARE("main_ram") // 7b in mapper = RAM D45 (6164)
-	//AM_RANGE(0xa000, 0xbfff) AM_RAM AM_SHARE("main_ram") // 7d in mapper = RAM D46 (6164)
+	//map(0x4000, 0x5fff).ram().share("main_ram"); // 6f in mapper = RAM D43 (6164)
+	//map(0x6000, 0x7fff).ram().share("main_ram"); // 77 in mapper = RAM D44 (6164)
+	//map(0x8000, 0x9fff).ram().share("main_ram"); // 7b in mapper = RAM D45 (6164)
+	//map(0xa000, 0xbfff).ram().share("main_ram"); // 7d in mapper = RAM D46 (6164)
 	map(0x4000, 0xbfff).bankrw("bankedram");
 	// c000-cfff is open bus in mapper, 7f
 	map(0xd000, 0xd7ff).ram(); // 7e in mapper = RAM P3 (6116)
@@ -489,13 +489,13 @@ void ep804_state::z80_mem_804_1_2(address_map &map)
 	map.unmap_value_high();
 	map(0x0000, 0x1fff).rom(); // 3f in mapper = rom D41
 	map(0x2000, 0x3fff).rom(); // 5f in mapper = rom D42
-	//AM_RANGE(0x4000, 0x5fff) AM_RAM AM_SHARE("main_ram") // 6f in mapper = RAM D43 (6164)
-	//AM_RANGE(0x6000, 0x7fff) AM_RAM AM_SHARE("main_ram") // 77 in mapper = RAM D44 (6164)
-	//AM_RANGE(0x8000, 0x9fff) AM_RAM AM_SHARE("main_ram") // 7b in mapper = RAM D45 (6164)
-	//AM_RANGE(0xa000, 0xbfff) AM_RAM AM_SHARE("main_ram") // 7d in mapper = RAM D46 (6164)
+	//map(0x4000, 0x5fff).ram().share("main_ram"); // 6f in mapper = RAM D43 (6164)
+	//map(0x6000, 0x7fff).ram().share("main_ram"); // 77 in mapper = RAM D44 (6164)
+	//map(0x8000, 0x9fff).ram().share("main_ram"); // 7b in mapper = RAM D45 (6164)
+	//map(0xa000, 0xbfff).ram().share("main_ram"); // 7d in mapper = RAM D46 (6164)
 	map(0x4000, 0xbfff).bankrw("bankedram");
 	// c000-cfff is open bus in mapper, 7f
-	//AM_RANGE(0xc000, 0xc7ff) AM_RAM // hack for now to test, since sometimes it writes to c3ff
+	//map(0xc000, 0xc7ff).ram(); // hack for now to test, since sometimes it writes to c3ff
 	map(0xd000, 0xd7ff).ram(); // 7e in mapper = RAM D47 (6116)
 	// d800-ffff is open bus in mapper, 7f
 }
@@ -525,7 +525,7 @@ void digel804_state::z80_io_1_4(address_map &map)
 	map(0x85, 0x85).mirror(0x38).r(FUNC(digel804_state::acia_command_r)); // (ACIA command reg)
 	map(0x86, 0x86).mirror(0x38).w(FUNC(digel804_state::acia_control_w)); // (ACIA control reg)
 	map(0x87, 0x87).mirror(0x38).r(FUNC(digel804_state::acia_control_r)); // (ACIA control reg)
-	//AM_RANGE(0x80,0x87) AM_MIRROR(0x38) AM_SHIFT(-1) AM_DEVREADWRITE("acia", mos6551_device, read, write) // this doesn't work since we lack an AM_SHIFT command
+	//map(0x80,0x87).mirror(0x38).shift(-1).rw("acia", FUNC(mos6551_device::read, FUNC(mos6551_device::write)); // this doesn't work since we lack a shift() command
 
 }
 
@@ -553,7 +553,7 @@ void ep804_state::z80_io_1_2(address_map &map)
 	map(0x85, 0x85).mirror(0x38).r(FUNC(ep804_state::acia_command_r)); // (ACIA command reg)
 	map(0x86, 0x86).mirror(0x38).w(FUNC(ep804_state::acia_control_w)); // (ACIA control reg)
 	map(0x87, 0x87).mirror(0x38).r(FUNC(ep804_state::acia_control_r)); // (ACIA control reg)
-	//AM_RANGE(0x80,0x87) AM_MIRROR(0x38) AM_SHIFT(-1) AM_DEVREADWRITE("acia", mos6551_device, read, write) // this doesn't work since we lack an AM_SHIFT command
+	//map(0x80,0x87).mirror(0x38).shift(-1).rw("acia", FUNC(mos6551_device::read, FUNC(mos6551_device::write)); // this doesn't work since we lack a shift() command
 
 }
 
@@ -631,60 +631,61 @@ WRITE_LINE_MEMBER( ep804_state::ep804_acia_irq_w )
 {
 }
 
-MACHINE_CONFIG_START(digel804_state::digel804)
+void digel804_state::digel804(machine_config &config)
+{
 	/* basic machine hardware */
-	MCFG_DEVICE_ADD("maincpu", Z80, 3.6864_MHz_XTAL/2) /* Z80A, X1(aka E0 on schematics): 3.6864Mhz */
-	MCFG_DEVICE_PROGRAM_MAP(z80_mem_804_1_4)
-	MCFG_DEVICE_IO_MAP(z80_io_1_4)
-	MCFG_QUANTUM_TIME(attotime::from_hz(60))
+	Z80(config, m_maincpu, 3.6864_MHz_XTAL/2); /* Z80A, X1(aka E0 on schematics): 3.6864Mhz */
+	m_maincpu->set_addrmap(AS_PROGRAM, &digel804_state::z80_mem_804_1_4);
+	m_maincpu->set_addrmap(AS_IO, &digel804_state::z80_io_1_4);
+	config.m_minimum_quantum = attotime::from_hz(60);
 
-	MCFG_ROC10937_ADD("vfd",0) // RIGHT_TO_LEFT
+	ROC10937(config, m_vfd); // RIGHT_TO_LEFT
 
 	/* video hardware */
 	config.set_default_layout(layout_digel804);
 
-	MCFG_DEVICE_ADD("74c923", MM74C923, 0)
-	MCFG_MM74C922_DA_CALLBACK(WRITELINE(*this, digel804_state, da_w))
-	MCFG_MM74C922_X1_CALLBACK(IOPORT("LINE0"))
-	MCFG_MM74C922_X2_CALLBACK(IOPORT("LINE1"))
-	MCFG_MM74C922_X3_CALLBACK(IOPORT("LINE2"))
-	MCFG_MM74C922_X4_CALLBACK(IOPORT("LINE3"))
+	MM74C923(config, m_kb, 0);
+	m_kb->da_wr_callback().set(FUNC(digel804_state::da_w));
+	m_kb->x1_rd_callback().set_ioport("LINE0");
+	m_kb->x2_rd_callback().set_ioport("LINE1");
+	m_kb->x3_rd_callback().set_ioport("LINE2");
+	m_kb->x4_rd_callback().set_ioport("LINE3");
 
 	/* acia */
-	mos6551_device &acia(MOS6551(config, "acia", 0));
-	acia.set_xtal(3.6864_MHz_XTAL/2);
-	acia.irq_handler().set(FUNC(digel804_state::acia_irq_w));
-	acia.txd_handler().set("rs232", FUNC(rs232_port_device::write_txd));
-	acia.rts_handler().set("rs232", FUNC(rs232_port_device::write_rts));
-	acia.dtr_handler().set("rs232", FUNC(rs232_port_device::write_dtr));
+	MOS6551(config, m_acia, 0);
+	m_acia->set_xtal(3.6864_MHz_XTAL/2);
+	m_acia->irq_handler().set(FUNC(digel804_state::acia_irq_w));
+	m_acia->txd_handler().set("rs232", FUNC(rs232_port_device::write_txd));
+	m_acia->rts_handler().set("rs232", FUNC(rs232_port_device::write_rts));
+	m_acia->dtr_handler().set("rs232", FUNC(rs232_port_device::write_dtr));
 
-	MCFG_DEVICE_ADD("rs232", RS232_PORT, default_rs232_devices, "null_modem")
-	MCFG_RS232_RXD_HANDLER(WRITELINE("acia", mos6551_device, write_rxd))
-	MCFG_RS232_DSR_HANDLER(WRITELINE("acia", mos6551_device, write_dsr))
-	MCFG_RS232_CTS_HANDLER(WRITELINE("acia", mos6551_device, write_cts))
-	MCFG_SLOT_OPTION_DEVICE_INPUT_DEFAULTS("null_modem", digel804_rs232_defaults)
-	MCFG_SLOT_OPTION_DEVICE_INPUT_DEFAULTS("terminal", digel804_rs232_defaults)
+	rs232_port_device &rs232(RS232_PORT(config, "rs232", default_rs232_devices, "null_modem"));
+	rs232.rxd_handler().set(m_acia, FUNC(mos6551_device::write_rxd));
+	rs232.dsr_handler().set(m_acia, FUNC(mos6551_device::write_dsr));
+	rs232.cts_handler().set(m_acia, FUNC(mos6551_device::write_cts));
+	rs232.set_option_device_input_defaults("null_modem", DEVICE_INPUT_DEFAULTS_NAME(digel804_rs232_defaults));
+	rs232.set_option_device_input_defaults("terminal", DEVICE_INPUT_DEFAULTS_NAME(digel804_rs232_defaults));
 
 	RAM(config, m_ram).set_default_size("256K").set_extra_options("32K,64K,128K");
 
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();
-	MCFG_DEVICE_ADD("speaker", SPEAKER_SOUND)
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_CONFIG_END
+	SPEAKER_SOUND(config, m_speaker).add_route(ALL_OUTPUTS, "mono", 0.25);
+}
 
-MACHINE_CONFIG_START(ep804_state::ep804)
+void ep804_state::ep804(machine_config &config)
+{
 	digel804(config);
 
 	/* basic machine hardware */
-	MCFG_DEVICE_MODIFY("maincpu")  /* Z80, X1(aka E0 on schematics): 3.6864Mhz */
-	MCFG_DEVICE_PROGRAM_MAP(z80_mem_804_1_2)
-	MCFG_DEVICE_IO_MAP(z80_io_1_2)
+	/* Z80, X1(aka E0 on schematics): 3.6864Mhz */
+	m_maincpu->set_addrmap(AS_PROGRAM, &ep804_state::z80_mem_804_1_2);
+	m_maincpu->set_addrmap(AS_IO, &ep804_state::z80_io_1_2);
 
-	subdevice<mos6551_device>("acia")->irq_handler().set(FUNC(ep804_state::ep804_acia_irq_w));
+	m_acia->irq_handler().set(FUNC(ep804_state::ep804_acia_irq_w));
 
 	m_ram->set_default_size("32K").set_extra_options("64K");
-MACHINE_CONFIG_END
+}
 
 
 

@@ -105,6 +105,21 @@ Note :
     argus
     valtric
 
+- Information about the internal ROM tests (see also MT03219):
+    * argus: Checksum routine at $7fc9 (for banks at $7fc0). Checksum is a
+      simple sum of the contents. Our dump gives a result of 0x95 while the
+      game expects 0x9b, therefore it displays a checksum error. Checksums for
+      the banked ROMs match.
+    * valtric: Checksum routine at $987c (for banks at $f000). Checksum is a
+      XOR over the contents. The expected checksums are stored in ROM vt_06.bin
+      starting at $d000 (main ROM first, then banks). For our dump, the
+      expected checksums are all 0x00, but the calculated checksums differ,
+      therefore displays a checksum error for all ROMs. This has been validated
+      on real hardware to also fail there.
+    * butasan: Checksum routine is at $e0a8 (for banks at $ec74). Checksum is a
+      simple sum over the contents. The test seems to be broken (or hacked) as
+      it will only fail when the checksum is exactly 0x00.
+
 
 Known issues :
 ===============
@@ -145,10 +160,10 @@ TIMER_DEVICE_CALLBACK_MEMBER(argus_state::scanline)
 	int scanline = param;
 
 	if(scanline == 240) // vblank-out irq
-		m_maincpu->set_input_line_and_vector(0, HOLD_LINE,0xd7); /* RST 10h */
+		m_maincpu->set_input_line_and_vector(0, HOLD_LINE,0xd7); /* Z80 - RST 10h */
 
 	if(scanline == 16) // vblank-in irq
-		m_maincpu->set_input_line_and_vector(0, HOLD_LINE,0xcf); /* RST 08h */
+		m_maincpu->set_input_line_and_vector(0, HOLD_LINE,0xcf); /* Z80 - RST 08h */
 }
 
 TIMER_DEVICE_CALLBACK_MEMBER(argus_state::butasan_scanline)
@@ -156,10 +171,10 @@ TIMER_DEVICE_CALLBACK_MEMBER(argus_state::butasan_scanline)
 	int scanline = param;
 
 	if(scanline == 248) // vblank-out irq
-		m_maincpu->set_input_line_and_vector(0, HOLD_LINE,0xd7); /* RST 10h */
+		m_maincpu->set_input_line_and_vector(0, HOLD_LINE,0xd7); /* Z80 - RST 10h */
 
 	if(scanline == 8) // vblank-in irq
-		m_maincpu->set_input_line_and_vector(0, HOLD_LINE,0xcf); /* RST 08h */
+		m_maincpu->set_input_line_and_vector(0, HOLD_LINE,0xcf); /* Z80 - RST 08h */
 }
 
 
@@ -440,74 +455,52 @@ INPUT_PORTS_END
 
 ***************************************************************************/
 
-static const gfx_layout charlayout =
-{
-	8,8,    /* 8x8 characters */
-	RGN_FRAC(1,1),   /* number of characters */
-	4,      /* 4 bits per pixel */
-	{ STEP4(0,1) },
-	{ STEP8(0,4) },
-	{ STEP8(0,4*8) },
-	32*8
-};
-
-static const gfx_layout tilelayout =
-{
-	16,16,  /* 16x16 characters */
-	RGN_FRAC(1,1),    /* number of characters */
-	4,      /* 4 bits per pixel */
-	{ STEP4(0,1) },
-	{ STEP8(0,4), STEP8(4*8*16, 4) },
-	{ STEP16(0,4*8) },
-	128*8
-};
-
 static GFXDECODE_START( gfx_argus )
-	GFXDECODE_ENTRY( "gfx1", 0, tilelayout,  0*16,  8 )
-	GFXDECODE_ENTRY( "gfx2", 0, tilelayout,  8*16, 16 )
-	GFXDECODE_ENTRY( "gfx3", 0, tilelayout, 24*16, 16 )
-	GFXDECODE_ENTRY( "gfx4", 0, charlayout, 40*16, 16 )
+	GFXDECODE_ENTRY( "gfx1", 0, gfx_8x8x4_col_2x2_group_packed_msb,  0*16,  8 )
+	GFXDECODE_ENTRY( "gfx2", 0, gfx_8x8x4_col_2x2_group_packed_msb,  8*16, 16 )
+	GFXDECODE_ENTRY( "gfx3", 0, gfx_8x8x4_col_2x2_group_packed_msb, 24*16, 16 )
+	GFXDECODE_ENTRY( "gfx4", 0, gfx_8x8x4_packed_msb,               40*16, 16 )
 GFXDECODE_END
 
 static GFXDECODE_START( gfx_valtric )
-	GFXDECODE_ENTRY( "gfx1", 0, tilelayout,  0*16, 16 )
-	GFXDECODE_ENTRY( "gfx2", 0, tilelayout, 16*16, 16 )
-	GFXDECODE_ENTRY( "gfx3", 0, charlayout, 32*16, 16 )
+	GFXDECODE_ENTRY( "gfx1", 0, gfx_8x8x4_col_2x2_group_packed_msb,  0*16, 16 )
+	GFXDECODE_ENTRY( "gfx2", 0, gfx_8x8x4_col_2x2_group_packed_msb, 16*16, 16 )
+	GFXDECODE_ENTRY( "gfx3", 0, gfx_8x8x4_packed_msb,               32*16, 16 )
 GFXDECODE_END
 
 static GFXDECODE_START( gfx_butasan )
-	GFXDECODE_ENTRY( "gfx1", 0, tilelayout,  0*16, 16 )
-	GFXDECODE_ENTRY( "gfx2", 0, tilelayout, 16*16, 16 )
-	GFXDECODE_ENTRY( "gfx3", 0, tilelayout, 12*16, 16 )
-	GFXDECODE_ENTRY( "gfx4", 0, charlayout, 32*16, 16 )
+	GFXDECODE_ENTRY( "gfx1", 0, gfx_8x8x4_col_2x2_group_packed_msb,  0*16, 16 )
+	GFXDECODE_ENTRY( "gfx2", 0, gfx_8x8x4_col_2x2_group_packed_msb, 16*16, 16 )
+	GFXDECODE_ENTRY( "gfx3", 0, gfx_8x8x4_col_2x2_group_packed_msb, 12*16, 16 )
+	GFXDECODE_ENTRY( "gfx4", 0, gfx_8x8x4_packed_msb,               32*16, 16 )
 GFXDECODE_END
 
 
-MACHINE_CONFIG_START(argus_state::argus)
-
+void argus_state::argus(machine_config &config)
+{
 	/* basic machine hardware */
-	MCFG_DEVICE_ADD("maincpu", Z80, 5000000)           /* 4 MHz */
-	MCFG_DEVICE_PROGRAM_MAP(argus_map)
-	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", argus_state, scanline, "screen", 0, 1)
+	Z80(config, m_maincpu, 5000000);           /* 4 MHz */
+	m_maincpu->set_addrmap(AS_PROGRAM, &argus_state::argus_map);
+	TIMER(config, "scantimer").configure_scanline(FUNC(argus_state::scanline), "screen", 0, 1);
 
-	MCFG_DEVICE_ADD("audiocpu", Z80, 5000000)
-	MCFG_DEVICE_PROGRAM_MAP(sound_map_a)
-	MCFG_DEVICE_IO_MAP(sound_portmap_1)
+	Z80(config, m_audiocpu, 5000000);
+	m_audiocpu->set_addrmap(AS_PROGRAM, &argus_state::sound_map_a);
+	m_audiocpu->set_addrmap(AS_IO, &argus_state::sound_portmap_1);
 
-	MCFG_QUANTUM_TIME(attotime::from_hz(600))
+	config.m_minimum_quantum = attotime::from_hz(600);
 
 	/* video hardware */
-	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_REFRESH_RATE(54)
-	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0)  /* This value is referred to psychic5 driver */)
-	MCFG_SCREEN_SIZE(32*16, 32*16)
-	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
-	MCFG_SCREEN_UPDATE_DRIVER(argus_state, screen_update_argus)
+	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	m_screen->set_refresh_hz(54);
+	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(0));  /* This value is referred to psychic5 driver */
+	m_screen->set_size(32*16, 32*16);
+	m_screen->set_visarea(0*8, 32*8-1, 2*8, 30*8-1);
+	m_screen->set_screen_update(FUNC(argus_state::screen_update_argus));
 
-	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_argus)
-	MCFG_PALETTE_ADD("palette", 896)
+	GFXDECODE(config, m_gfxdecode, m_palette, gfx_argus);
+	PALETTE(config, m_palette).set_entries(896);
 
-	MCFG_DEVICE_ADD("blend", JALECO_BLEND, 0)
+	JALECO_BLEND(config, m_blend, 0);
 
 	MCFG_VIDEO_START_OVERRIDE(argus_state,argus)
 	MCFG_VIDEO_RESET_OVERRIDE(argus_state,argus)
@@ -515,41 +508,41 @@ MACHINE_CONFIG_START(argus_state::argus)
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();
 
-	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
+	GENERIC_LATCH_8(config, "soundlatch");
 
-	MCFG_DEVICE_ADD("ym1", YM2203, 6000000 / 4)
-	MCFG_YM2203_IRQ_HANDLER(INPUTLINE("audiocpu", 0))
-	MCFG_SOUND_ROUTE(0, "mono", 0.15)
-	MCFG_SOUND_ROUTE(1, "mono", 0.15)
-	MCFG_SOUND_ROUTE(2, "mono", 0.15)
-	MCFG_SOUND_ROUTE(3, "mono", 0.50)
-MACHINE_CONFIG_END
+	ym2203_device &ym1(YM2203(config, "ym1", 6000000 / 4));
+	ym1.irq_handler().set_inputline(m_audiocpu, 0);
+	ym1.add_route(0, "mono", 0.15);
+	ym1.add_route(1, "mono", 0.15);
+	ym1.add_route(2, "mono", 0.15);
+	ym1.add_route(3, "mono", 0.50);
+}
 
-MACHINE_CONFIG_START(argus_state::valtric)
-
+void argus_state::valtric(machine_config &config)
+{
 	/* basic machine hardware */
-	MCFG_DEVICE_ADD("maincpu", Z80, 5000000)           /* 5 MHz */
-	MCFG_DEVICE_PROGRAM_MAP(valtric_map)
-	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", argus_state, scanline, "screen", 0, 1)
+	Z80(config, m_maincpu, 5000000);    /* 5 MHz */
+	m_maincpu->set_addrmap(AS_PROGRAM, &argus_state::valtric_map);
+	TIMER(config, "scantimer").configure_scanline(FUNC(argus_state::scanline), "screen", 0, 1);
 
-	MCFG_DEVICE_ADD("audiocpu", Z80, 5000000)
-	MCFG_DEVICE_PROGRAM_MAP(sound_map_a)
-	MCFG_DEVICE_IO_MAP(sound_portmap_2)
+	Z80(config, m_audiocpu, 5000000);
+	m_audiocpu->set_addrmap(AS_PROGRAM, &argus_state::sound_map_a);
+	m_audiocpu->set_addrmap(AS_IO, &argus_state::sound_portmap_2);
 
-	MCFG_QUANTUM_TIME(attotime::from_hz(600))
+	config.m_minimum_quantum = attotime::from_hz(600);
 
 	/* video hardware */
-	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_REFRESH_RATE(54)
-	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0)  /* This value is referred to psychic5 driver */)
-	MCFG_SCREEN_SIZE(32*16, 32*16)
-	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
-	MCFG_SCREEN_UPDATE_DRIVER(argus_state, screen_update_valtric)
+	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	m_screen->set_refresh_hz(54);
+	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(0));  /* This value is referred to psychic5 driver */
+	m_screen->set_size(32*16, 32*16);
+	m_screen->set_visarea(0*8, 32*8-1, 2*8, 30*8-1);
+	m_screen->set_screen_update(FUNC(argus_state::screen_update_valtric));
 
-	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_valtric)
-	MCFG_PALETTE_ADD("palette", 768)
+	GFXDECODE(config, m_gfxdecode, m_palette, gfx_valtric);
+	PALETTE(config, m_palette).set_entries(768);
 
-	MCFG_DEVICE_ADD("blend", JALECO_BLEND, 0)
+	JALECO_BLEND(config, m_blend, 0);
 
 	MCFG_VIDEO_START_OVERRIDE(argus_state,valtric)
 	MCFG_VIDEO_RESET_OVERRIDE(argus_state,valtric)
@@ -557,47 +550,47 @@ MACHINE_CONFIG_START(argus_state::valtric)
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();
 
-	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
+	GENERIC_LATCH_8(config, "soundlatch");
 
-	MCFG_DEVICE_ADD("ym1", YM2203, 6000000 / 4)
-	MCFG_YM2203_IRQ_HANDLER(INPUTLINE("audiocpu", 0))
-	MCFG_SOUND_ROUTE(0, "mono", 0.15)
-	MCFG_SOUND_ROUTE(1, "mono", 0.15)
-	MCFG_SOUND_ROUTE(2, "mono", 0.15)
-	MCFG_SOUND_ROUTE(3, "mono", 0.50)
+	ym2203_device &ym1(YM2203(config, "ym1", 6000000 / 4));
+	ym1.irq_handler().set_inputline(m_audiocpu, 0);
+	ym1.add_route(0, "mono", 0.15);
+	ym1.add_route(1, "mono", 0.15);
+	ym1.add_route(2, "mono", 0.15);
+	ym1.add_route(3, "mono", 0.50);
 
-	MCFG_DEVICE_ADD("ym2", YM2203, 6000000 / 4)
-	MCFG_SOUND_ROUTE(0, "mono", 0.15)
-	MCFG_SOUND_ROUTE(1, "mono", 0.15)
-	MCFG_SOUND_ROUTE(2, "mono", 0.15)
-	MCFG_SOUND_ROUTE(3, "mono", 0.50)
-MACHINE_CONFIG_END
+	ym2203_device &ym2(YM2203(config, "ym2", 6000000 / 4));
+	ym2.add_route(0, "mono", 0.15);
+	ym2.add_route(1, "mono", 0.15);
+	ym2.add_route(2, "mono", 0.15);
+	ym2.add_route(3, "mono", 0.50);
+}
 
-MACHINE_CONFIG_START(argus_state::butasan)
-
+void argus_state::butasan(machine_config &config)
+{
 	/* basic machine hardware */
-	MCFG_DEVICE_ADD("maincpu", Z80, 5000000)           /* 5 MHz */
-	MCFG_DEVICE_PROGRAM_MAP(butasan_map)
-	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", argus_state, butasan_scanline, "screen", 0, 1)
+	Z80(config, m_maincpu, 5000000);    /* 5 MHz */
+	m_maincpu->set_addrmap(AS_PROGRAM, &argus_state::butasan_map);
+	TIMER(config, "scantimer").configure_scanline(FUNC(argus_state::butasan_scanline), "screen", 0, 1);
 
-	MCFG_DEVICE_ADD("audiocpu", Z80, 5000000)
-	MCFG_DEVICE_PROGRAM_MAP(sound_map_b)
-	MCFG_DEVICE_IO_MAP(sound_portmap_2)
+	Z80(config, m_audiocpu, 5000000);
+	m_audiocpu->set_addrmap(AS_PROGRAM, &argus_state::sound_map_b);
+	m_audiocpu->set_addrmap(AS_IO, &argus_state::sound_portmap_2);
 
-	MCFG_QUANTUM_TIME(attotime::from_hz(600))
+	config.m_minimum_quantum = attotime::from_hz(600);
 
 	/* video hardware */
-	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_REFRESH_RATE(54)
-	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0)  /* This value is taken from psychic5 driver */)
-	MCFG_SCREEN_SIZE(32*16, 32*16)
-	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
-	MCFG_SCREEN_UPDATE_DRIVER(argus_state, screen_update_butasan)
+	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	m_screen->set_refresh_hz(54);
+	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(0));  /* This value is taken from psychic5 driver */
+	m_screen->set_size(32*16, 32*16);
+	m_screen->set_visarea(0*8, 32*8-1, 1*8, 31*8-1);
+	m_screen->set_screen_update(FUNC(argus_state::screen_update_butasan));
 
-	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_butasan)
-	MCFG_PALETTE_ADD("palette", 768)
+	GFXDECODE(config, m_gfxdecode, m_palette, gfx_butasan);
+	PALETTE(config, m_palette).set_entries(768);
 
-	MCFG_DEVICE_ADD("blend", JALECO_BLEND, 0)
+	JALECO_BLEND(config, m_blend, 0);
 
 	MCFG_VIDEO_START_OVERRIDE(argus_state,butasan)
 	MCFG_VIDEO_RESET_OVERRIDE(argus_state,butasan)
@@ -605,21 +598,21 @@ MACHINE_CONFIG_START(argus_state::butasan)
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();
 
-	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
+	GENERIC_LATCH_8(config, "soundlatch");
 
-	MCFG_DEVICE_ADD("ym1", YM2203, 6000000 / 4)
-	MCFG_YM2203_IRQ_HANDLER(INPUTLINE("audiocpu", 0))
-	MCFG_SOUND_ROUTE(0, "mono", 0.30)
-	MCFG_SOUND_ROUTE(1, "mono", 0.30)
-	MCFG_SOUND_ROUTE(2, "mono", 0.30)
-	MCFG_SOUND_ROUTE(3, "mono", 1.0)
+	ym2203_device &ym1(YM2203(config, "ym1", 6000000 / 4));
+	ym1.irq_handler().set_inputline(m_audiocpu, 0);
+	ym1.add_route(0, "mono", 0.30);
+	ym1.add_route(1, "mono", 0.30);
+	ym1.add_route(2, "mono", 0.30);
+	ym1.add_route(3, "mono", 1.0);
 
-	MCFG_DEVICE_ADD("ym2", YM2203, 6000000 / 4)
-	MCFG_SOUND_ROUTE(0, "mono", 0.30)
-	MCFG_SOUND_ROUTE(1, "mono", 0.30)
-	MCFG_SOUND_ROUTE(2, "mono", 0.30)
-	MCFG_SOUND_ROUTE(3, "mono", 1.0)
-MACHINE_CONFIG_END
+	ym2203_device &ym2(YM2203(config, "ym2", 6000000 / 4));
+	ym2.add_route(0, "mono", 0.30);
+	ym2.add_route(1, "mono", 0.30);
+	ym2.add_route(2, "mono", 0.30);
+	ym2.add_route(3, "mono", 1.0);
+}
 
 
 /***************************************************************************

@@ -87,7 +87,7 @@ void ts816_state::ts816_io(address_map &map)
 	map(0x38, 0x3b).rw("sio7", FUNC(z80sio_device::cd_ba_r), FUNC(z80sio_device::cd_ba_w)); // SIO 7 for user 13 & 14
 	map(0x40, 0x43).rw("sio4", FUNC(z80sio_device::cd_ba_r), FUNC(z80sio_device::cd_ba_w)); // SIO 4 for user 7 & 8
 	map(0x48, 0x4b).rw("sio8", FUNC(z80sio_device::cd_ba_r), FUNC(z80sio_device::cd_ba_w)); // SIO 8 for user 15 & 16
-	//AM_RANGE(0x50, 0x53) // SIO 0 for RS232 1 and part of tape interface
+	//map(0x50, 0x53) // SIO 0 for RS232 1 and part of tape interface
 	map(0x50, 0x50).r(FUNC(ts816_state::keyin_r)).w(m_terminal, FUNC(generic_terminal_device::write));
 	map(0x52, 0x52).r(FUNC(ts816_state::status_r));
 	map(0x58, 0x5b).rw("sio9", FUNC(z80sio_device::cd_ba_r), FUNC(z80sio_device::cd_ba_w)); // SIO 9 for RS232 2 & 3
@@ -263,7 +263,8 @@ void ts816_state::init_ts816()
 	membank("bank2")->configure_entry(1, &rams[0x1e000]);
 }
 
-MACHINE_CONFIG_START(ts816_state::ts816)
+void ts816_state::ts816(machine_config &config)
+{
 	/* basic machine hardware */
 	Z80(config, m_maincpu, XTAL(16'000'000) / 4);
 	m_maincpu->set_addrmap(AS_PROGRAM, &ts816_state::ts816_mem);
@@ -271,8 +272,8 @@ MACHINE_CONFIG_START(ts816_state::ts816)
 	m_maincpu->set_daisy_config(daisy_chain);
 
 	/* video hardware */
-	MCFG_DEVICE_ADD(m_terminal, GENERIC_TERMINAL, 0)
-	MCFG_GENERIC_TERMINAL_KEYBOARD_CB(PUT(ts816_state, kbd_put))
+	GENERIC_TERMINAL(config, m_terminal, 0);
+	m_terminal->set_keyboard_callback(FUNC(ts816_state::kbd_put));
 
 	//z80sio_device& sio0(Z80SIO(config, "sio0", XTAL(16'000'000) / 4));
 	//sio0.out_int_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ0);
@@ -310,7 +311,7 @@ MACHINE_CONFIG_START(ts816_state::ts816)
 	z80dma_device& dma(Z80DMA(config, "dma", XTAL(16'000'000) / 4));
 	//dma.out_busreq_callback().set(FUNC(ts816_state::busreq_w));
 	dma.out_int_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ0);
-MACHINE_CONFIG_END
+}
 
 /* ROM definition */
 ROM_START( ts816 )

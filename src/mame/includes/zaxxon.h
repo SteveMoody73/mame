@@ -5,17 +5,22 @@
     Sega Zaxxon hardware
 
 ***************************************************************************/
+#ifndef MAME_INCLUDES_ZAXXON_H
+#define MAME_INCLUDES_ZAXXON_H
+
+#pragma once
 
 #include "machine/74259.h"
 #include "machine/i8255.h"
 #include "sound/samples.h"
 #include "emupal.h"
+#include "tilemap.h"
 
 class zaxxon_state : public driver_device
 {
 public:
-	zaxxon_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
+	zaxxon_state(const machine_config &mconfig, device_type type, const char *tag) :
+		driver_device(mconfig, type, tag),
 		m_maincpu(*this, "maincpu"),
 		m_mainlatch(*this, "mainlatch%u", 1),
 		m_ppi(*this, "ppi8255"),
@@ -26,7 +31,8 @@ public:
 		m_videoram(*this, "videoram"),
 		m_spriteram(*this, "spriteram"),
 		m_colorram(*this, "colorram"),
-		m_decrypted_opcodes(*this, "decrypted_opcodes") { }
+		m_decrypted_opcodes(*this, "decrypted_opcodes")
+	{ }
 
 	void root(machine_config &config);
 	void ixion(machine_config &config);
@@ -42,8 +48,8 @@ public:
 	void init_razmataz();
 	void init_zaxxonj();
 
-	DECLARE_CUSTOM_INPUT_MEMBER(razmataz_dial_r);
-	DECLARE_CUSTOM_INPUT_MEMBER(zaxxon_coin_r);
+	template <int Num> DECLARE_CUSTOM_INPUT_MEMBER(razmataz_dial_r);
+	template <int Num> DECLARE_READ_LINE_MEMBER(zaxxon_coin_r);
 	DECLARE_INPUT_CHANGED_MEMBER(service_switch);
 	DECLARE_INPUT_CHANGED_MEMBER(zaxxon_coin_inserted);
 
@@ -105,7 +111,7 @@ private:
 	TILE_GET_INFO_MEMBER(congo_get_fg_tile_info);
 	virtual void machine_start() override;
 	virtual void video_start() override;
-	DECLARE_PALETTE_INIT(zaxxon);
+	void zaxxon_palette(palette_device &palette);
 	DECLARE_VIDEO_START(razmataz);
 	DECLARE_VIDEO_START(congo);
 	uint32_t screen_update_zaxxon(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
@@ -131,3 +137,4 @@ private:
 	void zaxxon_map(address_map &map);
 };
 
+#endif // MAME_INCLUDES_ZAXXON_H

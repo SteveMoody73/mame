@@ -97,10 +97,11 @@ void ym2608_device::device_start()
 
 	/* initialize YM2608 */
 	m_chip = ym2608_init(this,clock(),rate,
-		&ym2608_device::static_internal_read_byte,
-		&ym2608_device::static_external_read_byte, &ym2608_device::static_external_write_byte,
-		&ym2608_device::static_timer_handler,&ym2608_device::static_irq_handler,&psgintf);
-	assert_always(m_chip != nullptr, "Error creating YM2608 chip");
+			&ym2608_device::static_internal_read_byte,
+			&ym2608_device::static_external_read_byte, &ym2608_device::static_external_write_byte,
+			&ym2608_device::static_timer_handler,&ym2608_device::static_irq_handler,&psgintf);
+	if (!m_chip)
+		throw emu_fatalerror("ym2608_device(%s): Error creating YM2608 chip", tag());
 }
 
 //-------------------------------------------------
@@ -141,12 +142,12 @@ void ym2608_device::rom_bank_updated()
 }
 
 
-READ8_MEMBER( ym2608_device::read )
+u8 ym2608_device::read(offs_t offset)
 {
 	return ym2608_read(m_chip, offset & 3);
 }
 
-WRITE8_MEMBER( ym2608_device::write )
+void ym2608_device::write(offs_t offset, u8 data)
 {
 	ym2608_write(m_chip, offset & 3, data);
 }

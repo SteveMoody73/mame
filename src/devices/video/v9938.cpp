@@ -73,7 +73,7 @@ enum
 
 #define EXPMEM_OFFSET 0x20000
 
-#define LONG_WIDTH (512 + 32)
+#define V9938_LONG_WIDTH (512 + 32)
 
 static const char *const v9938_modes[] = {
 	"TEXT 1", "MULTICOLOR", "GRAPHIC 1", "GRAPHIC 2", "GRAPHIC 3",
@@ -273,20 +273,35 @@ void v99x8_device::configure_pal_ntsc()
 
 
 /*
-    Driver-specific function: update the vdp mouse state
+    Colorbus inputs
+    vdp will process mouse deltas only if it is in mouse mode
+    Reg 8: MS LP x x x x x x
 */
-void v99x8_device::update_mouse_state(int mx_delta, int my_delta, int button_state)
+void v99x8_device::colorbus_x_input(int mx_delta)
 {
-	// save button state
-	m_button_state = (button_state << 6) & 0xc0;
-
 	if ((m_cont_reg[8] & 0xc0) == 0x80)
-	{   // vdp will process mouse deltas only if it is in mouse mode
+	{
 		m_mx_delta += mx_delta;
-		m_my_delta += my_delta;
+		if (m_mx_delta < -127) m_mx_delta = -127;
+		if (m_mx_delta > 127) m_mx_delta = 127;
 	}
 }
 
+void v99x8_device::colorbus_y_input(int my_delta)
+{
+	if ((m_cont_reg[8] & 0xc0) == 0x80)
+	{
+		m_my_delta += my_delta;
+		if (m_my_delta < -127) m_my_delta = -127;
+		if (m_my_delta > 127) m_my_delta = 127;
+	}
+}
+
+void v99x8_device::colorbus_button_input(bool switch1_pressed, bool switch2_pressed)
+{
+	// save button state
+	m_button_state = (switch2_pressed? 0x80 : 0x00) | (switch1_pressed? 0x40 : 0x00);
+}
 
 
 /***************************************************************************
@@ -369,7 +384,7 @@ uint32_t v99x8_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap
 	return 0;
 }
 
-READ8_MEMBER( v99x8_device::read )
+uint8_t v99x8_device::read(offs_t offset)
 {
 	switch (offset & 3)
 	{
@@ -379,7 +394,7 @@ READ8_MEMBER( v99x8_device::read )
 	return 0xff;
 }
 
-WRITE8_MEMBER( v99x8_device::write )
+void v99x8_device::write(offs_t offset, uint8_t data)
 {
 	switch (offset & 3)
 	{
@@ -909,7 +924,7 @@ void v99x8_device::default_border(uint32_t *ln)
 	int i;
 
 	pen = pen16(m_cont_reg[7] & 0x0f);
-	i = LONG_WIDTH;
+	i = V9938_LONG_WIDTH;
 	while (i--) *ln++ = pen;
 }
 
@@ -919,7 +934,7 @@ void v99x8_device::graphic7_border(uint32_t *ln)
 	int i;
 
 	pen = pen256(m_cont_reg[7]);
-	i = LONG_WIDTH;
+	i = V9938_LONG_WIDTH;
 	while (i--) *ln++ = pen;
 }
 
@@ -931,7 +946,7 @@ void v99x8_device::graphic5_border(uint32_t *ln)
 
 	pen1 = pen16(m_cont_reg[7] & 0x03);
 	pen0 = pen16((m_cont_reg[7] >> 2) & 0x03);
-	i = LONG_WIDTH / 2;
+	i = V9938_LONG_WIDTH / 2;
 	while (i--) { *ln++ = pen0; *ln++ = pen1; }
 }
 

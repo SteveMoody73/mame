@@ -39,7 +39,6 @@
 #include "machine/z80ctc.h"
 #include "machine/z80sio.h"
 #include "machine/z80pio.h"
-#include "machine/clock.h"
 #include "bus/rs232/rs232.h"
 
 
@@ -72,7 +71,7 @@ void zsbc3_state::zsbc3_io(address_map &map)
 {
 	map.unmap_value_high();
 	map.global_mask(0xff);
-	map(0x08, 0x0b); //AM_DEVREADWRITE("pio", z80pio_device, read, write) // the control bytes appear to be for a PIO
+	map(0x08, 0x0b); //.rw("pio", FUNC(z80pio_device::read), FUNC(z80pio_device::write)); // the control bytes appear to be for a PIO
 	map(0x28, 0x2b).rw("sio", FUNC(z80sio_device::cd_ba_r), FUNC(z80sio_device::cd_ba_w));
 	map(0x30, 0x33).rw("ctc", FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
 	map(0x38, 0x38); // unknown device, init byte = C3
@@ -91,14 +90,12 @@ void zsbc3_state::zsbc3(machine_config &config)
 	m_maincpu->set_addrmap(AS_IO, &zsbc3_state::zsbc3_io);
 
 	z80ctc_device &ctc(Z80CTC(config, "ctc", 16_MHz_XTAL / 4));
+	ctc.set_clk<0>(16_MHz_XTAL / 8);
+	ctc.set_clk<1>(16_MHz_XTAL / 8);
+	ctc.set_clk<2>(16_MHz_XTAL / 8);
+	ctc.set_clk<3>(16_MHz_XTAL / 8);
 	ctc.zc_callback<0>().set("sio", FUNC(z80sio_device::txca_w));
 	ctc.zc_callback<0>().append("sio", FUNC(z80sio_device::rxca_w));
-
-	clock_device &clk2mhz(CLOCK(config, "clk2mhz", 16_MHz_XTAL / 8));
-	clk2mhz.signal_handler().set("ctc", FUNC(z80ctc_device::trg0));
-	clk2mhz.signal_handler().append("ctc", FUNC(z80ctc_device::trg1));
-	clk2mhz.signal_handler().append("ctc", FUNC(z80ctc_device::trg2));
-	clk2mhz.signal_handler().append("ctc", FUNC(z80ctc_device::trg3));
 
 	z80sio_device &sio(Z80SIO(config, "sio", 16_MHz_XTAL / 4));
 	//sio.out_int_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ0);  // no evidence of a daisy chain because IM2 is not set

@@ -238,7 +238,7 @@ READ8_MEMBER( aussiebyte_state::rtc_r )
 {
 	m_rtc->read_w(1);
 	m_rtc->address_w(offset);
-	uint8_t data = m_rtc->data_r(space,0);
+	uint8_t data = m_rtc->data_r();
 	m_rtc->read_w(0);
 	return data;
 }
@@ -246,7 +246,7 @@ READ8_MEMBER( aussiebyte_state::rtc_r )
 WRITE8_MEMBER( aussiebyte_state::rtc_w )
 {
 	m_rtc->address_w(offset);
-	m_rtc->data_w(space,0,data);
+	m_rtc->data_w(data);
 	m_rtc->write_w(1);
 	m_rtc->write_w(0);
 }
@@ -436,7 +436,7 @@ static void aussiebyte_floppies(device_slot_interface &device)
 
 ************************************************************/
 
-QUICKLOAD_LOAD_MEMBER( aussiebyte_state, aussiebyte )
+QUICKLOAD_LOAD_MEMBER(aussiebyte_state::quickload_cb)
 {
 	address_space& prog_space = m_maincpu->space(AS_PROGRAM);
 
@@ -495,7 +495,8 @@ void aussiebyte_state::machine_reset()
 	m_maincpu->reset();
 }
 
-MACHINE_CONFIG_START(aussiebyte_state::aussiebyte)
+void aussiebyte_state::aussiebyte(machine_config &config)
+{
 	/* basic machine hardware */
 	Z80(config, m_maincpu, 16_MHz_XTAL / 4);
 	m_maincpu->set_addrmap(AS_PROGRAM, &aussiebyte_state::aussiebyte_map);
@@ -503,13 +504,12 @@ MACHINE_CONFIG_START(aussiebyte_state::aussiebyte)
 	m_maincpu->set_daisy_config(daisy_chain_intf);
 
 	/* video hardware */
-	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_REFRESH_RATE(50)
-	MCFG_SCREEN_SIZE(640, 480)
-	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
-	MCFG_SCREEN_UPDATE_DEVICE("crtc", sy6545_1_device, screen_update)
-	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_crt8002)
-	MCFG_PALETTE_ADD_MONOCHROME("palette")
+	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen.set_raw(16_MHz_XTAL, 952, 0, 640, 336, 0, 288);
+	screen.set_screen_update("crtc", FUNC(sy6545_1_device::screen_update));
+
+	GFXDECODE(config, "gfxdecode", "palette", gfx_crt8002);
+	PALETTE(config, m_palette, palette_device::MONOCHROME);
 
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();
@@ -523,15 +523,14 @@ MACHINE_CONFIG_START(aussiebyte_state::aussiebyte)
 	m_centronics->set_data_input_buffer("cent_data_in");
 	m_centronics->busy_handler().set(FUNC(aussiebyte_state::write_centronics_busy));
 	INPUT_BUFFER(config, "cent_data_in");
-	MCFG_CENTRONICS_OUTPUT_LATCH_ADD("cent_data_out", "centronics")
-
-	clock_device &ctc_clock(CLOCK(config, "ctc_clock", 4.9152_MHz_XTAL / 4));
-	ctc_clock.signal_handler().set(m_ctc, FUNC(z80ctc_device::trg0));
-	ctc_clock.signal_handler().append(m_ctc, FUNC(z80ctc_device::trg1));
-	ctc_clock.signal_handler().append(m_ctc, FUNC(z80ctc_device::trg2));
+	output_latch_device &cent_data_out(OUTPUT_LATCH(config, "cent_data_out"));
+	m_centronics->set_output_latch(cent_data_out);
 
 	Z80CTC(config, m_ctc, 16_MHz_XTAL / 4);
 	m_ctc->intr_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ0);
+	m_ctc->set_clk<0>(4.9152_MHz_XTAL / 4);
+	m_ctc->set_clk<1>(4.9152_MHz_XTAL / 4);
+	m_ctc->set_clk<2>(4.9152_MHz_XTAL / 4);
 	m_ctc->zc_callback<0>().set("sio1", FUNC(z80sio_device::rxca_w));
 	m_ctc->zc_callback<0>().append("sio1", FUNC(z80sio_device::txca_w));
 	m_ctc->zc_callback<1>().set("sio1", FUNC(z80sio_device::rxtxcb_w));
@@ -572,30 +571,28 @@ MACHINE_CONFIG_START(aussiebyte_state::aussiebyte)
 	sio2.out_dtra_callback().set("rs232", FUNC(rs232_port_device::write_dtr));
 	sio2.out_rtsa_callback().set("rs232", FUNC(rs232_port_device::write_rts));
 
-	MCFG_DEVICE_ADD("rs232", RS232_PORT, default_rs232_devices, "keyboard")
-	MCFG_RS232_RXD_HANDLER(WRITELINE("sio2", z80sio_device, rxa_w))
+	RS232_PORT(config, m_rs232, default_rs232_devices, "keyboard");
+	m_rs232->rxd_handler().set("sio2", FUNC(z80sio_device::rxa_w));
 
 	WD2797(config, m_fdc, 16_MHz_XTAL / 16);
 	m_fdc->intrq_wr_callback().set(FUNC(aussiebyte_state::fdc_intrq_w));
 	m_fdc->drq_wr_callback().set(FUNC(aussiebyte_state::fdc_drq_w));
-	MCFG_FLOPPY_DRIVE_ADD("fdc:0", aussiebyte_floppies, "525qd", floppy_image_device::default_floppy_formats)
-	MCFG_FLOPPY_DRIVE_SOUND(true)
-	MCFG_FLOPPY_DRIVE_ADD("fdc:1", aussiebyte_floppies, "525qd", floppy_image_device::default_floppy_formats)
-	MCFG_FLOPPY_DRIVE_SOUND(true)
+	FLOPPY_CONNECTOR(config, "fdc:0", aussiebyte_floppies, "525qd", floppy_image_device::default_floppy_formats).enable_sound(true);
+	FLOPPY_CONNECTOR(config, "fdc:1", aussiebyte_floppies, "525qd", floppy_image_device::default_floppy_formats).enable_sound(true);
 
 	/* devices */
-	MCFG_MC6845_ADD("crtc", SY6545_1, "screen", 16_MHz_XTAL / 8)
-	MCFG_MC6845_SHOW_BORDER_AREA(false)
-	MCFG_MC6845_CHAR_WIDTH(8)
-	MCFG_MC6845_UPDATE_ROW_CB(aussiebyte_state, crtc_update_row)
-	MCFG_MC6845_ADDR_CHANGED_CB(aussiebyte_state, crtc_update_addr)
+	SY6545_1(config, m_crtc, 16_MHz_XTAL / 8);
+	m_crtc->set_screen("screen");
+	m_crtc->set_show_border_area(false);
+	m_crtc->set_char_width(8);
+	m_crtc->set_update_row_callback(FUNC(aussiebyte_state::crtc_update_row), this);
+	m_crtc->set_on_update_addr_change_callback(FUNC(aussiebyte_state::crtc_update_addr), this);
 
-	MCFG_DEVICE_ADD("rtc", MSM5832, 32.768_kHz_XTAL)
+	MSM5832(config, m_rtc, 32.768_kHz_XTAL);
 
 	/* quickload */
-	MCFG_QUICKLOAD_ADD("quickload", aussiebyte_state, aussiebyte, "com,cpm", 3)
-
-MACHINE_CONFIG_END
+	QUICKLOAD(config, "quickload", "com,cpm", attotime::from_seconds(3)).set_load_callback(FUNC(aussiebyte_state::quickload_cb), this);
+}
 
 
 void aussiebyte_state::machine_start()

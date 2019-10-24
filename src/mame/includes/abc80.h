@@ -15,8 +15,6 @@
 #include "bus/rs232/rs232.h"
 #include "cpu/z80/z80.h"
 #include "machine/z80daisy.h"
-#include "imagedev/flopdrv.h"
-#include "imagedev/printer.h"
 #include "imagedev/cassette.h"
 #include "imagedev/snapquik.h"
 #include "machine/abc80kb.h"
@@ -24,7 +22,6 @@
 #include "machine/ram.h"
 #include "machine/z80pio.h"
 #include "sound/sn76477.h"
-#include "sound/wave.h"
 #include "emupal.h"
 
 #define ABC80_HTOTAL    384
@@ -153,7 +150,7 @@ public:
 	void kbd_w(u8 data);
 	DECLARE_WRITE8_MEMBER( csg_w );
 
-	DECLARE_QUICKLOAD_LOAD_MEMBER( bac );
+	DECLARE_QUICKLOAD_LOAD_MEMBER(quickload_cb);
 
 	enum
 	{
