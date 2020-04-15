@@ -52,10 +52,10 @@ edevices_sforce_device::edevices_sforce_device(const machine_config &mconfig, co
 
 void edevices_device::device_start()
 {
-	m_bg_tilemap    = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(edevices_device::get_bg_tile_info),this),    TILEMAP_SCAN_COLS, 16, 16, 64, 16);
-	m_mlow_tilemap  = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(edevices_device::get_mlow_tile_info),this),  TILEMAP_SCAN_COLS, 16, 16, 64, 16);
-	m_mhigh_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(edevices_device::get_mhigh_tile_info),this), TILEMAP_SCAN_COLS, 16, 16, 64, 16);
-	m_tx_tilemap    = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(edevices_device::get_tx_tile_info),this),    TILEMAP_SCAN_ROWS,  8,  8, 64, 32);
+	m_bg_tilemap    = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(edevices_device::get_bg_tile_info)),    TILEMAP_SCAN_COLS, 16, 16, 64, 16);
+	m_mlow_tilemap  = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(edevices_device::get_mlow_tile_info)),  TILEMAP_SCAN_COLS, 16, 16, 64, 16);
+	m_mhigh_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(edevices_device::get_mhigh_tile_info)), TILEMAP_SCAN_COLS, 16, 16, 64, 16);
+	m_tx_tilemap    = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(edevices_device::get_tx_tile_info)),    TILEMAP_SCAN_ROWS,  8,  8, 64, 32);
 
 	m_mlow_tilemap->set_transparent_pen(0);
 	m_mhigh_tilemap->set_transparent_pen(0);
@@ -140,7 +140,7 @@ TILE_GET_INFO_MEMBER(edevices_device::get_bg_tile_info)
 	int tileno = m_bg_videoram[tile_index] & 0x1fff;
 	int colour = (m_bg_videoram[tile_index] & 0xe000) >> 13;
 
-	SET_TILE_INFO_MEMBER(4, tileno, colour, 0);
+	tileinfo.set(4, tileno, colour, 0);
 }
 
 TILE_GET_INFO_MEMBER(edevices_device::get_mlow_tile_info)
@@ -148,7 +148,7 @@ TILE_GET_INFO_MEMBER(edevices_device::get_mlow_tile_info)
 	int tileno = m_mlow_videoram[tile_index] & 0x1fff;
 	int colour = (m_mlow_videoram[tile_index] & 0xe000) >> 13;
 
-	SET_TILE_INFO_MEMBER(3, tileno, colour, 0);
+	tileinfo.set(3, tileno, colour, 0);
 }
 
 TILE_GET_INFO_MEMBER(edevices_device::get_mhigh_tile_info)
@@ -156,7 +156,7 @@ TILE_GET_INFO_MEMBER(edevices_device::get_mhigh_tile_info)
 	int tileno = m_mhigh_videoram[tile_index] & 0x1fff;
 	int colour = (m_mhigh_videoram[tile_index] & 0xe000) >> 13;
 
-	SET_TILE_INFO_MEMBER(2, tileno, colour, 0);
+	tileinfo.set(2, tileno, colour, 0);
 }
 
 TILE_GET_INFO_MEMBER(edevices_device::get_tx_tile_info)
@@ -164,7 +164,7 @@ TILE_GET_INFO_MEMBER(edevices_device::get_tx_tile_info)
 	int tileno = m_tx_videoram[tile_index] & 0x1fff;
 	int colour = (m_tx_videoram[tile_index] & 0xe000) >> 13;
 
-	SET_TILE_INFO_MEMBER(1, tileno, colour, 0);
+	tileinfo.set(1, tileno, colour, 0);
 }
 
 

@@ -260,7 +260,7 @@ uint32_t cv1k_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, 
 
 READ64_MEMBER( cv1k_state::flash_port_e_r )
 {
-	return ((m_serflash->flash_ready_r(space, offset) ? 0x20 : 0x00)) | 0xdf;
+	return ((m_serflash->flash_ready_r() ? 0x20 : 0x00)) | 0xdf;
 }
 
 
@@ -281,7 +281,7 @@ READ8_MEMBER( cv1k_state::flash_io_r )
 			return 0xff;
 
 		case 0x00:
-			return m_serflash->flash_io_r(space,offset);
+			return m_serflash->flash_io_r();
 	}
 }
 
@@ -295,15 +295,15 @@ WRITE8_MEMBER( cv1k_state::flash_io_w )
 			break;
 
 		case 0x00:
-			m_serflash->flash_data_w(space, offset, data);
+			m_serflash->flash_data_w( data);
 			break;
 
 		case 0x01:
-			m_serflash->flash_cmd_w(space, offset, data);
+			m_serflash->flash_cmd_w(data);
 			break;
 
 		case 0x2:
-			m_serflash->flash_addr_w(space, offset, data);
+			m_serflash->flash_addr_w(data);
 			break;
 	}
 }
@@ -332,7 +332,7 @@ WRITE8_MEMBER( cv1k_state::serial_rtc_eeprom_w )
 			m_eepromout->write(data, 0xff);
 			break;
 		case 0x03:
-			m_serflash->flash_enab_w(space,offset,data);
+			m_serflash->flash_enab_w(data);
 			break;
 
 		default:
@@ -472,7 +472,7 @@ void cv1k_state::cv1k(machine_config &config)
 	m_maincpu->set_sh4_clock(12.8_MHz_XTAL*8); // 102.4MHz
 	m_maincpu->set_addrmap(AS_PROGRAM, &cv1k_state::cv1k_map);
 	m_maincpu->set_addrmap(AS_IO, &cv1k_state::cv1k_port);
-	m_maincpu->set_vblank_int("screen", FUNC(cv1k_state::irq2_line_hold));
+	m_maincpu->set_vblank_int("screen", FUNC(cv1k_state::irq2_line_hold)); // irq2 actually asserted at V-sync pulse, not at V-blank
 
 	RTC9701(config, m_eeprom);
 	SERFLASH(config, m_serflash, 0);
@@ -900,7 +900,7 @@ void cv1k_state::install_speedups(uint32_t idleramoff, uint32_t idlepc, bool is_
 
 	m_maincpu->sh2drc_add_pcflush(idlepc+2);
 
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0xc000000+m_idleramoffs, 0xc000000+m_idleramoffs+7, read64_delegate(FUNC(cv1k_state::speedup_r),this));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0xc000000+m_idleramoffs, 0xc000000+m_idleramoffs+7, read64_delegate(*this, FUNC(cv1k_state::speedup_r)));
 
 	m_maincpu->sh2drc_add_fastram(0x00000000, 0x003fffff, true,  m_rombase);
 

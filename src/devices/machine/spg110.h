@@ -26,6 +26,8 @@ public:
 		m_screen.set_tag(std::forward<T>(screen_tag));
 	}
 
+	void set_video_irq_spidman(bool is_spiderman) { m_is_spiderman = is_spiderman; }
+
 	auto porta_out() { return m_porta_out.bind(); }
 	auto portb_out() { return m_portb_out.bind(); }
 	auto portc_out() { return m_portc_out.bind(); }
@@ -67,7 +69,7 @@ private:
 	devcb_read16 m_portb_in;
 	devcb_read16 m_portc_in;
 
-	devcb_read16 m_adc_in[2];
+	devcb_read16::array<2> m_adc_in;
 
 	devcb_write8 m_chip_sel;
 
@@ -77,12 +79,17 @@ private:
 	DECLARE_WRITE16_MEMBER(porta_w) { m_porta_out(offset, data, mem_mask); }
 	DECLARE_WRITE16_MEMBER(portb_w) { m_portb_out(offset, data, mem_mask); }
 	DECLARE_WRITE16_MEMBER(portc_w) { m_portc_out(offset, data, mem_mask); }
+
+	DECLARE_WRITE_LINE_MEMBER(ffreq1_w);
+	DECLARE_WRITE_LINE_MEMBER(ffreq2_w);
+
 	template <size_t Line> DECLARE_READ16_MEMBER(adc_r) { return m_adc_in[Line](); }
 	DECLARE_WRITE8_MEMBER(cs_w) { m_chip_sel(offset, data, mem_mask); }
 	DECLARE_READ16_MEMBER(get_pal_r) { return 0; /*m_pal_flag;*/ }
 	void configure_spg_io(spg2xx_io_device* io);
 
 	DECLARE_WRITE_LINE_MEMBER(videoirq_w);
+	bool m_is_spiderman;
 };
 
 DECLARE_DEVICE_TYPE(SPG110, spg110_device)

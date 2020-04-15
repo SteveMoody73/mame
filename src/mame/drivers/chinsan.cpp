@@ -392,7 +392,7 @@ TILE_GET_INFO_MEMBER( chinsan_state::tile_info )
 	// -----210  unknown
 	uint8_t color = m_color_ram[tile_index] >> 3;
 
-	SET_TILE_INFO_MEMBER(0, code, color, 0);
+	tileinfo.set(0, code, color, 0);
 }
 
 
@@ -420,7 +420,7 @@ WRITE_LINE_MEMBER( chinsan_state::adpcm_int_w )
 		uint8_t *ROM = memregion("adpcm")->base();
 
 		m_adpcm_data = ((m_trigger ? (ROM[m_adpcm_pos] & 0x0f) : (ROM[m_adpcm_pos] & 0xf0) >> 4));
-		m_adpcm->write_data(m_adpcm_data & 0xf);
+		m_adpcm->data_w(m_adpcm_data & 0xf);
 		m_trigger ^= 1;
 		if (m_trigger == 0)
 		{
@@ -468,7 +468,7 @@ WRITE8_MEMBER( chinsan_state::ctrl_w )
 
 void chinsan_state::machine_start()
 {
-	m_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(chinsan_state::tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
+	m_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(chinsan_state::tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
 
 	m_bank1->configure_entries(0, 4, memregion("maincpu")->base() + 0x8000, 0x4000);
 

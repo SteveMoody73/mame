@@ -124,17 +124,6 @@ TIMER_DEVICE_CALLBACK_MEMBER(exctsccr_state::exctsccr_sound_irq)
  *
  *************************************/
 
-WRITE_LINE_MEMBER(champbas_state::mcu_switch_w)
-{
-	// switch shared RAM between CPU and MCU bus
-	m_alpha_8201->bus_dir_w(state);
-}
-
-WRITE_LINE_MEMBER(champbas_state::mcu_start_w)
-{
-	m_alpha_8201->mcu_start_w(state);
-}
-
 /* champbja another protection */
 READ8_MEMBER(champbas_state::champbja_protection_r)
 {
@@ -532,11 +521,11 @@ void champbas_state::talbot(machine_config &config)
 	m_mainlatch->q_out_cb<3>().set(FUNC(champbas_state::flipscreen_w));
 	m_mainlatch->q_out_cb<4>().set_nop(); // no palettebank
 	m_mainlatch->q_out_cb<5>().set_nop(); // n.c.
-	m_mainlatch->q_out_cb<6>().set(FUNC(champbas_state::mcu_start_w));
-	m_mainlatch->q_out_cb<7>().set(FUNC(champbas_state::mcu_switch_w));
+	m_mainlatch->q_out_cb<6>().set(m_alpha_8201, FUNC(alpha_8201_device::mcu_start_w));
+	m_mainlatch->q_out_cb<7>().set(m_alpha_8201, FUNC(alpha_8201_device::bus_dir_w));
 
 	ALPHA_8201(config, m_alpha_8201, XTAL(18'432'000)/6/8);
-	config.m_perfect_cpu_quantum = subtag("alpha_8201:mcu");
+	config.set_perfect_quantum("alpha_8201:mcu");
 
 	WATCHDOG_TIMER(config, m_watchdog).set_vblank_count("screen", 0x10);
 
@@ -614,11 +603,11 @@ void champbas_state::champbasj(machine_config &config)
 	/* basic machine hardware */
 	m_maincpu->set_addrmap(AS_PROGRAM, &champbas_state::champbasj_map);
 
-	m_mainlatch->q_out_cb<6>().set(FUNC(champbas_state::mcu_start_w));
-	m_mainlatch->q_out_cb<7>().set(FUNC(champbas_state::mcu_switch_w));
+	m_mainlatch->q_out_cb<6>().set(m_alpha_8201, FUNC(alpha_8201_device::mcu_start_w));
+	m_mainlatch->q_out_cb<7>().set(m_alpha_8201, FUNC(alpha_8201_device::bus_dir_w));
 
 	ALPHA_8201(config, m_alpha_8201, XTAL(18'432'000)/6/8); // note: 8302 rom on champbb2 (same device!)
-	config.m_perfect_cpu_quantum = subtag("alpha_8201:mcu");
+	config.set_perfect_quantum("alpha_8201:mcu");
 }
 
 
@@ -676,8 +665,8 @@ void exctsccr_state::exctsccr(machine_config &config)
 	m_mainlatch->q_out_cb<3>().set(FUNC(exctsccr_state::flipscreen_w));
 	m_mainlatch->q_out_cb<4>().set_nop(); // no palettebank
 	m_mainlatch->q_out_cb<5>().set_nop(); // n.c.
-	m_mainlatch->q_out_cb<6>().set(FUNC(exctsccr_state::mcu_start_w));
-	m_mainlatch->q_out_cb<7>().set(FUNC(exctsccr_state::mcu_switch_w));
+	m_mainlatch->q_out_cb<6>().set(m_alpha_8201, FUNC(alpha_8201_device::mcu_start_w));
+	m_mainlatch->q_out_cb<7>().set(m_alpha_8201, FUNC(alpha_8201_device::bus_dir_w));
 
 	Z80(config, m_audiocpu, XTAL(14'318'181)/4);
 	m_audiocpu->set_addrmap(AS_PROGRAM, &exctsccr_state::exctsccr_sound_map);
@@ -689,7 +678,7 @@ void exctsccr_state::exctsccr(machine_config &config)
 	exc_snd_irq.set_start_delay(attotime::from_hz(75));
 
 	ALPHA_8201(config, m_alpha_8201, XTAL(18'432'000)/6/8); // note: 8302 rom, or 8303 on exctscc2 (same device!)
-	config.m_perfect_cpu_quantum = subtag("alpha_8201:mcu");
+	config.set_perfect_quantum("alpha_8201:mcu");
 
 	WATCHDOG_TIMER(config, m_watchdog).set_vblank_count("screen", 0x10);
 
@@ -740,14 +729,14 @@ void exctsccr_state::exctsccrb(machine_config &config)
 	m_mainlatch->q_out_cb<3>().set(FUNC(exctsccr_state::flipscreen_w));
 	m_mainlatch->q_out_cb<4>().set_nop(); // no palettebank
 	m_mainlatch->q_out_cb<5>().set_nop(); // n.c.
-	m_mainlatch->q_out_cb<6>().set(FUNC(exctsccr_state::mcu_start_w));
-	m_mainlatch->q_out_cb<7>().set(FUNC(exctsccr_state::mcu_switch_w));
+	m_mainlatch->q_out_cb<6>().set(m_alpha_8201, FUNC(alpha_8201_device::mcu_start_w));
+	m_mainlatch->q_out_cb<7>().set(m_alpha_8201, FUNC(alpha_8201_device::bus_dir_w));
 
 	Z80(config, m_audiocpu, XTAL(18'432'000)/6);
 	m_audiocpu->set_addrmap(AS_PROGRAM, &exctsccr_state::champbas_sound_map);
 
 	ALPHA_8201(config, m_alpha_8201, XTAL(18'432'000)/6/8); // champbasj 8201 on pcb, though unused
-	config.m_perfect_cpu_quantum = subtag("alpha_8201:mcu");
+	config.set_perfect_quantum("alpha_8201:mcu");
 
 	WATCHDOG_TIMER(config, m_watchdog).set_vblank_count("screen", 0x10);
 

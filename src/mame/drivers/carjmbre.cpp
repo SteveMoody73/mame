@@ -164,12 +164,12 @@ TILE_GET_INFO_MEMBER(carjmbre_state::get_tile_info)
 {
 	int attr = m_videoram[tile_index | 0x400];
 	int code = (m_videoram[tile_index] & 0xff) | (attr << 1 & 0x100);
-	SET_TILE_INFO_MEMBER(0, code, attr & 0xf, 0);
+	tileinfo.set(0, code, attr & 0xf, 0);
 }
 
 void carjmbre_state::video_start()
 {
-	m_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(carjmbre_state::get_tile_info),this), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
+	m_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(carjmbre_state::get_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
 	m_tilemap->set_transparent_pen(0);
 }
 

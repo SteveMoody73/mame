@@ -82,7 +82,7 @@ TILE_GET_INFO_MEMBER(d9final_state::get_sc0_tile_info)
 	int tile = ((m_hi_vram[tile_index] & 0x3f)<<8) | m_lo_vram[tile_index];
 	int color = m_cram[tile_index] & 0x3f;
 
-	SET_TILE_INFO_MEMBER(0,
+	tileinfo.set(0,
 			tile,
 			color,
 			0);
@@ -90,7 +90,7 @@ TILE_GET_INFO_MEMBER(d9final_state::get_sc0_tile_info)
 
 void d9final_state::video_start()
 {
-	m_sc0_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(d9final_state::get_sc0_tile_info),this),TILEMAP_SCAN_ROWS,8,8,64,32);
+	m_sc0_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(d9final_state::get_sc0_tile_info)), TILEMAP_SCAN_ROWS, 8,8,64,32);
 }
 
 uint32_t d9final_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)

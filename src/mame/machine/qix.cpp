@@ -89,15 +89,17 @@ WRITE8_MEMBER(qix_state::qix_data_firq_ack_w)
 
 READ8_MEMBER(qix_state::qix_data_firq_r)
 {
-	m_maincpu->set_input_line(M6809_FIRQ_LINE, ASSERT_LINE);
-	return 0xff;
+	if (!machine().side_effects_disabled())
+		m_maincpu->set_input_line(M6809_FIRQ_LINE, ASSERT_LINE);
+	return space.unmap();
 }
 
 
 READ8_MEMBER(qix_state::qix_data_firq_ack_r)
 {
-	m_maincpu->set_input_line(M6809_FIRQ_LINE, CLEAR_LINE);
-	return 0xff;
+	if (!machine().side_effects_disabled())
+		m_maincpu->set_input_line(M6809_FIRQ_LINE, CLEAR_LINE);
+	return space.unmap();
 }
 
 
@@ -122,15 +124,17 @@ WRITE8_MEMBER(qix_state::qix_video_firq_ack_w)
 
 READ8_MEMBER(qix_state::qix_video_firq_r)
 {
-	m_videocpu->set_input_line(M6809_FIRQ_LINE, ASSERT_LINE);
-	return 0xff;
+	if (!machine().side_effects_disabled())
+		m_videocpu->set_input_line(M6809_FIRQ_LINE, ASSERT_LINE);
+	return space.unmap();
 }
 
 
 READ8_MEMBER(qix_state::qix_video_firq_ack_r)
 {
-	m_videocpu->set_input_line(M6809_FIRQ_LINE, CLEAR_LINE);
-	return 0xff;
+	if (!machine().side_effects_disabled())
+		m_videocpu->set_input_line(M6809_FIRQ_LINE, CLEAR_LINE);
+	return space.unmap();
 }
 
 
@@ -153,7 +157,7 @@ WRITE8_MEMBER(qixmcu_state::coin_w)
 	logerror("qixmcu_state, coin_w = %02X\n", data);
 	/* this is a callback called by pia6821_device::write(), so I don't need to synchronize */
 	/* the CPUs - they have already been synchronized by qix_pia_w() */
-	m_mcu->pa_w(space, 0, data, mem_mask);
+	m_mcu->pa_w(data);
 }
 
 

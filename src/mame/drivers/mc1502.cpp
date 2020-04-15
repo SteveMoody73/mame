@@ -209,6 +209,12 @@ MACHINE_RESET_MEMBER(mc1502_state, mc1502)
  * macros
  */
 
+void mc1502_state::fdc_config(device_t *device)
+{
+	mc1502_fdc_device &fdc = *downcast<mc1502_fdc_device*>(device);
+	fdc.set_cpu(m_maincpu);
+}
+
 void mc1502_state::mc1502_map(address_map &map)
 {
 	map.unmap_value_high();
@@ -250,7 +256,7 @@ void mc1502_state::mc1502(machine_config &config)
 	m_pic8259->out_int_callback().set_inputline(m_maincpu, 0);
 
 	I8255(config, m_ppi8255n1);
-	m_ppi8255n1->out_pa_callback().set("cent_data_out", FUNC(output_latch_device::bus_w));
+	m_ppi8255n1->out_pa_callback().set("cent_data_out", FUNC(output_latch_device::write));
 	m_ppi8255n1->out_pb_callback().set(FUNC(mc1502_state::mc1502_ppi_portb_w));
 	m_ppi8255n1->in_pc_callback().set(FUNC(mc1502_state::mc1502_ppi_portc_r));
 	m_ppi8255n1->out_pc_callback().set(FUNC(mc1502_state::mc1502_ppi_portc_w));
@@ -258,7 +264,7 @@ void mc1502_state::mc1502(machine_config &config)
 	I8255(config, m_ppi8255n2);
 	m_ppi8255n2->in_pa_callback().set(FUNC(mc1502_state::mc1502_kppi_porta_r));
 	m_ppi8255n2->out_pb_callback().set(FUNC(mc1502_state::mc1502_kppi_portb_w));
-	m_ppi8255n2->in_pc_callback().set("cent_status_in", FUNC(input_buffer_device::bus_r));
+	m_ppi8255n2->in_pc_callback().set("cent_status_in", FUNC(input_buffer_device::read));
 	m_ppi8255n2->out_pc_callback().set(FUNC(mc1502_state::mc1502_kppi_portc_w));
 
 	I8251(config, m_upd8251, 0);
@@ -284,10 +290,11 @@ void mc1502_state::mc1502(machine_config &config)
 	isa.irq5_callback().set(m_pic8259, FUNC(pic8259_device::ir5_w));
 	isa.irq6_callback().set(m_pic8259, FUNC(pic8259_device::ir6_w));
 	isa.irq7_callback().set(m_pic8259, FUNC(pic8259_device::ir7_w));
+	isa.iochrdy_callback().set_inputline(m_maincpu, INPUT_LINE_HALT);
 
 	ISA8_SLOT(config, "board0", 0, "isa", mc1502_isa8_cards, "cga_mc1502", true); // FIXME: determine ISA bus clock
-	ISA8_SLOT(config, "isa1", 0, "isa", mc1502_isa8_cards, "fdc", false);
-	ISA8_SLOT(config, "isa2", 0, "isa", mc1502_isa8_cards, "rom", false);
+	ISA8_SLOT(config, "isa1", 0, "isa", mc1502_isa8_cards, "fdc", false).set_option_machine_config("fdc", [this](device_t *device) { fdc_config(device); });
+	ISA8_SLOT(config, "isa2", 0, "isa", mc1502_isa8_cards, "rom", false).set_option_machine_config("fdc", [this](device_t* device) { fdc_config(device); });
 
 	SPEAKER(config, "mono").front_center();
 	SPEAKER_SOUND(config, "speaker").add_route(ALL_OUTPUTS, "mono", 0.80);
@@ -324,7 +331,7 @@ void mc1502_state::mc1502(machine_config &config)
         QWERTY).
 */
 ROM_START( mc1502 )
-	ROM_REGION16_LE(0x10000,"bios", 0)
+	ROM_REGION(0x10000,"bios", 0)
 
 	ROM_DEFAULT_BIOS("v52")
 	ROM_SYSTEM_BIOS(0, "v50", "v5.0 10/05/89")
@@ -374,7 +381,7 @@ ROM_END
         different video subsystem (not emulated).
 */
 ROM_START( pk88 )
-	ROM_REGION16_LE(0x10000,"bios", 0)
+	ROM_REGION(0x10000, "bios", 0)
 
 	// datecode 07.23.87
 	ROM_LOAD( "b0.064", 0x0000, 0x2000, CRC(80d3cf5d) SHA1(64769b7a8b60ffeefa04e4afbec778069a2840c9))

@@ -209,6 +209,10 @@ dmv_keyboard_device::dmv_keyboard_device(const machine_config &mconfig, const ch
 
 void dmv_keyboard_device::device_start()
 {
+	// register for state saving
+	save_item(NAME(m_col));
+	save_item(NAME(m_sd_data_state));
+	save_item(NAME(m_sd_poll_state));
 }
 
 
@@ -289,7 +293,7 @@ WRITE8_MEMBER( dmv_keyboard_device::port2_w )
 DECLARE_WRITE_LINE_MEMBER(dmv_keyboard_device::sd_poll_w)
 {
 	if (m_sd_poll_state && !state)
-		m_maincpu->upi41_master_w(m_maincpu->space(), 0, 0);
+		m_maincpu->upi41_master_w(0, 0);
 
 	m_sd_poll_state = state;
 }

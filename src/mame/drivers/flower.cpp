@@ -164,7 +164,7 @@ TILE_GET_INFO_MEMBER(flower_state::get_bg_tile_info)
 	int code = m_bgvram[tile_index];
 	int color = (m_bgvram[tile_index+0x100] & 0xf0) >> 4;
 
-	SET_TILE_INFO_MEMBER(1, code, color, 0);
+	tileinfo.set(1, code, color, 0);
 }
 
 TILE_GET_INFO_MEMBER(flower_state::get_fg_tile_info)
@@ -172,13 +172,13 @@ TILE_GET_INFO_MEMBER(flower_state::get_fg_tile_info)
 	int code = m_fgvram[tile_index];
 	int color = (m_fgvram[tile_index+0x100] & 0xf0) >> 4;
 
-	SET_TILE_INFO_MEMBER(1, code, color, 0);
+	tileinfo.set(1, code, color, 0);
 }
 
 void flower_state::video_start()
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(flower_state::get_bg_tile_info),this), TILEMAP_SCAN_ROWS, 16, 16, 16, 16);
-	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(flower_state::get_fg_tile_info),this), TILEMAP_SCAN_ROWS, 16, 16, 16, 16);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(flower_state::get_bg_tile_info)), TILEMAP_SCAN_ROWS, 16, 16, 16, 16);
+	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(flower_state::get_fg_tile_info)), TILEMAP_SCAN_ROWS, 16, 16, 16, 16);
 
 	m_screen->register_screen_bitmap(m_temp_bitmap);
 	m_fg_tilemap->set_transparent_pen(15);
@@ -509,7 +509,7 @@ void flower_state::flower(machine_config &config)
 	m_audiocpu->set_addrmap(AS_PROGRAM, &flower_state::audio_map);
 	m_audiocpu->set_periodic_int(FUNC(flower_state::irq0_line_hold), attotime::from_hz(90));
 
-	config.m_perfect_cpu_quantum = subtag("mastercpu");
+	config.set_perfect_quantum(m_mastercpu);
 
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
 	m_screen->set_screen_update(FUNC(flower_state::screen_update));

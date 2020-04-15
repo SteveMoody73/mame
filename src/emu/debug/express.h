@@ -17,6 +17,7 @@
 
 #include <deque>
 #include <functional>
+#include <list>
 #include <unordered_map>
 
 
@@ -104,8 +105,6 @@ private:
 // symbol_entry describes a symbol in a symbol table
 class symbol_entry
 {
-	friend class simple_list<symbol_entry>;
-
 protected:
 	// symbol types
 	enum symbol_type
@@ -120,7 +119,6 @@ public:
 	virtual ~symbol_entry();
 
 	// getters
-	symbol_entry *next() const { return m_next; }
 	const char *name() const { return m_name.c_str(); }
 	const std::string &format() const { return m_format; }
 
@@ -134,7 +132,6 @@ public:
 
 protected:
 	// internal state
-	symbol_entry *  m_next;                     // link to next entry
 	symbol_table &  m_table;                    // pointer back to the owning table
 	symbol_type     m_type;                     // type of symbol
 	std::string     m_name;                     // name of the symbol
@@ -150,16 +147,16 @@ class symbol_table
 {
 public:
 	// callback functions for getting/setting a symbol value
-	typedef std::function<u64(symbol_table &table)> getter_func;
-	typedef std::function<void(symbol_table &table, u64 value)> setter_func;
+	typedef std::function<u64()> getter_func;
+	typedef std::function<void(u64 value)> setter_func;
 
 	// callback functions for function execution
-	typedef std::function<u64(symbol_table &table, int numparams, const u64 *paramlist)> execute_func;
+	typedef std::function<u64(int numparams, const u64 *paramlist)> execute_func;
 
 	// callback functions for memory reads/writes
-	typedef std::function<expression_error::error_code(void *cbparam, const char *name, expression_space space)> valid_func;
-	typedef std::function<u64(void *cbparam, const char *name, expression_space space, u32 offset, int size, bool disable_se)> read_func;
-	typedef std::function<void(void *cbparam, const char *name, expression_space space, u32 offset, int size, u64 value, bool disable_se)> write_func;
+	typedef std::function<expression_error::error_code(const char *name, expression_space space)> valid_func;
+	typedef std::function<u64(const char *name, expression_space space, u32 offset, int size, bool disable_se)> read_func;
+	typedef std::function<void(const char *name, expression_space space, u32 offset, int size, u64 value, bool disable_se)> write_func;
 
 	enum read_write
 	{
@@ -168,15 +165,14 @@ public:
 	};
 
 	// construction/destruction
-	symbol_table(void *globalref, symbol_table *parent = nullptr);
+	symbol_table(symbol_table *parent = nullptr);
 
 	// getters
 	const std::unordered_map<std::string, std::unique_ptr<symbol_entry>> &entries() const { return m_symlist; }
 	symbol_table *parent() const { return m_parent; }
-	void *globalref() const { return m_globalref; }
 
 	// setters
-	void configure_memory(void *param, valid_func valid, read_func read, write_func write);
+	void configure_memory(valid_func valid, read_func read, write_func write);
 
 	// symbol access
 	void add(const char *name, read_write rw, u64 *ptr = nullptr);
@@ -198,9 +194,7 @@ public:
 private:
 	// internal state
 	symbol_table *          m_parent;           // pointer to the parent symbol table
-	void *                  m_globalref;        // global reference parameter
 	std::unordered_map<std::string,std::unique_ptr<symbol_entry>> m_symlist;        // list of symbols
-	void *                  m_memory_param;     // callback parameter for memory
 	valid_func              m_memory_valid;     // validation callback
 	read_func               m_memory_read;      // read callback
 	write_func              m_memory_write;     // write callback
@@ -215,19 +209,22 @@ class parsed_expression
 {
 public:
 	// construction/destruction
-	parsed_expression(const parsed_expression &src) { copy(src); }
-	parsed_expression(symbol_table *symtable = nullptr, const char *expression = nullptr, u64 *result = nullptr);
+	parsed_expression(symbol_table &symtable, const char *expression = nullptr, int default_base = 16);
+	parsed_expression(const parsed_expression &src);
+	parsed_expression(parsed_expression &&src) = default;
 
 	// operators
 	parsed_expression &operator=(const parsed_expression &src) { copy(src); return *this; }
+	parsed_expression &operator=(parsed_expression &&src) = default;
 
 	// getters
 	bool is_empty() const { return (m_tokenlist.count() == 0); }
 	const char *original_string() const { return m_original_string.c_str(); }
-	symbol_table *symbols() const { return m_symtable; }
+	symbol_table &symbols() const { return m_symtable.get(); }
 
 	// setters
-	void set_symbols(symbol_table *symtable) { m_symtable = symtable; }
+	void set_symbols(symbol_table &symtable) { m_symtable = std::reference_wrapper<symbol_table>(symtable); }
+	void set_default_base(int base) { assert(base == 8 || base == 10 || base == 16); m_default_base = base; }
 
 	// execution
 	void parse(const char *string);
@@ -315,8 +312,8 @@ private:
 		parse_token &set_memory_source(const char *string) { assert(m_type == OPERATOR || m_type == MEMORY); m_string = string; return *this; }
 
 		// access
-		u64 get_lval_value(symbol_table *symtable);
-		void set_lval_value(symbol_table *symtable, u64 value);
+		u64 get_lval_value(symbol_table &symtable);
+		void set_lval_value(symbol_table &symtable, u64 value);
 
 	private:
 		// internal state
@@ -327,27 +324,6 @@ private:
 		u32                     m_flags;            // additional flags/info
 		const char *            m_string;           // associated string
 		symbol_entry *          m_symbol;           // symbol pointer
-	};
-
-	// an expression_string holds an indexed string parsed from the expression
-	class expression_string
-	{
-		friend class simple_list<expression_string>;
-
-	public:
-		// construction/destruction
-		expression_string(const char *string, int length = 0)
-			: m_next(nullptr),
-				m_string(string, (length == 0) ? strlen(string) : length) { }
-
-		// operators
-		operator const char *() { return m_string.c_str(); }
-		operator const char *() const { return m_string.c_str(); }
-
-	private:
-		// internal state
-		expression_string * m_next;                     // next string in list
-		std::string         m_string;                   // copy of the string
 	};
 
 	// internal helpers
@@ -376,10 +352,11 @@ private:
 	static const int MAX_FUNCTION_PARAMS = 16;
 
 	// internal state
-	symbol_table *      m_symtable;                     // symbol table
+	std::reference_wrapper<symbol_table> m_symtable;    // symbol table
+	int                 m_default_base;                 // default base
 	std::string         m_original_string;              // original string (prior to parsing)
 	simple_list<parse_token> m_tokenlist;               // token list
-	simple_list<expression_string> m_stringlist;        // string list
+	std::list<std::string> m_stringlist;                // string list
 	std::deque<parse_token> m_token_stack;              // token stack (used during execution)
 };
 

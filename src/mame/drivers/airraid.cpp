@@ -187,10 +187,9 @@ private:
 
 	required_device<airraid_video_device> m_airraid_video;
 
-	DECLARE_READ8_MEMBER(cshooter_coin_r);
-	DECLARE_WRITE8_MEMBER(cshooter_c500_w);
-	DECLARE_WRITE8_MEMBER(cshooter_c700_w);
-	DECLARE_WRITE8_MEMBER(bank_w);
+	void cshooter_c500_w(uint8_t data);
+	void cshooter_c700_w(uint8_t data);
+	void bank_w(uint8_t data);
 	DECLARE_MACHINE_RESET(cshooter);
 	TIMER_DEVICE_CALLBACK_MEMBER(cshooter_scanline);
 
@@ -220,15 +219,15 @@ MACHINE_RESET_MEMBER(airraid_state,cshooter)
 {
 }
 
-WRITE8_MEMBER(airraid_state::cshooter_c500_w)
+void airraid_state::cshooter_c500_w(uint8_t data)
 {
 }
 
-WRITE8_MEMBER(airraid_state::cshooter_c700_w)
+void airraid_state::cshooter_c700_w(uint8_t data)
 {
 }
 
-WRITE8_MEMBER(airraid_state::bank_w)
+void airraid_state::bank_w(uint8_t data)
 {
 	// format of this address is TTBB tbfs
 
@@ -400,7 +399,7 @@ void airraid_state::airraid(machine_config &config)
 	audiocpu.set_addrmap(AS_OPCODES, &airraid_state::airraid_sound_decrypted_opcodes_map);
 	audiocpu.set_irq_acknowledge_callback("seibu_sound", FUNC(seibu_sound_device::im0_vector_cb));
 
-	config.m_perfect_cpu_quantum = subtag("maincpu");
+	config.set_perfect_quantum(m_maincpu);
 
 	PALETTE(config, m_palette).set_format(palette_device::xBGR_444, 0x100);
 

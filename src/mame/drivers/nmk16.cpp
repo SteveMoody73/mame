@@ -96,6 +96,7 @@ tharrier test mode:
 1)  Press player 2 buttons 1+2 during reset.  "Are you ready?" will appear
 2)  Press player 1 buttons in this sequence:
     2,1,2,2,1,1,↓,↓
+Note: this doesn't currently work, the message never appears (most likely an error in the protection simulation).
 
 tdragon and hachamf test mode:
 
@@ -106,6 +107,8 @@ mustang and blkheart test mode:
 
 1)  Press player 2 buttons 1+2 during reset.  "Ready?" will appear
 2)  Press player 1 button 1 14 (!) times
+Note: blkheart has a buggy service mode, apparently they shifted the ASCII gfx bank at $3xx but
+      forgot to update the routines so it treats the VRAM as if ASCII bank is at $0xx (cfr. the move.w imm,Ax).
 
 gunnail test mode:
 
@@ -118,9 +121,31 @@ bjtwin test mode:
 2)  Press player 1 buttons in this sequence:
     2,2,2, 1,1,1, 2,2,2, 1,1,1
     The release date of this program will appear.
+Note: Some code has to be patched out for this to work (cfr. init_bjtwin fn).
+The program remaps button 2 and 3 to button 1, so you can't enter the above sequence.
 
-Some code has to be patched out for this to work (see below). The program
-remaps button 2 and 3 to button 1, so you can't enter the above sequence.
+---
+
+'gunnailp' observed differences (from notes by trap15)
+
+   - Different introduction scene
+   - Many unique enemy types that ended up unused
+   - Tweaked enemy attack patterns
+   - Tweaked boss behavior and attack patterns
+   - Dramatically different stages (and only 7 of them):
+      - Stage 1: Became Stage 5, very different layouts
+      - Stage 2: Became Stage 7, with mostly slight enemy layout changes
+      - Stage 3: Became Stage 6, almost the same as final
+      - Stage 4: Stayed as Stage 4, with very minor enemy layout changes
+      - Stage 5: Entirely unique stage, majorly reworked to become final Stage 2
+      - Stage 6: Became Stage 3, many enemy layout changes
+      - Stage 7: Entirely unique stage, majorly reworked to become final Stage 1
+   - No ending, instead loops forever
+      - Loop has extremely fast bullets
+      - The difficulty seems the same on all loops
+   - Player's blue shot has a wider maximum and minimum spread
+   - Player's main shot hitbox is symmetrical and wider than final
+      - When the hitbox was shrunk for the final, it was only shrunk in one direction, making it extended to the right
 
 ---
 
@@ -141,7 +166,7 @@ Questions / Notes
 
 Sound notes for games with a Z80:
 
-mustangb and tdragonb use the Seibu Raiden sound hardware and a modified
+mustangb, strahljb and tdragonb use the Seibu Raiden sound hardware and a modified
 Z80 program (but the music is intact and recognizable).  See audio/seibu.cpp
 for more info on this.
 
@@ -358,7 +383,7 @@ void nmk16_state::scroll_w(offs_t offset, u8 data)
 
 			}
 		}
-		m_bg_tilemap[Layer]->set_scrollx(0,((m_scroll[Layer][0] << 8) | m_scroll[Layer][1]) - m_videoshift);
+		m_bg_tilemap[Layer]->set_scrollx(0,(m_scroll[Layer][0] << 8) | m_scroll[Layer][1]);
 	}
 }
 
@@ -452,7 +477,7 @@ void nmk16_tomagic_state::tomagic_sound_map(address_map &map)
 void nmk16_tomagic_state::tomagic_sound_io_map(address_map &map)
 {
 	map.global_mask(0xff);
-	map(0x00, 0x00).w(FUNC(nmk16_state::macross2_sound_bank_w));
+	map(0x00, 0x00).w(FUNC(nmk16_tomagic_state::macross2_sound_bank_w));
 	map(0x02, 0x03).rw("ymsnd", FUNC(ym3812_device::read), FUNC(ym3812_device::write));
 	map(0x06, 0x06).r(m_soundlatch, FUNC(generic_latch_8_device::read));
 }
@@ -1085,6 +1110,24 @@ void nmk16_state::strahl_map(address_map &map)
 	map(0xf0000, 0xfffff).ram().share("mainram");
 }
 
+void nmk16_state::strahljbl_map(address_map &map)
+{
+	map(0x00000, 0x3ffff).rom();
+	map(0x80000, 0x80001).portr("IN0");
+	map(0x80002, 0x80003).portr("IN1");
+	map(0x80008, 0x80009).portr("DSW1");
+	map(0x8000a, 0x8000b).portr("DSW2");
+	map(0x80015, 0x80015).w(FUNC(nmk16_state::flipscreen_w));
+	map(0x8001e, 0x8001f).w("seibu_sound", FUNC(seibu_sound_device::main_mustb_w));
+	map(0x84000, 0x84007).ram().w(FUNC(nmk16_state::scroll_w<0>)).umask16(0x00ff);
+	map(0x88000, 0x88007).ram().w(FUNC(nmk16_state::scroll_w<1>)).umask16(0x00ff);
+	map(0x8c000, 0x8c7ff).ram().w(m_palette, FUNC(palette_device::write16)).share("palette");
+	map(0x90000, 0x93fff).ram().w(FUNC(nmk16_state::bgvideoram_w<0>)).share("bgvideoram0");
+	map(0x94000, 0x97fff).ram().w(FUNC(nmk16_state::bgvideoram_w<1>)).share("bgvideoram1");
+	map(0x9c000, 0x9c7ff).ram().w(FUNC(nmk16_state::txvideoram_w)).share("txvideoram");
+	map(0xf0000, 0xfffff).ram().share("mainram");
+}
+
 void nmk16_state::macross_map(address_map &map)
 {
 	map(0x000000, 0x07ffff).rom();
@@ -1261,7 +1304,7 @@ void nmk16_state::bjtwin_map(address_map &map)
 	map(0x084020, 0x08402f).w("nmk112", FUNC(nmk112_device::okibank_w)).umask16(0x00ff);
 	map(0x088000, 0x0887ff).ram().w(m_palette, FUNC(palette_device::write16)).share("palette");
 	map(0x094001, 0x094001).w(FUNC(nmk16_state::tilebank_w));
-	map(0x094002, 0x094003).nopw();    /* IRQ enable? */
+	map(0x094003, 0x094003).w(FUNC(nmk16_state::bjtwin_scroll_w));    // sabotenb specific?
 	map(0x09c000, 0x09cfff).mirror(0x1000).ram().w(FUNC(nmk16_state::bgvideoram_w<0>)).share("bgvideoram0");
 	map(0x0f0000, 0x0fffff).ram().share("mainram");
 }
@@ -2060,6 +2103,13 @@ static INPUT_PORTS_START( strahl )
 	PORT_DIPSETTING(    0x20, "300k and every 300k" )
 	PORT_DIPSETTING(    0x00, DEF_STR( None ) )
 	PORT_SERVICE_DIPLOC( 0x80, IP_ACTIVE_LOW, "SW2:8" )
+INPUT_PORTS_END
+
+static INPUT_PORTS_START( strahljbl )
+	PORT_INCLUDE(strahl)
+
+	PORT_START("COIN")  // referenced by Seibu sound board
+	PORT_BIT( 0xff, IP_ACTIVE_LOW, IPT_UNKNOWN )
 INPUT_PORTS_END
 
 static INPUT_PORTS_START( acrobatm )
@@ -4062,19 +4112,14 @@ TIMER_DEVICE_CALLBACK_MEMBER(nmk16_state::nmk16_scanline)
 	const int NUM_SCANLINES = 256;
 	const int IRQ1_SCANLINE = 25; // guess
 	const int VBIN_SCANLINE = 0;
-	const int VBOUT_sCANLINE = 240;
-	const int SPRDMA_SCANLINE = 241; // 256 USEC after VBOUT
+	const int VBOUT_SCANLINE = 240;
 
 	int scanline = param;
 
-	if (scanline == VBOUT_sCANLINE) // vblank-out irq
-		m_maincpu->set_input_line(4, HOLD_LINE);
-
-	if (scanline == SPRDMA_SCANLINE)
+	if (scanline == VBOUT_SCANLINE) // vblank-out irq
 	{
-		// 2 buffers confirmed on PCB
-		memcpy(m_spriteram_old2.get(),m_spriteram_old.get(), 0x1000);
-		memcpy(m_spriteram_old.get(), m_mainram + m_sprdma_base / 2, 0x1000);
+		m_maincpu->set_input_line(4, HOLD_LINE);
+		m_dma_timer->adjust(attotime::from_usec(256)); // 256 USEC after VBOUT
 	}
 
 	/* Vblank-in irq, Vandyke definitely relies that irq fires at scanline ~0 instead of 112 (as per previous
@@ -4089,6 +4134,14 @@ TIMER_DEVICE_CALLBACK_MEMBER(nmk16_state::nmk16_scanline)
 	/* 8.9ms from first IRQ1 to second IRQ1 fire. approx 128 lines (half frame time) */
 	if (scanline == IRQ1_SCANLINE+(NUM_SCANLINES/2)) // if this happens too late bioship sprites will glitch on the left edge
 		m_maincpu->set_input_line(1, HOLD_LINE);
+}
+
+TIMER_CALLBACK_MEMBER(nmk16_state::dma_callback)
+{
+	// 2 buffers confirmed on PCB, 1 on sabotenb
+	memcpy(m_spriteram_old2.get(),m_spriteram_old.get(), 0x1000);
+	memcpy(m_spriteram_old.get(), m_mainram + m_sprdma_base / 2, 0x1000);
+	//m_maincpu->spin_until_time(attotime::from_usec(694)); // stop cpu during DMA?
 }
 
 void nmk16_state::set_hacky_interrupt_timing(machine_config &config)
@@ -4141,8 +4194,8 @@ void nmk16_state::tharrier(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
-	m_spritegen->set_ext_callback(FUNC(nmk16_state::get_sprite_flip), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
+	m_spritegen->set_ext_callback(FUNC(nmk16_state::get_sprite_flip));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_tharrier));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_tharrier);
@@ -4180,7 +4233,7 @@ void nmk16_state::mustang(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
@@ -4217,12 +4270,12 @@ void nmk16_state::mustangb(machine_config &config)
 	set_hacky_interrupt_timing(config);
 
 	Z80(config, m_audiocpu, 14318180/4);
-	m_audiocpu->set_addrmap(AS_PROGRAM, &seibu_sound_common::seibu_sound_map);
+	m_audiocpu->set_addrmap(AS_PROGRAM, &nmk16_state::seibu_sound_map);
 	m_audiocpu->set_irq_acknowledge_callback("seibu_sound", FUNC(seibu_sound_device::im0_vector_cb));
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
@@ -4255,7 +4308,7 @@ void nmk16_state::bioship(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_strahl));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_bioship);
@@ -4293,7 +4346,7 @@ void nmk16_state::vandyke(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
@@ -4333,7 +4386,7 @@ void nmk16_state::vandykeb(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
@@ -4357,7 +4410,7 @@ void nmk16_state::acrobatm(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
@@ -4394,12 +4447,12 @@ void nmk16_state::tdragonb(machine_config &config)    /* bootleg using Raiden so
 	set_hacky_interrupt_timing(config);
 
 	Z80(config, m_audiocpu, 14318180/4);
-	m_audiocpu->set_addrmap(AS_PROGRAM, &seibu_sound_common::seibu_sound_map);
+	m_audiocpu->set_addrmap(AS_PROGRAM, &nmk16_state::seibu_sound_map);
 	m_audiocpu->set_irq_acknowledge_callback("seibu_sound", FUNC(seibu_sound_device::im0_vector_cb));
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
@@ -4432,7 +4485,7 @@ void nmk16_state::tdragon(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
@@ -4479,7 +4532,7 @@ void nmk16_state::ssmissin(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
@@ -4506,7 +4559,7 @@ void nmk16_state::strahl(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_strahl));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_strahl);
@@ -4535,6 +4588,40 @@ void nmk16_state::strahl(machine_config &config)
 	m_oki[1]->add_route(ALL_OUTPUTS, "mono", 0.10);
 }
 
+void nmk16_state::strahljbl(machine_config &config)
+{
+	M68000(config, m_maincpu, 12_MHz_XTAL); 
+	m_maincpu->set_addrmap(AS_PROGRAM, &nmk16_state::strahljbl_map);
+	set_hacky_interrupt_timing(config);
+
+	Z80(config, m_audiocpu, 12_MHz_XTAL / 4); // XTAL confirmed, divisor not
+	m_audiocpu->set_addrmap(AS_PROGRAM, &nmk16_state::seibu_sound_map);
+	m_audiocpu->set_irq_acknowledge_callback("seibu_sound", FUNC(seibu_sound_device::im0_vector_cb));
+
+	set_hacky_screen_lowres(config);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
+	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_strahl));
+
+	GFXDECODE(config, m_gfxdecode, m_palette, gfx_strahl);
+	PALETTE(config, m_palette).set_format(palette_device::RGBx_444, 1024);
+	MCFG_VIDEO_START_OVERRIDE(nmk16_state,strahl)
+
+	SPEAKER(config, "mono").front_center();
+
+	ym3812_device &ymsnd(YM3812(config, "ymsnd", 12_MHz_XTAL / 4)); // XTAL confirmed, divisor not
+	ymsnd.irq_handler().set("seibu_sound", FUNC(seibu_sound_device::fm_irqhandler));
+	ymsnd.add_route(ALL_OUTPUTS, "mono", 1.0);
+
+	OKIM6295(config, "oki", 12_MHz_XTAL / 12, okim6295_device::PIN7_LOW).add_route(ALL_OUTPUTS, "mono", 0.40); // XTAL confirmed, divisor not
+
+	seibu_sound_device &seibu_sound(SEIBU_SOUND(config, "seibu_sound", 0));
+	seibu_sound.int_callback().set_inputline(m_audiocpu, 0);
+	seibu_sound.set_rom_tag("audiocpu");
+	seibu_sound.set_rombank_tag("seibu_bank1");
+	seibu_sound.ym_read_callback().set("ymsnd", FUNC(ym3812_device::read));
+	seibu_sound.ym_write_callback().set("ymsnd", FUNC(ym3812_device::write));
+}
+
 void nmk16_state::hachamf(machine_config &config)
 {
 	/* basic machine hardware */
@@ -4544,7 +4631,7 @@ void nmk16_state::hachamf(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
@@ -4589,7 +4676,7 @@ void nmk16_state::macross(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
@@ -4627,7 +4714,7 @@ void nmk16_state::blkheart(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
@@ -4665,7 +4752,7 @@ void nmk16_state::gunnail(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_hires(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
@@ -4728,7 +4815,7 @@ void nmk16_state::macross2(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_hires(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_5bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_5bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross2);
@@ -4766,13 +4853,13 @@ void nmk16_state::tdragon2(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &nmk16_state::tdragon2_map);
 	set_hacky_interrupt_timing(config);
 
-	Z80(config, m_audiocpu, 4000000); /* Z0840006PSC 4 MHz  */
+	Z80(config, m_audiocpu, 4000000); /* Z0840006PSC 4? MHz  */
 	m_audiocpu->set_addrmap(AS_PROGRAM, &nmk16_state::macross2_sound_map);
 	m_audiocpu->set_addrmap(AS_IO, &nmk16_state::macross2_sound_io_map);
 
 	/* video hardware */
 	set_hacky_screen_hires(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_5bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_5bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross2);
@@ -4823,7 +4910,7 @@ void nmk16_state::raphero(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_hires(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_5bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_5bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross2);
@@ -4863,7 +4950,7 @@ void nmk16_state::bjtwin(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_hires(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_bjtwin));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_bjtwin);
@@ -4890,12 +4977,10 @@ TIMER_DEVICE_CALLBACK_MEMBER(nmk16_state::manybloc_scanline)
 	int scanline = param;
 
 	if (scanline == 248) // vblank-out irq
-		m_maincpu->set_input_line(4, HOLD_LINE);
-
-	if (scanline == 248)
 	{
 		// only a single buffer
 		memcpy(m_spriteram_old2.get(), m_mainram + m_sprdma_base / 2, 0x1000);
+		m_maincpu->set_input_line(4, HOLD_LINE);
 	}
 
 	/* This is either vblank-in or sprite dma irq complete */
@@ -4926,8 +5011,8 @@ void nmk16_state::manybloc(machine_config &config)
 	m_screen->set_palette(m_palette);
 
 	NMK_16BIT_SPRITE(config, m_spritegen, XTAL(12'000'000)/2);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
-	m_spritegen->set_ext_callback(FUNC(nmk16_state::get_sprite_flip), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
+	m_spritegen->set_ext_callback(FUNC(nmk16_state::get_sprite_flip));
 	m_spritegen->set_screen_size(256, 256);
 	m_spritegen->set_max_sprite_clock(384 * 263); // from hardware manual
 
@@ -4972,12 +5057,12 @@ void nmk16_tomagic_state::tomagic(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_hires(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_tomagic_state::get_colour_4bit), this);
-	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
+	m_spritegen->set_colpri_callback(FUNC(nmk16_tomagic_state::get_colour_4bit));
+	m_screen->set_screen_update(FUNC(nmk16_tomagic_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
 	PALETTE(config, m_palette).set_format(palette_device::RRRRGGGGBBBBRGBx, 1024);
-	MCFG_VIDEO_START_OVERRIDE(nmk16_state,gunnail)
+	MCFG_VIDEO_START_OVERRIDE(nmk16_tomagic_state,gunnail)
 
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();
@@ -5183,7 +5268,7 @@ void nmk16_state::init_hachamf_prot()
 	rom[0x048a/2] = 0x4e71;
 	rom[0x04aa/2] = 0x4e71;
 
-	m_maincpu->space(AS_PROGRAM).install_write_handler(0x0f0000, 0x0fffff, write16s_delegate(FUNC(nmk16_state::hachamf_mainram_w),this));
+	m_maincpu->space(AS_PROGRAM).install_write_handler(0x0f0000, 0x0fffff, write16s_delegate(*this, FUNC(nmk16_state::hachamf_mainram_w)));
 	save_protregs();
 }
 
@@ -5203,7 +5288,7 @@ void nmk16_state::init_tdragon_prot()
 	rom[0x048a/2] = 0x4e71;
 	rom[0x04aa/2] = 0x4e71;
 
-	m_maincpu->space(AS_PROGRAM).install_write_handler(0x0b0000, 0x0bffff, write16s_delegate(FUNC(nmk16_state::tdragon_mainram_w),this));
+	m_maincpu->space(AS_PROGRAM).install_write_handler(0x0b0000, 0x0bffff, write16s_delegate(*this, FUNC(nmk16_state::tdragon_mainram_w)));
 	save_protregs();
 }
 
@@ -5257,7 +5342,7 @@ u16 nmk16_state::vandykeb_r(){ return 0x0000; }
 void nmk16_state::init_vandykeb()
 {
 	m_okibank[0]->configure_entries(0, 4, memregion("oki1")->base() + 0x20000, 0x20000);
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x08000e, 0x08000f, read16smo_delegate(FUNC(nmk16_state::vandykeb_r),this));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x08000e, 0x08000f, read16smo_delegate(*this, FUNC(nmk16_state::vandykeb_r)));
 	m_maincpu->space(AS_PROGRAM).nop_write(0x08001e, 0x08001f);
 }
 
@@ -5429,8 +5514,8 @@ void afega_state::stagger1(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(afega_state::get_colour_4bit), this);
-	m_spritegen->set_ext_callback(FUNC(afega_state::get_sprite_flip), this);
+	m_spritegen->set_colpri_callback(FUNC(afega_state::get_colour_4bit));
+	m_spritegen->set_ext_callback(FUNC(afega_state::get_sprite_flip));
 	m_screen->set_screen_update(FUNC(afega_state::screen_update_afega));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
@@ -5512,8 +5597,8 @@ void afega_state::firehawk(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(afega_state::get_colour_4bit), this);
-	m_spritegen->set_ext_callback(FUNC(afega_state::get_sprite_flip), this);
+	m_spritegen->set_colpri_callback(FUNC(afega_state::get_colour_4bit));
+	m_spritegen->set_ext_callback(FUNC(afega_state::get_sprite_flip));
 	m_screen->set_screen_update(FUNC(afega_state::screen_update_firehawk));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_grdnstrm);
@@ -5552,7 +5637,7 @@ void nmk16_state::twinactn(machine_config &config)
 
 	/* video hardware */
 	set_hacky_screen_lowres(config);
-	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit), this);
+	m_spritegen->set_colpri_callback(FUNC(nmk16_state::get_colour_4bit));
 	m_screen->set_screen_update(FUNC(nmk16_state::screen_update_macross));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_macross);
@@ -6406,6 +6491,36 @@ ROM_START( strahlja )
 	ROM_CONTINUE(             0x20000, 0x20000 )    /* banked */
 ROM_END
 
+ROM_START( strahljbl ) // N0 892 PCB, this bootleg uses SEIBU sound system
+	ROM_REGION( 0x40000, "maincpu", 0 )
+	ROM_LOAD16_BYTE( "a7.u3", 0x00000, 0x20000, CRC(3ddca4f7) SHA1(83ab6278fced912759c20eba6254bc544dc1ffdf) )
+	ROM_LOAD16_BYTE( "a8.u2", 0x00001, 0x20000, CRC(890f74d0) SHA1(50c4781642cb95c82d1a4d2e8e8d0be2baea29a7) )
+
+	ROM_REGION( 0x20000, "fgtile", 0 ) // same as original
+	ROM_LOAD( "cha.38",  0x000000, 0x10000, CRC(2273b33e) SHA1(fa53e91b80dfea3f8b2c1f0ce66e5c6920c4960f) ) // Characters
+
+	ROM_REGION( 0x40000, "bgtile", 0 ) // same as original
+	ROM_LOAD( "6.2m", 0x000000, 0x40000, CRC(5769e3e1) SHA1(7d7a16b11027d0a7618df1ec1e3484224b772e90) ) // Tiles
+
+	ROM_REGION( 0x180000, "sprites", 0 ) // same as original, just a bigger ROM
+	ROM_LOAD( "d.8m",  0x000000, 0x100000, CRC(09ede4d4) SHA1(5c5dcc57f78145b9c6e711a32afc0aab7a5a0450) )
+	ROM_LOAD( "5.4m",  0x100000, 0x080000, CRC(a0e7d210) SHA1(96a762a3a1cdeaa91bde50429e0ac665fb81190b) )
+
+	ROM_REGION( 0x80000, "gfx4", 0 ) // same as original
+	ROM_LOAD( "4.4m", 0x000000, 0x80000, CRC(bb1bb155) SHA1(83a02e89180e15f0e7817e0e92b4bf4e209bb69a) ) // Tiles
+
+	ROM_REGION(0x20000, "audiocpu", 0 )
+	ROM_LOAD( "a6.u417",    0x000000, 0x08000, CRC(99ee7505) SHA1(b97c8ee5e26e8554b5de506fba3b32cc2fde53c9) )
+	ROM_CONTINUE(                       0x010000, 0x08000 )
+	ROM_COPY( "audiocpu",     0x000000, 0x018000, 0x08000 )
+
+	ROM_REGION( 0x40000, "oki", 0 )
+	ROM_LOAD( "a5.u304",    0x00000, 0x10000, CRC(f6f6c4bf) SHA1(ea4cf74d968e254ae47c16c2f4c2f4bc1a528808) )
+
+	ROM_REGION( 0x800, "p_rom", 0 ) // not used by the emulation
+	ROM_LOAD( "129.u28", 0x0000, 0x800, CRC(034f68ca) SHA1(377d0951f96d81d389aa96e2f7912a89a136d357) )
+ROM_END
+
 ROM_START( hachamf )
 	ROM_REGION( 0x40000, "maincpu", 0 )     /* 68000 code */
 	ROM_LOAD16_BYTE( "7.93",  0x00000, 0x20000, CRC(9d847c31) SHA1(1d370d8db9cadadb9c2cb213e32f681947d81b7f) ) /* internally reports as 19th Sep. 1991 */
@@ -6620,6 +6735,34 @@ ROM_START( gunnail )
 
 	ROM_REGION( 0x020000, "fgtile", 0 )
 	ROM_LOAD( "1.u21",    0x000000, 0x020000, CRC(3d00a9f4) SHA1(91a82e3e74c8774d7f8b2adceb228b97010facfd) )    /* 8x8 tiles */
+
+	ROM_REGION( 0x100000, "bgtile", 0 )
+	ROM_LOAD( "92077-4.u19", 0x000000, 0x100000, CRC(a9ea2804) SHA1(14dbdb3c7986db5e44dc7c5be6fcf39f3d1e50b0) ) /* 16x16 tiles */
+
+	ROM_REGION( 0x200000, "sprites", 0 )
+	ROM_LOAD16_WORD_SWAP( "92077-7.u134", 0x000000, 0x200000, CRC(d49169b3) SHA1(565ff7725dd6ace79b55706114132d8d867e81a9) ) /* Sprites */
+
+	ROM_REGION( 0x080000, "oki1", 0 )   /* OKIM6295 samples */
+	ROM_LOAD( "92077-5.u56", 0x00000, 0x80000, CRC(feb83c73) SHA1(b44e9d20b4af02e218c4bc875d66a7d6b8551cae) ) /* 0x20000 - 0x80000 banked */
+
+	ROM_REGION( 0x080000, "oki2", 0 )   /* OKIM6295 samples */
+	ROM_LOAD( "92077-6.u57", 0x00000, 0x80000, CRC(6d133f0d) SHA1(8a5e6e27a297196f20e4de0d060f1188115809bb) ) /* 0x20000 - 0x80000 banked */
+
+	ROM_REGION( 0x0220, "proms", 0 )
+	ROM_LOAD( "8_82s129.u35",   0x0000, 0x0100, CRC(4299776e) SHA1(683d14d2ace14965f0fcfe0f0540c1b77d2cece5) )  /* unknown */
+	ROM_LOAD( "9_82s135.u72",   0x0100, 0x0100, CRC(633ab1c9) SHA1(acd99fcca41eaab7948ca84988352f1d7d519c61) )  /* unknown */
+	ROM_LOAD( "10_82s123.u96",  0x0200, 0x0020, CRC(c60103c8) SHA1(dfb05b704bb5e1f75f5aaa4fa36e8ddcc905f8b6) )  /* unknown */
+ROM_END
+
+ROM_START( gunnailp )
+	ROM_REGION( 0x80000, "maincpu", 0 )     /* 68000 code */
+	ROM_LOAD16_WORD_SWAP( "3.u132",  0x00000, 0x80000, CRC(93570f03) SHA1(54fb203b5bfceb0ac86627bff3e67863f460fe73) )
+
+	ROM_REGION( 0x10000, "audiocpu", 0 )     /* Code for NMK004 CPU */
+	ROM_LOAD( "92077_2.u101",      0x00000, 0x10000, CRC(cd4e55f8) SHA1(92182767ca0ec37ec4949bd1a88c2efdcdcb60ed) )
+
+	ROM_REGION( 0x020000, "fgtile", 0 )
+	ROM_LOAD( "1.u21",    0x000000, 0x020000, CRC(bdf427e4) SHA1(e9cd178d1d9e2ed72f0fb013385d935f334b8fe3) )    /* 8x8 tiles */
 
 	ROM_REGION( 0x100000, "bgtile", 0 )
 	ROM_LOAD( "92077-4.u19", 0x000000, 0x100000, CRC(a9ea2804) SHA1(14dbdb3c7986db5e44dc7c5be6fcf39f3d1e50b0) ) /* 16x16 tiles */
@@ -8420,6 +8563,7 @@ GAME( 1992, macross,    0,        macross,      macross,      nmk16_state, init_
 
 GAME( 1993, gunnail,    0,        gunnail,      gunnail,      nmk16_state, init_nmk,             ROT270, "NMK / Tecmo",                  "GunNail (28th May. 1992)", 0 ) // Tecmo is displayed only when set to Japan
 GAME( 1992, gunnailb,   gunnail,  gunnailb,     gunnail,      nmk16_state, init_gunnailb,        ROT270, "bootleg",                      "GunNail (bootleg)", MACHINE_NO_SOUND ) // different sound hardware not hooked up
+GAME( 1992, gunnailp,   gunnail,  gunnail,      gunnail,      nmk16_state, init_nmk,             ROT270, "NMK",                          "GunNail (location test)", 0 ) // still has the 28th May. 1992 string, so unlikely that was the release date for either version.
 // a 1992 version of Gunnail exists, see https://www.youtube.com/watch?v=tf15Wz0zUiA  3:10; is this bootleg version 'gunnailb'?
 
 GAME( 1993, macross2,   0,        macross2,     macross2,     nmk16_state, init_banked_audiocpu, ROT0,   "Banpresto",                    "Super Spacefortress Macross II / Chou-Jikuu Yousai Macross II", MACHINE_NO_COCKTAIL )
@@ -8460,6 +8604,7 @@ GAME( 1997, tomagic,   0,         tomagic,      tomagic,      nmk16_tomagic_stat
 GAME( 1990, mustangb,   mustang,  mustangb,     mustang,      nmk16_state, empty_init,           ROT0,   "bootleg",                       "US AAF Mustang (bootleg)", 0 )
 GAME( 1990, mustangb2,  mustang,  mustangb,     mustang,      nmk16_state, empty_init,           ROT0,   "bootleg (TAB Austria)",         "US AAF Mustang (TAB Austria bootleg)", 0 ) // PCB and ROMs have TAB Austria stickers
 GAME( 1991, tdragonb,   tdragon,  tdragonb,     tdragonb,     nmk16_state, init_tdragonb,        ROT270, "bootleg",                       "Thunder Dragon (bootleg)", 0 )
+GAME( 1992, strahljbl,  strahl,   strahljbl,    strahljbl,    nmk16_state, empty_init,           ROT0,   "bootleg",                       "Koutetsu Yousai Strahl (Japan, bootleg)", 0 )
 
 // these are from Comad, based on the Thunder Dragon code?
 GAME( 1992, ssmissin,   0,        ssmissin,     ssmissin,     nmk16_state, init_ssmissin,        ROT270, "Comad",                         "S.S. Mission", MACHINE_NO_COCKTAIL )

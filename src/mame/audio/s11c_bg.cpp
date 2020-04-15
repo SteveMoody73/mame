@@ -45,7 +45,7 @@ WRITE_LINE_MEMBER( s11c_bg_device::pia40_cb2_w)
 
 WRITE8_MEMBER( s11c_bg_device::pia40_pb_w )
 {
-//  m_pia34->write_portb(data);
+//  m_pia34->portb_w(data);
 }
 
 void s11c_bg_device::ctrl_w(uint8_t data)
@@ -55,14 +55,14 @@ void s11c_bg_device::ctrl_w(uint8_t data)
 
 void s11c_bg_device::data_w(uint8_t data)
 {
-	m_pia40->write_portb(data);
+	m_pia40->portb_w(data);
 }
 
 void s11c_bg_device::device_add_mconfig(machine_config &config)
 {
 	MC6809E(config, m_cpu, XTAL(8'000'000) / 4); // MC68B09E
 	m_cpu->set_addrmap(AS_PROGRAM, &s11c_bg_device::s11c_bg_map);
-	config.m_minimum_quantum = attotime::from_hz(50);
+	config.set_maximum_quantum(attotime::from_hz(50));
 
 	YM2151(config, m_ym2151, XTAL(3'579'545)); // "3.58 MHz" on schematics and parts list
 	m_ym2151->irq_handler().set(FUNC(s11c_bg_device::ym2151_irq_w));

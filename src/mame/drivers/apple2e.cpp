@@ -157,6 +157,7 @@ Address bus A0-A11 is Y0-Y11
 #include "bus/a2bus/a2vulcan.h"
 #include "bus/a2bus/4play.h"
 #include "bus/a2bus/computereyes2.h"
+#include "bus/a2bus/byte8251.h"
 
 #include "bus/a2gameio/gameio.h"
 
@@ -2469,10 +2470,16 @@ READ8_MEMBER(apple2e_state::c800_r)
 {
 	if ((offset == 0x7ff) && !machine().side_effects_disabled())
 	{
+		uint8_t rv = 0xff;
+
+		if ((m_cnxx_slot > 0) && (m_slotdevice[m_cnxx_slot] != nullptr))
+		{
+			rv = m_slotdevice[m_cnxx_slot]->read_c800(offset&0xfff);
+		}
 		m_cnxx_slot = CNXX_UNCLAIMED;
 		m_intc8rom = false;
 		update_slotrom_banks();
-		return 0xff;
+		return rv;
 	}
 
 	if ((m_cnxx_slot > 0) && (m_slotdevice[m_cnxx_slot] != nullptr))
@@ -2525,6 +2532,11 @@ WRITE8_MEMBER(apple2e_state::c800_w)
 		return;
 	}
 
+	if ((m_cnxx_slot > 0) && (m_slotdevice[m_cnxx_slot] != nullptr))
+	{
+		m_slotdevice[m_cnxx_slot]->write_c800(offset&0xfff, data);
+	}
+
 	if (offset == 0x7ff)
 	{
 		if (!machine().side_effects_disabled())
@@ -2533,13 +2545,6 @@ WRITE8_MEMBER(apple2e_state::c800_w)
 			m_intc8rom = false;
 			update_slotrom_banks();
 		}
-
-		return;
-	}
-
-	if ((m_cnxx_slot > 0) && (m_slotdevice[m_cnxx_slot] != nullptr))
-	{
-		m_slotdevice[m_cnxx_slot]->write_c800(offset&0xfff, data);
 	}
 }
 
@@ -2912,7 +2917,7 @@ void apple2e_state::laser128_map(address_map &map)
 //  map(0xc098, 0xc09b).rw(m_acia1, FUNC(mos6551_device::read), FUNC(mos6551_device::write));
 //  map(0xc0a8, 0xc0ab).rw(m_acia2, FUNC(mos6551_device::read), FUNC(mos6551_device::write));
 	map(0xc0d0, 0xc0d3).rw(FUNC(apple2e_state::memexp_r), FUNC(apple2e_state::memexp_w));
-	map(0xc0e0, 0xc0ef).rw(m_laserudc, FUNC(applefdc_base_device::bus_r), FUNC(applefdc_base_device::bus_w));
+	map(0xc0e0, 0xc0ef).rw(m_laserudc, FUNC(applefdc_base_device::read), FUNC(applefdc_base_device::write));
 	map(0xc100, 0xc2ff).m(m_c100bank, FUNC(address_map_bank_device::amap8));
 	map(0xc300, 0xc3ff).m(m_c300bank, FUNC(address_map_bank_device::amap8));
 	map(0xc400, 0xc7ff).m(m_c400bank, FUNC(address_map_bank_device::amap8));
@@ -4208,13 +4213,15 @@ static void apple2_cards(device_slot_interface &device)
 	device.option_add("vulcan", A2BUS_VULCANIIE); /* Applied Engineering Vulcan IDE drive */
 	device.option_add("4play", A2BUS_4PLAY); /* 4Play Joystick Card (Rev. B) */
 	device.option_add("ceyes2", A2BUS_COMPUTEREYES2); /* ComputerEyes/2 Video Digitizer */
+	device.option_add("applesurance", A2BUS_APPLESURANCE);  /* Applesurance Diagnostic Controller */
+	device.option_add("byte8251", A2BUS_BYTE8251); /* BYTE Magazine 8251 serial card */
 }
 
 static void apple2eaux_cards(device_slot_interface &device)
 {
-	device.option_add("std80", A2EAUX_STD80COL); /* Apple IIe Standard 80 Column Card */
-	device.option_add("ext80", A2EAUX_EXT80COL); /* Apple IIe Extended 80 Column Card */
-	device.option_add("rw3", A2EAUX_RAMWORKS3);  /* Applied Engineering RamWorks III */
+	device.option_add("std80", A2EAUX_STD80COL); // Apple IIe Standard 80 Column Card
+	device.option_add("ext80", A2EAUX_EXT80COL); // Apple IIe Extended 80 Column Card
+	device.option_add("rw3", A2EAUX_RAMWORKS3);  // Applied Engineering RamWorks III
 }
 
 void apple2e_state::apple2e(machine_config &config)
@@ -4226,7 +4233,7 @@ void apple2e_state::apple2e(machine_config &config)
 
 	TIMER(config, m_scantimer, 0);
 	m_scantimer->configure_scanline(FUNC(apple2e_state::apple2_interrupt), "screen", 0, 1);
-	config.m_minimum_quantum = attotime::from_hz(60);
+	config.set_maximum_quantum(attotime::from_hz(60));
 
 	APPLE2_VIDEO(config, m_video, XTAL(14'318'181)).set_screen(m_screen);
 	APPLE2_COMMON(config, m_a2common, XTAL(14'318'181));
@@ -4300,7 +4307,7 @@ void apple2e_state::apple2e(machine_config &config)
 
 	/* repeat timer.  15 Hz from page 7-15 of "Understanding the Apple IIe" */
 	timer_device &timer(TIMER(config, "repttmr", 0));
-	timer.configure_periodic(timer_device::expired_delegate(FUNC(apple2e_state::ay3600_repeat), this), attotime::from_hz(15));
+	timer.configure_periodic(FUNC(apple2e_state::ay3600_repeat), attotime::from_hz(15));
 
 	/* slot devices */
 	A2BUS(config, m_a2bus, 0);
@@ -4321,7 +4328,7 @@ void apple2e_state::apple2e(machine_config &config)
 	m_a2eauxslot->set_space(m_maincpu, AS_PROGRAM);
 	m_a2eauxslot->out_irq_callback().set(FUNC(apple2e_state::a2bus_irq_w));
 	m_a2eauxslot->out_nmi_callback().set(FUNC(apple2e_state::a2bus_nmi_w));
-	A2EAUXSLOT_SLOT(config, "aux", m_a2eauxslot, apple2eaux_cards, "ext80");
+	A2EAUXSLOT_SLOT(config, "aux", m_a2eauxslot, apple2eaux_cards, "ext80");   // default to an extended 80-column card
 
 	APPLE2_GAMEIO(config, m_gameio, apple2_gameio_device::default_options, nullptr);
 

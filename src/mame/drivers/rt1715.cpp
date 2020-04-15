@@ -445,7 +445,7 @@ void rt1715_state::rt1715w_io(address_map &map)
 {
 	rt1715_base_io(map);
 
-	map(0x00, 0x00).rw(m_dma, FUNC(z80dma_device::bus_r), FUNC(z80dma_device::bus_w)); // A2
+	map(0x00, 0x00).rw(m_dma, FUNC(z80dma_device::read), FUNC(z80dma_device::write)); // A2
 	map(0x04, 0x07).rw(m_ctc2, FUNC(z80ctc_device::read), FUNC(z80ctc_device::write)); // A4
 //  map(0x1a, 0x1b) // chargen write protection
 	map(0x1c, 0x1d).m(m_fdc, FUNC(i8272a_device::map));
@@ -602,7 +602,7 @@ void rt1715_state::rt1715(machine_config &config)
 
 	I8275(config, m_crtc, 13.824_MHz_XTAL / 8);
 	m_crtc->set_character_width(8);
-	m_crtc->set_display_callback(FUNC(rt1715_state::crtc_display_pixels), this);
+	m_crtc->set_display_callback(FUNC(rt1715_state::crtc_display_pixels));
 	m_crtc->set_screen(m_screen);
 
 	/* keyboard */

@@ -180,7 +180,7 @@ public:
 		m_inputs(*this, "IN.%u", 0)
 	{ }
 
-	// machine drivers
+	// machine configs
 	void vsc(machine_config &config);
 
 protected:
@@ -271,7 +271,7 @@ READ8_MEMBER(vsc_state::speech_r)
 WRITE8_MEMBER(vsc_state::ppi_porta_w)
 {
 	// d0-d5: TSI C0-C5
-	m_speech->data_w(space, 0, data & 0x3f);
+	m_speech->data_w(data & 0x3f);
 
 	// d0-d7: data for the 4 7seg leds, bits are HGCBAFED (H is extra led)
 	m_7seg_data = bitswap<8>(data,7,6,2,1,0,5,4,3);
@@ -416,7 +416,7 @@ INPUT_PORTS_END
 
 
 /******************************************************************************
-    Machine Drivers
+    Machine Configs
 ******************************************************************************/
 
 void vsc_state::vsc(machine_config &config)
@@ -426,7 +426,7 @@ void vsc_state::vsc(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &vsc_state::main_map);
 	m_maincpu->set_addrmap(AS_IO, &vsc_state::main_io);
 
-	const attotime irq_period = attotime::from_hz(587); // 555 timer, measured
+	const attotime irq_period = attotime::from_hz(600); // 555 timer, ideal frequency is 600Hz (measurement was 587Hz)
 	TIMER(config, m_irq_on).configure_periodic(FUNC(vsc_state::irq_on<INPUT_LINE_NMI>), irq_period);
 	m_irq_on->set_start_delay(irq_period - attotime::from_usec(845)); // active for 0.845ms (approx half)
 	TIMER(config, "irq_off").configure_periodic(FUNC(vsc_state::irq_off<INPUT_LINE_NMI>), irq_period);

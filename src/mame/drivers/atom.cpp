@@ -663,7 +663,7 @@ void atom_state::machine_start()
 	m_baseram[0x0b] = machine().rand() & 0x0ff;
 
 	if (m_cart.found() && m_cart->exists())
-		m_maincpu->space(AS_PROGRAM).install_read_handler(0xa000, 0xafff, read8sm_delegate(FUNC(generic_slot_device::read_rom), &*m_cart));
+		m_maincpu->space(AS_PROGRAM).install_read_handler(0xa000, 0xafff, read8sm_delegate(*m_cart, FUNC(generic_slot_device::read_rom)));
 }
 
 /*-------------------------------------------------
@@ -729,7 +729,7 @@ void atom_state::atom(machine_config &config)
 	TIMER(config, "hz2400").configure_periodic(FUNC(atom_state::cassette_output_tick), attotime::from_hz(4806));
 
 	via6522_device &via(VIA6522(config, R6522_TAG, X2/4));
-	via.writepa_handler().set("cent_data_out", FUNC(output_latch_device::bus_w));
+	via.writepa_handler().set("cent_data_out", FUNC(output_latch_device::write));
 	via.ca2_handler().set(m_centronics, FUNC(centronics_device::write_strobe));
 	via.irq_handler().set_inputline(SY6502_TAG, M6502_IRQ_LINE);
 
@@ -758,10 +758,10 @@ void atom_state::atom(machine_config &config)
 	m_cassette->set_formats(atom_cassette_formats);
 	m_cassette->set_interface("atom_cass");
 
-	QUICKLOAD(config, "quickload", "atm").set_load_callback(FUNC(atom_state::quickload_cb), this);
+	QUICKLOAD(config, "quickload", "atm").set_load_callback(FUNC(atom_state::quickload_cb));
 
 	/* utility rom slot */
-	GENERIC_CARTSLOT(config, "cartslot", generic_linear_slot, "atom_cart", "bin,rom").set_device_load(FUNC(atom_state::cart_load), this);
+	GENERIC_CARTSLOT(config, "cartslot", generic_linear_slot, "atom_cart", "bin,rom").set_device_load(FUNC(atom_state::cart_load));
 
 	/* internal ram */
 	RAM(config, RAM_TAG).set_default_size("32K").set_extra_options("2K,4K,6K,8K,10K,12K").set_default_value(0x00);
@@ -777,7 +777,7 @@ void atom_state::atom(machine_config &config)
 -------------------------------------------------*/
 
 #define ATOM_ROM(_tag, _load) \
-	GENERIC_SOCKET(config, _tag, generic_linear_slot, "atom_cart", "bin,rom").set_device_load(FUNC(atomeb_state::_load), this) \
+	GENERIC_SOCKET(config, _tag, generic_linear_slot, "atom_cart", "bin,rom").set_device_load(FUNC(atomeb_state::_load)) \
 
 void atomeb_state::atomeb(machine_config &config)
 {
@@ -833,7 +833,7 @@ void atom_state::atombb(machine_config &config)
 	TIMER(config, "hz2400").configure_periodic(FUNC(atom_state::cassette_output_tick), attotime::from_hz(4806));
 
 	via6522_device &via(VIA6522(config, R6522_TAG, X2/4));
-	via.writepa_handler().set("cent_data_out", FUNC(output_latch_device::bus_w));
+	via.writepa_handler().set("cent_data_out", FUNC(output_latch_device::write));
 	via.ca2_handler().set(m_centronics, FUNC(centronics_device::write_strobe));
 	via.irq_handler().set_inputline(SY6502_TAG, M6502_IRQ_LINE);
 

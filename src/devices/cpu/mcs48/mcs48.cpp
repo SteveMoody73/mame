@@ -92,9 +92,10 @@
 ***************************************************************************/
 
 #include "emu.h"
-#include "debugger.h"
 #include "mcs48.h"
 #include "mcs48dsm.h"
+
+#include "debugger.h"
 
 
 /***************************************************************************
@@ -218,12 +219,12 @@ mcs48_cpu_device::mcs48_cpu_device(const machine_config &mconfig, device_type ty
 	, m_data_config("data", ENDIANNESS_LITTLE, 8, ( ( ram_size == 64 ) ? 6 : ( ( ram_size == 128 ) ? 7 : 8 ) ), 0
 					, (ram_size == 64) ? address_map_constructor(FUNC(mcs48_cpu_device::data_6bit), this) : (ram_size == 128) ? address_map_constructor(FUNC(mcs48_cpu_device::data_7bit), this) : address_map_constructor(FUNC(mcs48_cpu_device::data_8bit), this))
 	, m_io_config("io", ENDIANNESS_LITTLE, 8, 8, 0)
-	, m_port_in_cb{{*this}, {*this}}
-	, m_port_out_cb{{*this}, {*this}}
+	, m_port_in_cb(*this)
+	, m_port_out_cb(*this)
 	, m_bus_in_cb(*this)
 	, m_bus_out_cb(*this)
-	, m_test_in_cb{{*this}, {*this}}
-	, m_t0_clk_func()
+	, m_test_in_cb(*this)
+	, m_t0_clk_func(*this)
 	, m_prog_out_cb(*this)
 	, m_psw(0)
 	, m_dataptr(*this, "data")
@@ -1085,7 +1086,7 @@ const mcs48_cpu_device::mcs48_ophandler mcs48_cpu_device::s_i8022_opcodes[256] =
 
 void mcs48_cpu_device::device_config_complete()
 {
-	m_t0_clk_func.bind_relative_to(*owner());
+	m_t0_clk_func.resolve();
 	if (!m_t0_clk_func.isnull())
 		m_t0_clk_func(clock() / 3);
 }
@@ -1119,14 +1120,11 @@ void mcs48_cpu_device::device_start()
 	m_io = (m_feature_mask & EXT_BUS_FEATURE) != 0 ? &space(AS_IO) : nullptr;
 
 	// resolve callbacks
-	for (auto &cb : m_port_in_cb)
-		cb.resolve_safe(0xff);
-	for (auto &cb : m_port_out_cb)
-		cb.resolve_safe();
+	m_port_in_cb.resolve_all_safe(0xff);
+	m_port_out_cb.resolve_all_safe();
 	m_bus_in_cb.resolve_safe(0xff);
 	m_bus_out_cb.resolve_safe();
-	for (auto &cb : m_test_in_cb)
-		cb.resolve_safe(0);
+	m_test_in_cb.resolve_all_safe(0);
 	m_prog_out_cb.resolve_safe();
 
 	/* set up the state table */
@@ -1366,7 +1364,7 @@ void mcs48_cpu_device::execute_run()
     read
 -------------------------------------------------*/
 
-READ8_MEMBER( upi41_cpu_device::upi41_master_r )
+uint8_t upi41_cpu_device::upi41_master_r(offs_t offset)
 {
 	/* if just reading the status, return it */
 	if ((offset & 1) != 0)
@@ -1411,7 +1409,7 @@ TIMER_CALLBACK_MEMBER( upi41_cpu_device::master_callback )
 		m_sts |= STS_F1;
 }
 
-WRITE8_MEMBER( upi41_cpu_device::upi41_master_w )
+void upi41_cpu_device::upi41_master_w(offs_t offset, uint8_t data)
 {
 	machine().scheduler().synchronize(timer_expired_delegate(FUNC(upi41_cpu_device::master_callback), this), (offset << 8) | data);
 }

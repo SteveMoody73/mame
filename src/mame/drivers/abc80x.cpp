@@ -153,6 +153,8 @@ Notes:
 
 #define LOG 0
 
+#define ABCBUS_TAG "bus"
+
 
 //**************************************************************************
 //  SOUND
@@ -556,6 +558,15 @@ void abc800_state::abc800m_io(address_map &map)
 	map(0x31, 0x31).mirror(0xff06).r(MC6845_TAG, FUNC(mc6845_device::register_r));
 	map(0x38, 0x38).mirror(0xff06).w(MC6845_TAG, FUNC(mc6845_device::address_w));
 	map(0x39, 0x39).mirror(0xff06).w(MC6845_TAG, FUNC(mc6845_device::register_w));
+}
+
+//-------------------------------------------------
+//  ADDRESS_MAP( abc802_m1 )
+//-------------------------------------------------
+
+void abc802_state::abc802_m1(address_map &map)
+{
+	map(0x0000, 0xffff).r(FUNC(abc802_state::m1_r));
 }
 
 
@@ -979,7 +990,7 @@ void abc806_state::machine_reset()
 
 	// clear STO lines
 	for (int i = 0; i < 8; i++) {
-		sto_w(m_maincpu->space(AS_PROGRAM), 0, i);
+		sto_w(i);
 	}
 }
 
@@ -1115,7 +1126,7 @@ void abc800_state::common(machine_config &config)
 	SOFTWARE_LIST(config, "hdd_list").set_original("abc800_hdd");
 
 	// quickload
-	QUICKLOAD(config, "quickload", "bac", attotime::from_seconds(2)).set_load_callback(FUNC(abc800_state::quickload_cb), this);
+	QUICKLOAD(config, "quickload", "bac", attotime::from_seconds(2)).set_load_callback(FUNC(abc800_state::quickload_cb));
 }
 
 
@@ -1182,6 +1193,7 @@ void abc802_state::abc802(machine_config &config)
 	common(config);
 
 	// basic machine hardware
+	m_maincpu->set_addrmap(AS_OPCODES, &abc802_state::abc802_m1);
 	m_maincpu->set_addrmap(AS_PROGRAM, &abc802_state::abc802_mem);
 	m_maincpu->set_addrmap(AS_IO, &abc802_state::abc802_io);
 

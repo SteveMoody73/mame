@@ -278,10 +278,12 @@
 #include "emu.h"
 #include "audio/dcs.h"
 
+#include "bus/ata/idehd.h"
+#include "bus/rs232/rs232.h"
 #include "cpu/adsp2100/adsp2100.h"
 #include "cpu/mips/mips3.h"
 #include "machine/idectrl.h"
-#include "machine/idehd.h"
+#include "machine/ins8250.h"
 #include "machine/midwayic.h"
 #include "machine/smc91c9x.h"
 #include "machine/timekpr.h"
@@ -290,8 +292,6 @@
 #include "machine/pci-ide.h"
 #include "video/voodoo_pci.h"
 #include "screen.h"
-#include "machine/ins8250.h"
-#include "bus/rs232/rs232.h"
 
 #include "sf2049.lh"
 
@@ -514,8 +514,8 @@ void vegas_state::machine_start()
 
 void vegas_state::machine_reset()
 {
-	m_dcs->reset_w(1);
 	m_dcs->reset_w(0);
+	m_dcs->reset_w(1);
 
 	// Clear CPU IO registers
 	memset(m_cpuio_data, 0, ARRAY_LENGTH(m_cpuio_data));
@@ -786,10 +786,8 @@ WRITE8_MEMBER(vegas_state::sio_w)
 			// Reset Control:  Bit 0=>Reset IOASIC, Bit 1=>Reset NSS Connection, Bit 2=>Reset SMC, Bit 3=>Reset VSYNC, Bit 4=>VSYNC Polarity
 			/* bit 0 is used to reset the IOASIC */
 			if (!(data & (1 << 0)))
-			{
 				m_ioasic->ioasic_reset();
-				m_dcs->reset_w(data & 0x01);
-			}
+			m_dcs->reset_w(data & 0x01);
 			if ((data & (1 << 2)) && !(m_sio_reset_ctrl & (1 << 2))) {
 				logerror("sio_w: Ethernet reset\n");
 				m_ethernet->reset();

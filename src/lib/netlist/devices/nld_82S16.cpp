@@ -16,7 +16,7 @@ namespace netlist
 	NETLIB_OBJECT(82S16)
 	{
 		NETLIB_CONSTRUCTOR(82S16)
-		, m_A(*this, {{"A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7" }}, NETLIB_DELEGATE(82S16, addr))
+		, m_A(*this, {"A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7"}, NETLIB_DELEGATE(82S16, addr))
 		, m_CE1Q(*this, "CE1Q", NETLIB_DELEGATE(82S16, enq))
 		, m_CE2Q(*this, "CE2Q", NETLIB_DELEGATE(82S16, enq))
 		, m_CE3Q(*this, "CE3Q", NETLIB_DELEGATE(82S16, enq))
@@ -76,7 +76,7 @@ namespace netlist
 		logic_input_t m_DIN;
 		logic_output_t m_DOUTQ;
 
-		state_array<uint64_t, 4> m_ram; // 256 bits
+		state_container<std::array<uint64_t, 4>> m_ram; // 256 bits
 		state_var_u8 m_addr; // 256 bits
 		state_var_sig m_enq;
 		nld_power_pins m_power_pins;

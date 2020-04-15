@@ -3,14 +3,14 @@
 /***************************************************************************
 
     SNK/Alpha 68000 N based board games
-	
-	derived from alpha68k.cpp
 
-	TODO:
-	- Super Stingray MCU irq controls timer speed. The MCU has been
+    derived from alpha68k.cpp
+
+    TODO:
+    - Super Stingray MCU irq controls timer speed. The MCU has been
           hooked up but the clock is almost certainly wrong.
-	- GFX region can eventually overflow in jongbou, and in general all three 
-	  games can probably be run with the same gfx_layout structs
+    - GFX region can eventually overflow in jongbou, and in general all three
+      games can probably be run with the same gfx_layout structs
 
 ============================================================================
 
@@ -85,7 +85,7 @@ void alpha68k_N_state::draw_sprites(bitmap_ind16 &bitmap, const rectangle &clipr
 		int mx = m_spriteram[offs + c];
 		int my = -(mx >> 8) & 0xff;
 		mx &= 0xff;
-			
+
 		// TODO: not convinced by this
 		if (m_is_super_stingray && mx > 0xf8)
 			mx -= 0x100;
@@ -101,7 +101,7 @@ void alpha68k_N_state::draw_sprites(bitmap_ind16 &bitmap, const rectangle &clipr
 			{
 				u8 color, bank;
 				u16 tile;
-				
+
 				bank = data >> 10 & 3;
 				tile = data & 0x3ff;
 				if (m_is_super_stingray == true)
@@ -112,7 +112,7 @@ void alpha68k_N_state::draw_sprites(bitmap_ind16 &bitmap, const rectangle &clipr
 					bank += ((data >> m_tile_bankshift) & 4);
 					tile += (data >> 3 & 0x400);
 				}
-				
+
 				// can't be 0xff in super stingray
 				if (color != 0xff)
 				{
@@ -310,7 +310,7 @@ void sstingray_state::main_map(address_map &map)
 	map(0x060000, 0x060001).ram().share("videoram");  // MSB: watchdog, LSB: BGC
 	map(0x080000, 0x0801ff).rw(FUNC(sstingray_state::alpha8511_command_r), FUNC(sstingray_state::alpha8511_command_w)).umask16(0x00ff);
 	map(0x0c0000, 0x0c0001).portr("IN0");
-	map(0x0e0000, 0x0e0000).lr8("kyros_dip_r", [this]() -> u8 { return m_in[1]->read(); }).w(m_soundlatch, FUNC(generic_latch_8_device::write));
+	map(0x0e0000, 0x0e0000).lr8(NAME([this] () -> u8 { return m_in[1]->read(); })).w(m_soundlatch, FUNC(generic_latch_8_device::write));
 }
 
 void alpha68k_N_state::main_map(address_map &map)
@@ -321,7 +321,7 @@ void alpha68k_N_state::main_map(address_map &map)
 	map(0x060000, 0x060001).ram().share("videoram");  // MSB: watchdog, LSB: BGC
 	map(0x080000, 0x0801ff).rw(FUNC(kyros_state::kyros_alpha_trigger_r), FUNC(kyros_state::alpha_microcontroller_w));
 	map(0x0c0000, 0x0c0001).portr("IN0");
-	map(0x0e0000, 0x0e0000).lr8("kyros_dip_r", [this]() -> u8 { return m_in[1]->read(); }).w(m_soundlatch, FUNC(generic_latch_8_device::write));
+	map(0x0e0000, 0x0e0000).lr8(NAME([this] () -> u8 { return m_in[1]->read(); })).w(m_soundlatch, FUNC(generic_latch_8_device::write));
 }
 
 void jongbou_state::main_map(address_map &map)
@@ -557,10 +557,10 @@ static INPUT_PORTS_START( sstingry )
 	ALPHA68K_PLAYER_INPUT_SWAP_LR_MSB( 2, IPT_UNKNOWN, IPT_START2, IP_ACTIVE_HIGH )
 
 	PORT_START("IN1")
-	PORT_DIPNAME( 0x01, 0x01, DEF_STR( Demo_Sounds ) )
+	PORT_DIPNAME( 0x01, 0x01, DEF_STR( Demo_Sounds ) )  PORT_DIPLOCATION("SW1:!1")
 	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x01, DEF_STR( On ) )
-	PORT_DIPNAME( 0x0e, 0x00, DEF_STR( Coinage ) )
+	PORT_DIPNAME( 0x0e, 0x00, DEF_STR( Coinage ) )      PORT_DIPLOCATION("SW1:!2,!3,!4")
 	PORT_DIPSETTING(    0x00, "A 1C/1C B 1C/1C" )
 	PORT_DIPSETTING(    0x02, "A 1C/2C B 2C/1C" )
 	PORT_DIPSETTING(    0x04, "A 1C/3C B 3C/1C" )
@@ -569,15 +569,15 @@ static INPUT_PORTS_START( sstingry )
 	PORT_DIPSETTING(    0x0a, "A 1C/6C B 6C/1C" )
 	PORT_DIPSETTING(    0x0c, "A 2C/3C B 7C/1C" )
 	PORT_DIPSETTING(    0x0e, "A 3C/2C B 8C/1C" )
-	PORT_DIPNAME( 0x30, 0x00, DEF_STR( Lives ) )
+	PORT_DIPNAME( 0x30, 0x00, DEF_STR( Lives ) )        PORT_DIPLOCATION("SW1:!5,!6")
 	PORT_DIPSETTING(    0x00, "3" )
 	PORT_DIPSETTING(    0x10, "4" )
 	PORT_DIPSETTING(    0x20, "5" )
 	PORT_DIPSETTING(    0x30, "6" )
-	PORT_DIPNAME( 0x40, 0x00, DEF_STR( Unused ) )
+	PORT_DIPNAME( 0x40, 0x00, DEF_STR( Unused ) )       PORT_DIPLOCATION("SW1:!7")
 	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x40, DEF_STR( On ) )
-	PORT_DIPNAME( 0x80, 0x00, DEF_STR( Cabinet ) )
+	PORT_DIPNAME( 0x80, 0x00, DEF_STR( Cabinet ) )      PORT_DIPLOCATION("SW1:!8")
 	PORT_DIPSETTING(    0x00, DEF_STR( Upright ) )
 	PORT_DIPSETTING(    0x80, DEF_STR( Cocktail ) )
 
@@ -590,7 +590,7 @@ static INPUT_PORTS_START( kyros )
 	ALPHA68K_PLAYER_INPUT_SWAP_LR_MSB( 2, IPT_UNKNOWN, IPT_START2, IP_ACTIVE_HIGH )
 
 	PORT_START("IN1")  /* dipswitches */
-	PORT_DIPNAME( 0x01, 0x00, DEF_STR( Demo_Sounds ) )  PORT_DIPLOCATION("SW1:1")
+	PORT_DIPNAME( 0x01, 0x00, DEF_STR( Demo_Sounds ) )  PORT_DIPLOCATION("SW1:!1")
 	PORT_DIPSETTING(    0x01, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
 	PORT_DIPNAME( 0x0e, 0x0e, DEF_STR( Coinage ) )      PORT_DIPLOCATION("SW1:2,3,4")
@@ -602,15 +602,15 @@ static INPUT_PORTS_START( kyros )
 	PORT_DIPSETTING(    0x04, "A 1C/6C B 6C/1C" )
 	PORT_DIPSETTING(    0x08, "A 2C/3C B 7C/1C" )
 	PORT_DIPSETTING(    0x00, "A 3C/2C B 8C/1C" )
-	PORT_DIPNAME( 0x30, 0x00, DEF_STR( Lives ) )        PORT_DIPLOCATION("SW1:5,6")
+	PORT_DIPNAME( 0x30, 0x00, DEF_STR( Lives ) )        PORT_DIPLOCATION("SW1:!5,!6")
 	PORT_DIPSETTING(    0x00, "3" )
 	PORT_DIPSETTING(    0x10, "4" )
 	PORT_DIPSETTING(    0x20, "5" )
 	PORT_DIPSETTING(    0x30, "6" )
-	PORT_DIPNAME( 0x40, 0x00, DEF_STR( Difficulty ) )   PORT_DIPLOCATION("SW1:7")
+	PORT_DIPNAME( 0x40, 0x00, DEF_STR( Difficulty ) )   PORT_DIPLOCATION("SW1:!7")
 	PORT_DIPSETTING(    0x00, DEF_STR( Easy ) )
 	PORT_DIPSETTING(    0x40, DEF_STR( Hard ) )
-	PORT_DIPNAME( 0x80, 0x80, DEF_STR( Cabinet ) )      PORT_DIPLOCATION("SW1:8")
+	PORT_DIPNAME( 0x80, 0x80, DEF_STR( Cabinet ) )      PORT_DIPLOCATION("SW1:!8")
 	PORT_DIPSETTING(    0x80, DEF_STR( Upright ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( Cocktail ) )
 
@@ -626,27 +626,27 @@ static INPUT_PORTS_START( jongbou )
 	PORT_BIT( 0x8000, IP_ACTIVE_HIGH, IPT_BUTTON1 ) PORT_PLAYER(2)
 
 	PORT_START("IN1")
-	PORT_DIPNAME( 0x01, 0x00, DEF_STR( Lives ) )
+	PORT_DIPNAME( 0x01, 0x00, DEF_STR( Lives ) )       PORT_DIPLOCATION("SW1:!1")
 	PORT_DIPSETTING(    0x00, "3" )
 	PORT_DIPSETTING(    0x01, "5" )
-	PORT_DIPNAME( 0x02, 0x00, DEF_STR( Coinage ) )
+	PORT_DIPNAME( 0x02, 0x00, DEF_STR( Coinage ) )     PORT_DIPLOCATION("SW1:!2")
 	PORT_DIPSETTING(    0x00, "A 1C/1C B 1C/5C" )
 	PORT_DIPSETTING(    0x02, "A 1C/2C B 1C/3C" )
-	PORT_DIPNAME( 0x04, 0x00, DEF_STR( Bonus_Life ) )
+	PORT_DIPNAME( 0x04, 0x00, DEF_STR( Bonus_Life ) )  PORT_DIPLOCATION("SW1:!3")
 	PORT_DIPSETTING(    0x00, "30000 - 60000" )
 	PORT_DIPSETTING(    0x04, "Every 30000" )
-	PORT_DIPNAME( 0x08, 0x00, DEF_STR( Demo_Sounds ) )
+	PORT_DIPNAME( 0x08, 0x00, DEF_STR( Demo_Sounds ) ) PORT_DIPLOCATION("SW1:!4")
 	PORT_DIPSETTING(    0x08, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x30, 0x00, DEF_STR( Difficulty ) )
+	PORT_DIPNAME( 0x30, 0x00, DEF_STR( Difficulty ) )  PORT_DIPLOCATION("SW1:!5,!6")
 	PORT_DIPSETTING(    0x00, DEF_STR( Easy ) )
 	PORT_DIPSETTING(    0x20, DEF_STR( Normal ) )
 	PORT_DIPSETTING(    0x10, DEF_STR( Hard ) )
 	PORT_DIPSETTING(    0x30, DEF_STR( Very_Hard ) )
-	PORT_DIPNAME( 0x40, 0x40, DEF_STR( Cabinet ) )
+	PORT_DIPNAME( 0x40, 0x40, DEF_STR( Cabinet ) )     PORT_DIPLOCATION("SW1:!7")
 	PORT_DIPSETTING(    0x40, DEF_STR( Upright ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( Cocktail ) )
-	PORT_DIPNAME( 0x80, 0x80, "Show Girls" )
+	PORT_DIPNAME( 0x80, 0x80, "Show Girls" )           PORT_DIPLOCATION("SW1:!8")
 	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x80, DEF_STR( On ) )
 
@@ -670,7 +670,7 @@ void alpha68k_N_state::base_config(machine_config &config)
 {
 	MCFG_MACHINE_START_OVERRIDE(alpha68k_N_state,common)
 	MCFG_MACHINE_RESET_OVERRIDE(alpha68k_N_state,common)
-	
+
 	GENERIC_LATCH_8(config, m_soundlatch);
 
 	SPEAKER(config, "speaker").front_center();
@@ -683,7 +683,7 @@ void alpha68k_N_state::video_config(machine_config &config, u8 tile_transchar, u
 	set_screen_raw_params(config);
 	m_screen->set_screen_update(FUNC(alpha68k_N_state::screen_update));
 	m_screen->set_palette(m_palette);
-	
+
 	PALETTE(config, m_palette, FUNC(alpha68k_N_state::palette_init), 256 + 1, 256);
 
 	m_tile_transchar = tile_transchar;
@@ -947,7 +947,7 @@ ROM_START( jongbou )
 	ROM_REGION( 0x200, "clut_proms", 0 )
 	ROM_LOAD( "h.l9",  0x0100, 0x0100, CRC(e6e93b0b) SHA1(f64ff63699451910982a1a44c94ccd2c18fd389e) )
 	ROM_LOAD( "l.l10", 0x0000, 0x0100, CRC(51676dac) SHA1(685d14f448501a63cc9fa063f65842caddad8f39) )
-	
+
 	ROM_REGION( 0x2000, "color_proms", 0 )
 	ROM_LOAD( "p3.i15", 0x0000, 0x2000, CRC(8c09cd2a) SHA1(317764e0f5af29e78fd764bdf28579bf6be5630f) )
 ROM_END

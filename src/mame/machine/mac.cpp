@@ -344,7 +344,7 @@ void mac_state::v8_resize()
 		mac_install_memory(0x00000000, memory_size-1, memory_size, memory_data, is_rom, "bank1");
 
 		// install catcher in place of ROM that will detect the first access to ROM in its real location
-		m_maincpu->space(AS_PROGRAM).install_read_handler(0xa00000, 0xafffff, read32_delegate(FUNC(mac_state::rom_switch_r), this), 0xffffffff);
+		m_maincpu->space(AS_PROGRAM).install_read_handler(0xa00000, 0xafffff, read32_delegate(*this, FUNC(mac_state::rom_switch_r)), 0xffffffff);
 	}
 	else
 	{
@@ -464,7 +464,7 @@ void mac_state::set_memory_overlay(int overlay)
 
 			if (is_rom)
 			{
-				m_maincpu->space(AS_PROGRAM).install_read_handler(0x40000000, 0x4fffffff, read32_delegate(FUNC(mac_state::rom_switch_r), this), 0xffffffff);
+				m_maincpu->space(AS_PROGRAM).install_read_handler(0x40000000, 0x4fffffff, read32_delegate(*this, FUNC(mac_state::rom_switch_r)), 0xffffffff);
 			}
 			else
 			{
@@ -1169,7 +1169,7 @@ READ16_MEMBER ( mac_state::mac_scc_r )
 {
 	uint16_t result;
 
-	result = m_scc->reg_r(space, offset);
+	result = m_scc->reg_r(offset);
 	return (result << 8) | result;
 }
 
@@ -1177,12 +1177,12 @@ READ16_MEMBER ( mac_state::mac_scc_r )
 
 WRITE16_MEMBER ( mac_state::mac_scc_w )
 {
-	m_scc->reg_w(space, offset, data);
+	m_scc->reg_w(offset, data);
 }
 
 WRITE16_MEMBER ( mac_state::mac_scc_2_w )
 {
-	m_scc->reg_w(space, offset, data >> 8);
+	m_scc->reg_w(offset, data >> 8);
 }
 
 /* ********************************** *
@@ -1482,7 +1482,6 @@ WRITE8_MEMBER(mac_state::mac_via_out_a_pmu)
 //  printf("%02x to PM\n", data);
 	#endif
 	m_pm_data_send = data;
-	return;
 }
 
 WRITE8_MEMBER(mac_state::mac_via_out_b)

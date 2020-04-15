@@ -134,7 +134,7 @@ TILE_GET_INFO_MEMBER(jackie_state::get_fg_tile_info)
 {
 	int code = m_fg_tile_ram[tile_index] | (m_fg_color_ram[tile_index] << 8);
 	int tile = code & 0x1fff;
-	SET_TILE_INFO_MEMBER(0, code, tile != 0x1fff ? ((code >> 12) & 0xe) + 1 : 0, 0);
+	tileinfo.set(0, code, tile != 0x1fff ? ((code >> 12) & 0xe) + 1 : 0, 0);
 }
 
 WRITE8_MEMBER(jackie_state::fg_tile_w)
@@ -160,19 +160,19 @@ template<uint8_t Which>
 TILE_GET_INFO_MEMBER(jackie_state::get_reel_tile_info)
 {
 	int code = m_reel_ram[Which][tile_index];
-	SET_TILE_INFO_MEMBER(1, code, 0, 0);
+	tileinfo.set(1, code, 0, 0);
 }
 
 void jackie_state::video_start()
 {
-	m_reel_tilemap[0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(jackie_state::get_reel_tile_info<0>),this),TILEMAP_SCAN_ROWS,8,32, 64, 8);
-	m_reel_tilemap[1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(jackie_state::get_reel_tile_info<1>),this),TILEMAP_SCAN_ROWS,8,32, 64, 8);
-	m_reel_tilemap[2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(jackie_state::get_reel_tile_info<2>),this),TILEMAP_SCAN_ROWS,8,32, 64, 8);
+	m_reel_tilemap[0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(jackie_state::get_reel_tile_info<0>)), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
+	m_reel_tilemap[1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(jackie_state::get_reel_tile_info<1>)), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
+	m_reel_tilemap[2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(jackie_state::get_reel_tile_info<2>)), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
 
 	for (int i = 0; i < 3; i++)
 		m_reel_tilemap[i]->set_scroll_cols(64);
 
-	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(jackie_state::get_fg_tile_info),this), TILEMAP_SCAN_ROWS, 8,  8,  64, 32);
+	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(jackie_state::get_fg_tile_info)), TILEMAP_SCAN_ROWS, 8,  8,  64, 32);
 	m_fg_tilemap->set_transparent_pen(0);
 }
 

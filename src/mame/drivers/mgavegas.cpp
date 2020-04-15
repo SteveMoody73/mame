@@ -349,7 +349,7 @@ WRITE8_MEMBER(mgavegas_state::csoki_w)
 	if (LOG_MSM5205)
 		logerror("MSM5205 write to %04X data = %02X \n",offset+0xc800,data);
 	m_msm->reset_w(data&0x10>>4);
-	m_msm->write_data(data&0x0f);
+	m_msm->data_w(data&0x0f);
 }
 
 
@@ -557,13 +557,13 @@ void mgavegas_state::machine_reset()
 void mgavegas_state::init_mgavegas21()
 {
 	//hack to clear the irq on reti instruction
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x00ea, 0x00ea, read8_delegate(FUNC(mgavegas_state::start_read), this));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x00ea, 0x00ea, read8_delegate(*this, FUNC(mgavegas_state::start_read)));
 }
 
 void mgavegas_state::init_mgavegas()
 {
 	//hack to clear the irq on reti instruction
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x00e2, 0x00e2, read8_delegate(FUNC(mgavegas_state::start_read), this));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x00e2, 0x00e2, read8_delegate(*this, FUNC(mgavegas_state::start_read)));
 }
 
 
@@ -577,7 +577,7 @@ TIMER_DEVICE_CALLBACK_MEMBER( mgavegas_state::int_0 )
 void mgavegas_state::init_mgavegas133()
 {
 	//hack to clear the irq on reti instruction
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x00dd, 0x00dd, read8_delegate(FUNC(mgavegas_state::start_read), this));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x00dd, 0x00dd, read8_delegate(*this, FUNC(mgavegas_state::start_read)));
 }
 
 /*************************

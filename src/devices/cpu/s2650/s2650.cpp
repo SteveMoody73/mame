@@ -25,14 +25,14 @@
 #define INLINE_EA   1
 
 
-DEFINE_DEVICE_TYPE(S2650, s2650_device, "s2650", "Signetics S2650")
+DEFINE_DEVICE_TYPE(S2650, s2650_device, "s2650", "Signetics 2650")
 
 
 s2650_device::s2650_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: cpu_device(mconfig, S2650, tag, owner, clock)
-	, m_program_config("program", ENDIANNESS_LITTLE, 8, 15)
-	, m_io_config("io", ENDIANNESS_LITTLE, 8, 8)
-	, m_data_config("data", ENDIANNESS_LITTLE, 8, 1)
+	, m_program_config("program", ENDIANNESS_BIG, 8, 15)
+	, m_io_config("io", ENDIANNESS_BIG, 8, 8)
+	, m_data_config("data", ENDIANNESS_BIG, 8, 1)
 	, m_sense_handler(*this)
 	, m_flag_handler(*this), m_intack_handler(*this)
 	, m_ppc(0), m_page(0), m_iar(0), m_ea(0), m_psl(0), m_psu(0), m_r(0)
@@ -209,17 +209,15 @@ inline int s2650_device::check_irq_line()
 	{
 		if( (m_psu & II) == 0 )
 		{
-			int vector;
 			if (m_halt)
 			{
 				m_halt = 0;
 				m_iar = (m_iar + 1) & PMSK;
 			}
-			vector = standard_irq_callback(0) & 0xff;
+			standard_irq_callback(0);
 
 			/* Say hi */
-			m_intack_handler(true);
-
+			int vector = m_intack_handler();
 			/* build effective address within first 8K page */
 			m_ea = S2650_relative[vector] & PMSK;
 			if (vector & 0x80)      /* indirect bit set ? */
@@ -824,9 +822,9 @@ void s2650_device::device_start()
 {
 	m_sense_handler.resolve();
 	m_flag_handler.resolve_safe();
-	m_intack_handler.resolve_safe();
+	m_intack_handler.resolve_safe(0x00);
 
-	m_cache = space(AS_PROGRAM).cache<0, 0, ENDIANNESS_LITTLE>();
+	m_cache = space(AS_PROGRAM).cache<0, 0, ENDIANNESS_BIG>();
 
 	save_item(NAME(m_ppc));
 	save_item(NAME(m_page));

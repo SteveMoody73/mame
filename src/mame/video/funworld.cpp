@@ -119,28 +119,28 @@ TILE_GET_INFO_MEMBER(funworld_state::get_bg_tile_info)
 	int code = attr & 0xfff;
 	int color = m_colorram[offs] >> 4;  // 4 bits for color.
 
-	SET_TILE_INFO_MEMBER(0, code, color, 0);
+	tileinfo.set(0, code, color, 0);
 }
 
 
 void funworld_state::video_start()
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(funworld_state::get_bg_tile_info),this), TILEMAP_SCAN_ROWS, 4, 8, 96, 29);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(funworld_state::get_bg_tile_info)), TILEMAP_SCAN_ROWS, 4, 8, 96, 29);
 }
 
 void magicrd2_state::video_start()
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(magicrd2_state::get_bg_tile_info),this), TILEMAP_SCAN_ROWS, 4, 8, 112, 34);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(magicrd2_state::get_bg_tile_info)), TILEMAP_SCAN_ROWS, 4, 8, 112, 34);
 }
 
 void chinatow_state::video_start()
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(chinatow_state::get_bg_tile_info),this), TILEMAP_SCAN_ROWS, 4, 8, 96, 31);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(chinatow_state::get_bg_tile_info)), TILEMAP_SCAN_ROWS, 4, 8, 96, 31);
 }
 
 void multiwin_state::video_start()
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(multiwin_state::get_bg_tile_info),this), TILEMAP_SCAN_ROWS, 4, 8, 96, 31);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(multiwin_state::get_bg_tile_info)), TILEMAP_SCAN_ROWS, 4, 8, 96, 31);
 }
 
 

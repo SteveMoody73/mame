@@ -217,10 +217,10 @@ WRITE_LINE_MEMBER(tehkanwc_state::adpcm_int)
 	int msm_data = SAMPLES[m_msm_data_offs & 0x7fff];
 
 	if (m_toggle == 0)
-		m_msm->write_data((msm_data >> 4) & 0x0f);
+		m_msm->data_w((msm_data >> 4) & 0x0f);
 	else
 	{
-		m_msm->write_data(msm_data & 0x0f);
+		m_msm->data_w(msm_data & 0x0f);
 		m_msm_data_offs++;
 	}
 
@@ -681,7 +681,7 @@ void tehkanwc_state::tehkanwc(machine_config &config)
 	m_audiocpu->set_addrmap(AS_IO, &tehkanwc_state::sound_port);
 	m_audiocpu->set_vblank_int("screen", FUNC(tehkanwc_state::irq0_line_hold));
 
-	config.m_minimum_quantum = attotime::from_hz(600);  /* 10 CPU slices per frame - seems enough to keep the CPUs in sync */
+	config.set_maximum_quantum(attotime::from_hz(600));  /* 10 CPU slices per frame - seems enough to keep the CPUs in sync */
 
 	WATCHDOG_TIMER(config, "watchdog");
 

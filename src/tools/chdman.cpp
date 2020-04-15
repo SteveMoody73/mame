@@ -5,8 +5,7 @@
     CHD compression frontend
 
 ****************************************************************************/
-#include <stdio.h> // must be here otherwise issues with I64FMT in MINGW
-#include <assert.h>
+#include <stdio.h> // must be stdio.h and here otherwise issues with I64FMT in MINGW
 
 #include "osdcore.h"
 #include "corefile.h"
@@ -15,17 +14,17 @@
 #include "avhuff.h"
 #include "bitmap.h"
 #include "md5.h"
-#include "sha1.h"
+#include "hashing.h"
 #include "vbiparse.h"
-#include <stdarg.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
-#include <ctype.h>
 
-#include <iostream>
 #include <cassert>
+#include <cctype>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <ctime>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <new>

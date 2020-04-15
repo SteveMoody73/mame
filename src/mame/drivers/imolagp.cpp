@@ -35,7 +35,7 @@ came to clearing out my boxes of junk i took another look at it, and
 it was the bank of 4116 rams that made me take a closer look.
 
 I hooked it up and saw some video on my scope, then it died.
-The +12v had shorted.. Suspecting the godamn tantalum capacitors
+The +12v had shorted.. Suspecting the annoying tantalum capacitors
 (often short out for no reason) i found a shorted one, removed
 it and away we went. It had separate H + V sync, so i loaded
 a 74ls08 into a spare ic space and AND'ed the two signals to get
@@ -524,7 +524,7 @@ void imolagp_state::imolagp(machine_config &config)
 	m_slavecpu->set_addrmap(AS_PROGRAM, &imolagp_state::imolagp_slave_map);
 	m_slavecpu->set_addrmap(AS_IO, &imolagp_state::imolagp_slave_io);
 
-	config.m_perfect_cpu_quantum = subtag("maincpu");
+	config.set_perfect_quantum(m_maincpu);
 
 	i8255_device &ppi(I8255A(config, "ppi8255", 0));
 	// mode $91 - ports A & C-lower as input, ports B & C-upper as output

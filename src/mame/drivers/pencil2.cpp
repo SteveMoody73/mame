@@ -144,7 +144,7 @@ void pencil2_state::io_map(address_map &map)
 {
 	map.unmap_value_high();
 	map.global_mask(0xff);
-	map(0x00, 0x0f).w("cent_data_out", FUNC(output_latch_device::bus_w));
+	map(0x00, 0x0f).w("cent_data_out", FUNC(output_latch_device::write));
 	map(0x10, 0x1f).w(FUNC(pencil2_state::port10_w));
 	map(0x30, 0x3f).w(FUNC(pencil2_state::port30_w));
 	map(0x80, 0x9f).w(FUNC(pencil2_state::port80_w));
@@ -306,7 +306,7 @@ INPUT_PORTS_END
 void pencil2_state::machine_start()
 {
 	if (m_cart->exists())
-		m_maincpu->space(AS_PROGRAM).install_read_handler(0x8000, 0xffff, read8sm_delegate(FUNC(generic_slot_device::read_rom),(generic_slot_device*)m_cart));
+		m_maincpu->space(AS_PROGRAM).install_read_handler(0x8000, 0xffff, read8sm_delegate(*m_cart, FUNC(generic_slot_device::read_rom)));
 }
 
 void pencil2_state::pencil2(machine_config &config)

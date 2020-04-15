@@ -76,12 +76,12 @@ private:
 TILE_GET_INFO_MEMBER(headonb_state::get_tile_info)
 {
 	uint8_t code = m_video_ram[tile_index];
-	SET_TILE_INFO_MEMBER(0, code, 0, 0);
+	tileinfo.set(0, code, 0, 0);
 }
 
 void headonb_state::video_start()
 {
-	m_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(headonb_state::get_tile_info),this), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
+	m_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(headonb_state::get_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
 }
 
 uint32_t headonb_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)

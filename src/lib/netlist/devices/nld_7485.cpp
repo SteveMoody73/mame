@@ -16,8 +16,8 @@ namespace netlist
 	NETLIB_OBJECT(7485)
 	{
 		NETLIB_CONSTRUCTOR(7485)
-		, m_A(*this, {{"A0", "A1", "A2", "A3"}})
-		, m_B(*this, {{"B0", "B1", "B2", "B3"}})
+		, m_A(*this, {"A0", "A1", "A2", "A3"})
+		, m_B(*this, {"B0", "B1", "B2", "B3"})
 		, m_LTIN(*this, "LTIN")
 		, m_EQIN(*this, "EQIN")
 		, m_GTIN(*this, "GTIN")
@@ -86,7 +86,8 @@ namespace netlist
 				update_outputs(1, 0, 0);
 				return;
 			}
-			else if (m_A[i]() < m_B[i]())
+
+			if (m_A[i]() < m_B[i]())
 			{
 				update_outputs(0, 1, 0);
 				return;

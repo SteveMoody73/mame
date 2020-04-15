@@ -16,9 +16,14 @@
     MACROS
 ***************************************************************************/
 
-//#define VERBOSE 1
+#define LOG_SETUP    (1U << 1)
+
+//#define VERBOSE (LOG_GENERAL | LOG_SETUP)
 //#define LOG_OUTPUT_STREAM std::cout
+
 #include "logmacro.h"
+
+#define LOGSETUP(...)    LOGMASKED(LOG_SETUP,    __VA_ARGS__)
 
 /***************************************************************************
     LOCAL VARIABLES
@@ -177,12 +182,14 @@ void acia6850_device::control_w(uint8_t data)
 	// CR0 & CR1
 	int counter_divide_select_bits = (data >> 0) & 3;
 	m_divide = counter_divide_select[counter_divide_select_bits];
+	LOGSETUP(" - Divide: x%d\n", counter_divide_select[counter_divide_select_bits]);
 
 	// CR2, CR3 & CR4
 	int word_select_bits = (data >> 2) & 7;
 	m_bits = word_select[word_select_bits][0];
 	m_parity = word_select[word_select_bits][1];
 	m_stopbits = word_select[word_select_bits][2];
+	LOGSETUP(" - %d%c%d\n", m_bits, m_parity == PARITY_NONE ? 'N' : (m_parity == PARITY_ODD ? 'O' : 'E'), m_stopbits);
 
 	// CR5 & CR6
 	int transmitter_control_bits = (data >> 5) & 3;
@@ -192,6 +199,7 @@ void acia6850_device::control_w(uint8_t data)
 
 	// CR7
 	m_rx_irq_enable = (data >> 7) & 1;
+	LOGSETUP(" - RTS:%d BRK:%d TxIE:%d RxIE:%d\n", rts, m_brk, m_tx_irq_enable, m_rx_irq_enable);
 
 	if (m_divide == 0)
 	{
@@ -211,7 +219,10 @@ void acia6850_device::control_w(uint8_t data)
 		m_tx_state = STATE_START;
 		output_txd(1);
 
-		m_status &= SR_CTS;
+		/// TODO: find out whether this has any immediate effect on TDRE
+		/// TDRE probably shouldn't be cleared here if TDR wasn't loaded, despite what the datasheet implies
+		/// If TDRE is cleared, then a separate internal flag is needed to avoid transmitting a spurious first character
+		m_status &= SR_CTS | SR_TDRE;
 
 		if (m_dcd)
 		{
@@ -244,13 +255,13 @@ void acia6850_device::data_w(uint8_t data)
 {
 	LOG("MC6850 '%s' Data: %02x\n", tag(), data);
 
-	/// TODO: find out if data stored during master reset is sent after divider is set
+	/// TODO: find out if data stored during master reset is sent after divider is set (and if TDRE can be cleared by such a write)
 	if (m_divide == 0)
 	{
-		logerror("%s:ACIA %p: Data write while in reset!\n", machine().describe_context(), (void *)this);
+		logerror("%s: ACIA data write while in reset!\n", machine().describe_context());
 	}
 
-	/// TODO: find out what happens if TDRE is already clear when you write
+	/// TODO: find out whether this overwrites previous data or has no effect if TDRE is already clear when you write
 	m_tdr = data;
 	m_status &= ~SR_TDRE;
 
@@ -476,7 +487,6 @@ WRITE_LINE_MEMBER( acia6850_device::write_txc )
 		{
 			m_tx_counter++;
 
-			/// TODO: check txd is correctly generated, check atarist mcu is reading data, start checking receive data.
 			switch (m_tx_state)
 			{
 			case STATE_START:

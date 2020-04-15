@@ -203,13 +203,13 @@ INPUT_PORTS_END
 TILE_GET_INFO_MEMBER(clpoker_state::get_bg_tile_info)
 {
 	u16 tileno = (m_videoram[tile_index] << 8) | m_videoram[tile_index + 0x0800];
-	SET_TILE_INFO_MEMBER(0, tileno, 0, 0);
+	tileinfo.set(0, tileno, 0, 0);
 }
 
 TILE_GET_INFO_MEMBER(clpoker_state::get_fg_tile_info)
 {
 	u16 tileno = (m_videoram[tile_index + 0x1000] << 8) | m_videoram[tile_index + 0x1800];
-	SET_TILE_INFO_MEMBER(0, tileno, 0, 0);
+	tileinfo.set(0, tileno, 0, 0);
 }
 
 WRITE8_MEMBER(clpoker_state::videoram_w)
@@ -220,8 +220,8 @@ WRITE8_MEMBER(clpoker_state::videoram_w)
 
 void clpoker_state::video_start()
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(clpoker_state::get_bg_tile_info),this), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
-	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(clpoker_state::get_fg_tile_info),this), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(clpoker_state::get_bg_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
+	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(clpoker_state::get_fg_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
 	m_fg_tilemap->set_transparent_pen(0);
 
 	m_nmi_enable = false;

@@ -16,8 +16,8 @@
 #include "machine/ram.h"
 #include "machine/timer.h"
 #include "machine/z80ctc.h"
-#include "machine/z80dart.h"
 #include "machine/z80pio.h"
+#include "machine/z80sio.h"
 #include "machine/wd_fdc.h"
 #include "sound/ay8910.h"
 #include "emupal.h"
@@ -57,7 +57,7 @@ public:
 		m_floppy1(*this, FD1797_TAG":1"),
 		m_cassette(*this, CASSETTE_TAG),
 		m_centronics(*this, CENTRONICS_TAG),
-		m_exp(*this, TIKI100_BUS_TAG),
+		m_exp(*this, "tiki100bus"),
 		m_rom(*this, Z80_TAG),
 		m_prom(*this, "u4"),
 		m_video_ram(*this, "video_ram"),

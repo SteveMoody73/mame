@@ -7,7 +7,8 @@
   References:
   - 1985 #AP1 Hitachi 4-bit Single-Chip Microcomputer Data Book
   - 1988 HMCS400 Series Handbook (note: *400 is a newer MCU series, with similarities)
-  - opcode decoding by Tatsuyuki Satoh, Olivier Galibert, Kevin Horton, Lord Nightmare - and verified
+  - opcode decoding by Tatsuyuki Satoh, Olivier Galibert, Kevin Horton, Lord Nightmare
+    (verified a while later after new documentation was found)
 
 */
 
@@ -56,16 +57,20 @@ DEFINE_DEVICE_TYPE(HD44828, hd44828_device, "hd44828", "Hitachi HD44828") // CMO
 
 
 // internal memory maps
+
+// On HMCS42/3/4/5, only half of the ROM address range contains user-executable code,
+// there is up to 128 bytes of pattern data in the 2nd half. The 2nd half also includes
+// a couple of pages with factory test code by Hitachi, only executable when MCU test
+// mode is enabled externally. This data can still be accessed with the P opcode.
+
 void hmcs40_cpu_device::program_1k(address_map &map)
 {
-	map(0x0000, 0x03ff).rom();
-	map(0x0780, 0x07bf).rom(); // patterns on page 30
+	map(0x0000, 0x07ff).rom();
 }
 
 void hmcs40_cpu_device::program_2k(address_map &map)
 {
-	map(0x0000, 0x07ff).rom();
-	map(0x0f40, 0x0fbf).rom(); // patterns on page 61,62
+	map(0x0000, 0x0fff).rom();
 }
 
 
@@ -94,8 +99,8 @@ hmcs40_cpu_device::hmcs40_cpu_device(const machine_config &mconfig, device_type 
 	, m_family(family)
 	, m_polarity(polarity)
 	, m_stack_levels(stack_levels)
-	, m_read_r{{*this}, {*this}, {*this}, {*this}, {*this}, {*this}, {*this}, {*this}}
-	, m_write_r{{*this}, {*this}, {*this}, {*this}, {*this}, {*this}, {*this}, {*this}}
+	, m_read_r(*this)
+	, m_write_r(*this)
 	, m_read_d(*this)
 	, m_write_d(*this)
 {
@@ -203,15 +208,10 @@ void hmcs40_cpu_device::device_start()
 	m_pcmask = (1 << m_pcwidth) - 1;
 
 	m_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(hmcs40_cpu_device::simple_timer_cb), this));
-	reset_prescaler();
 
 	// resolve callbacks
-	for (int i = 0; i < 8; i++)
-	{
-		m_read_r[i].resolve_safe(m_polarity & 0xf);
-		m_write_r[i].resolve_safe();
-	}
-
+	m_read_r.resolve_all_safe(m_polarity & 0xf);
+	m_write_r.resolve_all_safe();
 	m_read_d.resolve_safe(m_polarity);
 	m_write_d.resolve_safe();
 
@@ -306,6 +306,9 @@ void hmcs40_cpu_device::device_reset()
 	m_ie = 0;
 	m_iri = m_irt = 0;
 	m_if[0] = m_if[1] = m_tf = 1;
+
+	if (!m_halt && m_timer->remaining().is_never())
+		reset_prescaler();
 
 	// clear i/o
 	m_d = m_polarity;

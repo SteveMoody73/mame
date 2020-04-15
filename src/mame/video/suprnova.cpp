@@ -282,7 +282,7 @@ TILE_GET_INFO_MEMBER(skns_state::get_tilemap_A_tile_info)
 	if(m_tilemapA_ram[tile_index] & 0x80000000) flags |= TILE_FLIPX;
 	if(m_tilemapA_ram[tile_index] & 0x40000000) flags |= TILE_FLIPY;
 
-	SET_TILE_INFO_MEMBER(0+depth,
+	tileinfo.set(0+depth,
 			code,
 			0x40+colr,
 			flags);
@@ -308,7 +308,7 @@ TILE_GET_INFO_MEMBER(skns_state::get_tilemap_B_tile_info)
 	if(m_tilemapB_ram[tile_index] & 0x80000000) flags |= TILE_FLIPX;
 	if(m_tilemapB_ram[tile_index] & 0x40000000) flags |= TILE_FLIPY;
 
-	SET_TILE_INFO_MEMBER(1+depth,
+	tileinfo.set(1+depth,
 			code,
 			0x40+colr,
 			flags);
@@ -345,10 +345,10 @@ WRITE32_MEMBER(skns_state::v3_regs_w)
 
 void skns_state::video_start()
 {
-	m_tilemap_A = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(skns_state::get_tilemap_A_tile_info),this),TILEMAP_SCAN_ROWS,16,16,64, 64);
+	m_tilemap_A = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(skns_state::get_tilemap_A_tile_info)), TILEMAP_SCAN_ROWS, 16,16, 64,64);
 	m_tilemap_A->set_transparent_pen(0);
 
-	m_tilemap_B = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(skns_state::get_tilemap_B_tile_info),this),TILEMAP_SCAN_ROWS,16,16,64, 64);
+	m_tilemap_B = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(skns_state::get_tilemap_B_tile_info)), TILEMAP_SCAN_ROWS, 16,16, 64,64);
 	m_tilemap_B->set_transparent_pen(0);
 
 	m_sprite_bitmap.allocate(1024,1024);

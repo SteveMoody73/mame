@@ -14,7 +14,7 @@ TILE_GET_INFO_MEMBER(glfgreat_state::glfgreat_get_roz_tile_info)
 
 	code = rom[tile_index + 0x80000] + 256 * rom[tile_index] + 256 * 256 * ((rom[tile_index / 4 + 0x100000] >> (2 * (tile_index & 3))) & 3);
 
-	SET_TILE_INFO_MEMBER(0, code & 0x3fff, code >> 14, 0);
+	tileinfo.set(0, code & 0x3fff, code >> 14, 0);
 }
 
 TILE_GET_INFO_MEMBER(prmrsocr_state::prmrsocr_get_roz_tile_info)
@@ -22,7 +22,7 @@ TILE_GET_INFO_MEMBER(prmrsocr_state::prmrsocr_get_roz_tile_info)
 	uint8_t *rom = memregion("user1")->base();
 	int code = rom[tile_index + 0x20000] + 256 * rom[tile_index];
 
-	SET_TILE_INFO_MEMBER(0, code & 0x1fff, code >> 13, 0);
+	tileinfo.set(0, code & 0x1fff, code >> 13, 0);
 }
 
 
@@ -254,7 +254,7 @@ VIDEO_START_MEMBER(tmnt_state,lgtnfght)/* also tmnt2, ssriders */
 
 VIDEO_START_MEMBER(glfgreat_state,glfgreat)
 {
-	m_roz_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(glfgreat_state::glfgreat_get_roz_tile_info),this), TILEMAP_SCAN_ROWS, 16, 16, 512, 512);
+	m_roz_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(glfgreat_state::glfgreat_get_roz_tile_info)), TILEMAP_SCAN_ROWS, 16, 16, 512, 512);
 	m_roz_tilemap->set_transparent_pen(0);
 
 	m_controller_select = 0;
@@ -269,7 +269,7 @@ VIDEO_START_MEMBER(glfgreat_state,glfgreat)
 
 VIDEO_START_MEMBER(prmrsocr_state,prmrsocr)
 {
-	m_roz_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(prmrsocr_state::prmrsocr_get_roz_tile_info),this), TILEMAP_SCAN_ROWS, 16, 16, 512, 256);
+	m_roz_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(prmrsocr_state::prmrsocr_get_roz_tile_info)), TILEMAP_SCAN_ROWS, 16, 16, 512, 256);
 	m_roz_tilemap->set_transparent_pen(0);
 
 	m_sprite_bank = 0;

@@ -53,6 +53,7 @@ public:
 	void init_goldstar();
 	void init_jkrmast();
 	void init_pkrmast();
+	void init_crazybonb();
 	void init_cmast91();
 	void init_wcherry();
 	void init_super9();
@@ -65,6 +66,7 @@ public:
 	DECLARE_VIDEO_START(cherrym);
 	void cmast91_palette(palette_device &palette) const;
 	void lucky8_palette(palette_device &palette) const;
+	void nfm_palette(palette_device &palette) const;
 	uint32_t screen_update_goldstar(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	uint32_t screen_update_cmast91(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
@@ -72,6 +74,7 @@ public:
 	void ladylinrb(machine_config &config);
 	void wcherry(machine_config &config);
 	void crazybon(machine_config &config);
+	void crazybonb(machine_config &config);
 	void pkrmast(machine_config &config);
 	void moonlght(machine_config &config);
 	void kkotnoli(machine_config &config);
@@ -169,10 +172,14 @@ public:
 	void init_skill98();
 	void init_po33();
 	void init_match133();
-	void init_nfb96_dk();
+	void init_nfb96_a();
+	void init_nfb96_b();
+	void init_nfb96_c1();
+	void init_nfb96_c1_2();
 	void init_nfb96_c2();
 	void init_nfb96_d();
-	void init_nfb96_c1();
+	void init_nfb96_dk();
+	void init_nfb96_g();
 	void init_nfb96sea();
 	void init_fb2010();
 	void init_rp35();
@@ -181,43 +188,30 @@ public:
 	void init_rp96sub();
 	void init_tcl();
 	void init_super7();
+	void init_chthree();
+	void init_wcat3a();
 
 	uint32_t screen_update_amcoe1a(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
 	void cm(machine_config &config);
+	void cm97(machine_config &config);
 	void cmasterc(machine_config &config);
 	void amcoe1a(machine_config &config);
 	void nfm(machine_config &config);
 	void amcoe2(machine_config &config);
 	void amcoe1(machine_config &config);
 	void chryangl(machine_config &config);
+	void ss2001(machine_config &config);
 	void amcoe1_portmap(address_map &map);
 	void amcoe2_portmap(address_map &map);
 	void cm_portmap(address_map &map);
+	void cm97_portmap(address_map &map);
 	void chryangl_decrypted_opcodes_map(address_map &map);
+	void ss2001_portmap(address_map &map);
 
 protected:
 	// installed by various driver init handlers to get stuff to work
-	READ8_MEMBER(fixedval09_r) { return 0x09; }
-	READ8_MEMBER(fixedval38_r) { return 0x38; }
-	READ8_MEMBER(fixedval48_r) { return 0x48; }
-	READ8_MEMBER(fixedval58_r) { return 0x58; }
-	READ8_MEMBER(fixedval68_r) { return 0x68; }
-	READ8_MEMBER(fixedval74_r) { return 0x74; }
-	READ8_MEMBER(fixedval7d_r) { return 0x7d; }
-	READ8_MEMBER(fixedval80_r) { return 0x80; }
-	READ8_MEMBER(fixedval82_r) { return 0x82; }
-	READ8_MEMBER(fixedval84_r) { return 0x84; }
-	READ8_MEMBER(fixedval90_r) { return 0x90; }
-	READ8_MEMBER(fixedval96_r) { return 0x96; }
-	READ8_MEMBER(fixedvala8_r) { return 0xa8; }
-	READ8_MEMBER(fixedvalaa_r) { return 0xaa; }
-	READ8_MEMBER(fixedvalb2_r) { return 0xb2; }
-	READ8_MEMBER(fixedvalb4_r) { return 0xb4; }
-	READ8_MEMBER(fixedvalbe_r) { return 0xbe; }
-	READ8_MEMBER(fixedvalc7_r) { return 0xc7; }
-	READ8_MEMBER(fixedvalea_r) { return 0xea; }
-	READ8_MEMBER(fixedvale4_r) { return 0xe4; }
+	template <uint8_t V> READ8_MEMBER(fixedval_r) { return V; }
 };
 
 
@@ -244,6 +238,7 @@ public:
 	void init_flam7_tw();
 	void init_luckylad();
 	void init_super972();
+	void init_wcat3();
 
 	DECLARE_VIDEO_START(bingowng);
 	DECLARE_VIDEO_START(magical);
@@ -259,6 +254,7 @@ public:
 	void lucky8(machine_config &config);
 	void lucky8f(machine_config &config);
 	void lucky8k(machine_config &config);
+	void luckylad(machine_config &config);
 	void super972(machine_config &config);
 	void wcat3(machine_config &config);
 	void magodds(machine_config &config);
@@ -301,7 +297,7 @@ public:
 	void cb3c(machine_config &config);
 	void cb3e(machine_config &config);
 	void ncb3(machine_config &config);
-	void cm97(machine_config &config);
+	void eldoradd(machine_config &config);
 	void ncb3_map(address_map &map);
 	void chryangla_map(address_map &map);
 	void chryangla_decrypted_opcodes_map(address_map &map);

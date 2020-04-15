@@ -105,9 +105,13 @@ Notes:
 - similarly, splndrbt hardware only appears to be capable of displaying 24 sprites.
   This time, they are consecutive in RAM.
 
-- gekisou doesn't have dip switches, but battery backed RAM. To enter the Settings
-  menu, press F1. The settings menu is VERY spartan, with no indication of what the
-  settings do.
+- gekisou doesn't have dip-switches but battery backed RAM.
+  By pressing service button (F2) at any time after POST operator can access to
+  a simple config menu with no setting OSD indication about what they do but just a
+  laconic number for each, basically mimicking an actual dip bank.
+  END arrows indicates where to exit and return back to title screen, basically
+  giving the operator to either read or rewrite all the settings.
+  Defaults are all ON.
 
   Settings:                1   2   3   4   5   6   7   8
   COIN 1  1 Coin / 1 Play  ON  ON
@@ -151,6 +155,8 @@ TODO:
 - gekisou: there is a small glitch during the text intro at the beginning of player
   2 game in cocktail mode: a white line spills out from the text box as characters
   in the last line are written. This might well be a bug in the original.
+  Update: background is actually misaligned one line, cfr. the blue buildings
+  that are near the status bar (missing on the other side).
 
 - splndrbt, hvoltage: the interpretation of the scaling PROMs might be wrong.
   The sprite x scaling is not used at all because I couldn't figure it out.
@@ -174,6 +180,9 @@ TODO:
 - the purpose of the sound PROM is unclear. From the schematics, it seems it
   should influence the MSM5232 clock. However, even removing it from the board
   doesn't seem to affect the sound.
+
+- dump the MCU ROM for kouyakyu, gekisou, hvoltage, though they currently work
+  fine with the ROM from another chip.
 
 * Special Thanks to:
 
@@ -361,7 +370,6 @@ D                                                                               
 #include "emu.h"
 #include "includes/equites.h"
 
-#include "cpu/alph8201/alph8201.h"
 #include "cpu/m68000/m68000.h"
 #include "machine/nvram.h"
 #include "machine/watchdog.h"
@@ -603,36 +611,6 @@ READ16_MEMBER(equites_state::equites_spriteram_kludge_r)
 		return m_spriteram[0];
 }
 
-READ8_MEMBER(equites_state::mcu_ram_r)
-{
-	if (m_fakemcu == nullptr)
-		return m_alpha_8201->ext_ram_r(space, offset);
-	else
-		return m_mcuram[offset];
-}
-
-WRITE8_MEMBER(equites_state::mcu_ram_w)
-{
-	if (m_fakemcu == nullptr)
-		m_alpha_8201->ext_ram_w(space, offset, data);
-	else
-		m_mcuram[offset] = data;
-}
-
-WRITE_LINE_MEMBER(equites_state::mcu_start_w)
-{
-	if (m_fakemcu == nullptr)
-		m_alpha_8201->mcu_start_w(state != 0);
-	else
-		m_fakemcu->set_input_line(INPUT_LINE_HALT, state ? ASSERT_LINE : CLEAR_LINE);
-}
-
-WRITE_LINE_MEMBER(equites_state::mcu_switch_w)
-{
-	if (m_fakemcu == nullptr)
-		m_alpha_8201->bus_dir_w(state == 0);
-}
-
 
 
 /******************************************************************************/
@@ -647,9 +625,9 @@ void equites_state::equites_common_map(address_map &map)
 	map(0x0c0200, 0x0c0fff).ram();
 	map(0x100000, 0x1001ff).ram().share("spriteram");
 	map(0x100000, 0x100001).r(FUNC(equites_state::equites_spriteram_kludge_r));
-	map(0x140000, 0x1407ff).rw(FUNC(equites_state::mcu_ram_r), FUNC(equites_state::mcu_ram_w)).umask16(0x00ff);
+	map(0x140000, 0x1407ff).rw(m_alpha_8201, FUNC(alpha_8201_device::ext_ram_r), FUNC(alpha_8201_device::ext_ram_w)).umask16(0x00ff);
 	map(0x180000, 0x180001).portr("IN1").w(m_soundlatch, FUNC(generic_latch_8_device::write));
-	map(0x180000, 0x180000).select(0x03c000).lw8("mainlatch_w", [this](offs_t offset, u8 data) { m_mainlatch->write_a3(offset >> 14); });
+	map(0x180000, 0x180000).select(0x03c000).lw8(NAME([this] (offs_t offset, u8 data) { m_mainlatch->write_a3(offset >> 14); }));
 	map(0x180001, 0x180001).w(m_soundlatch, FUNC(generic_latch_8_device::write));
 	map(0x1c0000, 0x1c0001).portr("IN0").w(FUNC(equites_state::equites_scrollreg_w));
 	map(0x380000, 0x380000).w(FUNC(equites_state::equites_bgcolor_w));
@@ -678,11 +656,11 @@ void splndrbt_state::splndrbt_map(address_map &map)
 	map(0x080000, 0x080001).portr("IN0");
 	map(0x0c0000, 0x0c0001).portr("IN1");
 	map(0x0c0000, 0x0c0000).select(0x020000).w(FUNC(splndrbt_state::equites_bgcolor_w));
-	map(0x0c0001, 0x0c0001).select(0x03c000).lw8("mainlatch_w", [this](offs_t offset, u8 data) { m_mainlatch->write_a3(offset >> 14); });
+	map(0x0c0001, 0x0c0001).select(0x03c000).lw8(NAME([this] (offs_t offset, u8 data) { m_mainlatch->write_a3(offset >> 14); }));
 	map(0x100000, 0x100001).w(FUNC(splndrbt_state::splndrbt_bg_scrollx_w));
 	map(0x140001, 0x140001).w("soundlatch", FUNC(generic_latch_8_device::write));
 	map(0x1c0000, 0x1c0001).w(FUNC(splndrbt_state::splndrbt_bg_scrolly_w));
-	map(0x180000, 0x1807ff).rw(FUNC(splndrbt_state::mcu_ram_r), FUNC(splndrbt_state::mcu_ram_w)).umask16(0x00ff);
+	map(0x180000, 0x1807ff).rw(m_alpha_8201, FUNC(alpha_8201_device::ext_ram_r), FUNC(alpha_8201_device::ext_ram_w)).umask16(0x00ff);
 	map(0x200000, 0x200fff).mirror(0x001000).rw(FUNC(splndrbt_state::equites_fg_videoram_r), FUNC(splndrbt_state::equites_fg_videoram_w)).umask16(0x00ff);
 	map(0x400000, 0x4007ff).ram().w(FUNC(splndrbt_state::equites_bg_videoram_w)).share("bg_videoram");
 	map(0x400800, 0x400fff).ram();
@@ -708,12 +686,6 @@ void equites_state::sound_map(address_map &map)
 void equites_state::sound_portmap(address_map &map)
 {
 	map(0x00e0, 0x00e7).rw("audio8155", FUNC(i8155_device::io_r), FUNC(i8155_device::io_w));
-}
-
-
-void equites_state::mcu_map(address_map &map)
-{
-	map(0x0000, 0x03ff).ram().share("mcuram"); /* main CPU shared RAM */
 }
 
 
@@ -1042,7 +1014,7 @@ void equites_state::common_sound(machine_config &config)
 	I8085A(config, m_audiocpu, 6.144_MHz_XTAL); /* verified on pcb */
 	m_audiocpu->set_addrmap(AS_PROGRAM, &equites_state::sound_map);
 	m_audiocpu->set_addrmap(AS_IO, &equites_state::sound_portmap);
-	m_audiocpu->set_clk_out("audio8155", FUNC(i8155_device::set_unscaled_clock));
+	m_audiocpu->set_clk_out(m_audio8155, FUNC(i8155_device::set_unscaled_clock_int));
 
 	I8155(config, m_audio8155, 0);
 	m_audio8155->out_pa_callback().set(FUNC(equites_state::equites_8155_porta_w));
@@ -1162,14 +1134,13 @@ void equites_state::equites(machine_config &config)
 
 	LS259(config, m_mainlatch);
 	m_mainlatch->q_out_cb<1>().set(FUNC(equites_state::flip_screen_w));
-	m_mainlatch->q_out_cb<2>().set(FUNC(equites_state::mcu_start_w));
-	m_mainlatch->q_out_cb<3>().set(FUNC(equites_state::mcu_switch_w));
+	m_mainlatch->q_out_cb<2>().set(m_alpha_8201, FUNC(alpha_8201_device::mcu_start_w));
+	m_mainlatch->q_out_cb<3>().set(m_alpha_8201, FUNC(alpha_8201_device::bus_dir_w)).invert();
 
 	common_sound(config);
 
 	ALPHA_8201(config, m_alpha_8201, 4000000/8); // 8303 or 8304 (same device!)
-
-	config.m_perfect_cpu_quantum = subtag("alpha_8201:mcu");
+	config.set_perfect_quantum("alpha_8201:mcu");
 
 	WATCHDOG_TIMER(config, "watchdog");
 
@@ -1194,16 +1165,13 @@ void gekisou_state::gekisou(machine_config &config)
 	/* basic machine hardware */
 	m_maincpu->set_addrmap(AS_PROGRAM, &gekisou_state::gekisou_map);
 
-	// mcu not dumped, so add simulated mcu
-	ALPHA8301L(config, "mcu", 4000000/8).set_addrmap(AS_PROGRAM, &gekisou_state::mcu_map);
-
 	// gekisou has battery-backed RAM to store settings
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0);
 }
 
-void gekisou_state::bngotime(machine_config &config)
+void equites_state::bngotime(machine_config &config)
 {
-	gekisou(config);
+	equites(config);
 
 	// TODO: emulate different sound board with Z80 + AY8910
 	m_audiocpu->set_disable();
@@ -1218,14 +1186,14 @@ void splndrbt_state::splndrbt(machine_config &config)
 
 	LS259(config, m_mainlatch);
 	m_mainlatch->q_out_cb<0>().set(FUNC(equites_state::flip_screen_w));
-	m_mainlatch->q_out_cb<1>().set(FUNC(equites_state::mcu_start_w));
-	m_mainlatch->q_out_cb<2>().set(FUNC(equites_state::mcu_switch_w));
+	m_mainlatch->q_out_cb<1>().set(m_alpha_8201, FUNC(alpha_8201_device::mcu_start_w));
+	m_mainlatch->q_out_cb<2>().set(m_alpha_8201, FUNC(alpha_8201_device::bus_dir_w)).invert();
 	m_mainlatch->q_out_cb<3>().set(FUNC(splndrbt_state::splndrbt_selchar_w));
 
 	common_sound(config);
 
 	ALPHA_8201(config, m_alpha_8201, 4000000/8); // 8303 or 8304 (same device!)
-	config.m_perfect_cpu_quantum = subtag("alpha_8201:mcu");
+	config.set_perfect_quantum("alpha_8201:mcu");
 
 	/* video hardware */
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
@@ -1239,14 +1207,6 @@ void splndrbt_state::splndrbt(machine_config &config)
 	PALETTE(config, m_palette, FUNC(splndrbt_state::splndrbt_palette), 0x280, 0x100);
 
 	MCFG_VIDEO_START_OVERRIDE(splndrbt_state,splndrbt)
-}
-
-void splndrbt_state::hvoltage(machine_config &config)
-{
-	splndrbt(config);
-
-	// mcu not dumped, so add simulated mcu
-	ALPHA8301L(config, "mcu", 4000000/8).set_addrmap(AS_PROGRAM, &splndrbt_state::mcu_map);
 }
 
 
@@ -1562,7 +1522,7 @@ ROM_START( kouyakyu )
 	ROM_LOAD( "epr-6698.bin", 0x0a000, 0x2000, CRC(7adfd1ff) SHA1(b543dd6734a681a187dabf602bea390de663039c) )
 
 	ROM_REGION( 0x2000, "alpha_8201:mcu", 0 )
-	ROM_LOAD( "alpha-8304_44801bxx.bin", 0x0000, 0x2000, BAD_DUMP CRC(66adcb37) SHA1(e1c72ecb161129dcbddc0b16dd90e716d0c79311) ) // 8304 is not dumped yet, using 8303 instead
+	ROM_LOAD( "alpha-8505_44801c57.bin", 0x0000, 0x2000, BAD_DUMP CRC(1f5a1405) SHA1(23f2e23db402f88037a5cbdab2935ec1b9a05298) ) // 8304 is not dumped yet, using 8505 instead
 
 	ROM_REGION( 0x1000, "gfx1", 0 ) // chars
 	ROM_LOAD( "epr-6710.bin", 0x00000, 0x1000, CRC(accda190) SHA1(265d2fd92574d65e7890e48d5f305bf903a67bc8) )
@@ -1627,7 +1587,7 @@ ROM_START( gekisou )
 	ROM_LOAD( "v3.1e", 0x08000, 0x4000, CRC(0ab5e777) SHA1(9177c42418f022a65d73c3302873b894c5a137a4) )
 
 	ROM_REGION( 0x2000, "alpha_8201:mcu", 0 )
-	ROM_LOAD( "alpha-8304_44801bxx.bin", 0x0000, 0x2000, BAD_DUMP CRC(66adcb37) SHA1(e1c72ecb161129dcbddc0b16dd90e716d0c79311) ) // 8304 is not dumped yet, using 8303 instead
+	ROM_LOAD( "alpha-8505_44801c57.bin", 0x0000, 0x2000, BAD_DUMP CRC(1f5a1405) SHA1(23f2e23db402f88037a5cbdab2935ec1b9a05298) ) // 8304 is not dumped yet, using 8505 instead
 
 	ROM_REGION( 0x1000, "gfx1", 0 ) // chars
 	ROM_LOAD( "0.5c",  0x00000, 0x1000, CRC(7e8bf4d1) SHA1(8abb82be006e8d1df449a5f83d59637314405119) )
@@ -1912,7 +1872,7 @@ ROM_START( hvoltage )
 	ROM_LOAD( "7_v.1e", 0x08000, 0x4000, CRC(44d38554) SHA1(6765971376eafa218fda1accb1e173a7c1850cc8) )
 
 	ROM_REGION( 0x2000, "alpha_8201:mcu", 0 )
-	ROM_LOAD( "alpha-8304_44801bxx.bin", 0x0000, 0x2000, BAD_DUMP CRC(66adcb37) SHA1(e1c72ecb161129dcbddc0b16dd90e716d0c79311) ) // 8304 is not dumped yet, using 8303 instead
+	ROM_LOAD( "alpha-8505_44801c57.bin", 0x0000, 0x2000, BAD_DUMP CRC(1f5a1405) SHA1(23f2e23db402f88037a5cbdab2935ec1b9a05298) ) // 8304 is not dumped yet, using 8505 instead
 
 	ROM_REGION( 0x2000, "gfx1", 0 ) // chars
 	ROM_LOAD( "5.8c",   0x00000, 0x2000, CRC(656d53cd) SHA1(9971ed7e7da0e8bf46e97e8f75a2c2201b33fc2f) )
@@ -1949,8 +1909,8 @@ ROM_START( hvoltage )
 ROM_END
 
 /*
-Unknown bingo game
-(c)1986 CLS?
+Bingo Time
+(c)1986 CLS
 
 68K55-2
 CPU:MC68000P8
@@ -1973,7 +1933,7 @@ ROM_START( bngotime )
 	ROM_LOAD( "11.sub", 0x00000, 0x2000, CRC(9b063c07) SHA1(c9fe7fe10bd204cb82066db7b576072df7787046) )
 
 	ROM_REGION( 0x2000, "alpha_8201:mcu", 0 )
-	ROM_LOAD( "alpha-8505_44801c57.bin", 0x0000, 0x2000, NO_DUMP )
+	ROM_LOAD( "alpha-8505_44801c57.bin", 0x0000, 0x2000, CRC(1f5a1405) SHA1(23f2e23db402f88037a5cbdab2935ec1b9a05298) )
 
 	ROM_REGION( 0x1000, "gfx1", 0 ) // chars
 	ROM_LOAD( "9.d5",  0x00000, 0x1000, CRC(3c356e82) SHA1(55a58f1335206a0996caf8967b4ee962d2373db4) )
@@ -2047,12 +2007,12 @@ GAME( 1984, equitess,  equites,  equites,  equites,  equites_state,  init_equite
 GAME( 1984, bullfgtr,  0,        equites,  bullfgtr, equites_state,  init_equites,  ROT90, "Alpha Denshi Co.", "Bull Fighter", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
 GAME( 1984, bullfgtrs, bullfgtr, equites,  bullfgtr, equites_state,  init_equites,  ROT90, "Alpha Denshi Co. (Sega license)", "Bull Fighter (Sega)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
 GAME( 1985, kouyakyu,  0,        equites,  kouyakyu, equites_state,  init_equites,  ROT0,  "Alpha Denshi Co.", "The Koukou Yakyuu", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
-GAME( 1985, gekisou,   0,        gekisou,  gekisou,  gekisou_state,  init_equites,  ROT90, "Eastern Corp.", "Gekisou (Japan)", MACHINE_UNEMULATED_PROTECTION | MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
-GAME( 1986, bngotime,  0,        bngotime, gekisou,  gekisou_state,  init_equites,  ROT90, "CLS", "Bingo Time", MACHINE_NOT_WORKING | MACHINE_UNEMULATED_PROTECTION | MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE ) // 8505 MCU isn't dumped
+GAME( 1985, gekisou,   0,        gekisou,  gekisou,  gekisou_state,  init_equites,  ROT90, "Eastern Corp.", "Gekisou (Japan)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1986, bngotime,  0,        bngotime, equites,  equites_state,  init_equites,  ROT90, "CLS", "Bingo Time", MACHINE_NOT_WORKING | MACHINE_NO_SOUND | MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE ) // needs inputs, emulation of the sound board
 
 // Splendor Blast Hardware
 GAME( 1985, splndrbt,  0,        splndrbt, splndrbt, splndrbt_state, init_splndrbt, ROT0,  "Alpha Denshi Co.", "Splendor Blast (set 1)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1985, splndrbta, splndrbt, splndrbt, splndrbt, splndrbt_state, init_splndrbt, ROT0,  "Alpha Denshi Co.", "Splendor Blast (set 2)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1985, splndrbtb, splndrbt, splndrbt, splndrbt, splndrbt_state, init_splndrbt, ROT0,  "Alpha Denshi Co.", "Splendor Blast (set 3)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1985, splndrbt2, 0,        splndrbt, splndrbt, splndrbt_state, init_splndrbt, ROT0,  "Alpha Denshi Co.", "Splendor Blast II", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
-GAME( 1985, hvoltage,  0,        hvoltage, hvoltage, splndrbt_state, init_splndrbt, ROT0,  "Alpha Denshi Co.", "High Voltage", MACHINE_UNEMULATED_PROTECTION | MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1985, hvoltage,  0,        splndrbt, hvoltage, splndrbt_state, init_splndrbt, ROT0,  "Alpha Denshi Co.", "High Voltage", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )

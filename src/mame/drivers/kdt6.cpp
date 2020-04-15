@@ -176,7 +176,7 @@ void kdt6_state::psi98_mem(address_map &map)
 void kdt6_state::psi98_io(address_map &map)
 {
 	map.global_mask(0xff);
-	map(0x00, 0x00).rw(m_dma, FUNC(z80dma_device::bus_r), FUNC(z80dma_device::bus_w));
+	map(0x00, 0x00).rw(m_dma, FUNC(z80dma_device::read), FUNC(z80dma_device::write));
 	map(0x04, 0x07).rw(m_sio, FUNC(z80sio_device::cd_ba_r), FUNC(z80sio_device::cd_ba_w));
 	map(0x08, 0x0b).rw("ctc1", FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
 	map(0x0c, 0x0f).rw("pio", FUNC(z80pio_device::read), FUNC(z80pio_device::write));
@@ -574,8 +574,8 @@ void kdt6_state::machine_start()
 	m_dummy_w = std::make_unique<uint8_t[]>(0x1000);
 
 	// override the region 0x0000 to 0x1fff here to enable prom reading
-	m_cpu->space(AS_PROGRAM).install_read_handler(0x0000, 0x0fff, read8_delegate(FUNC(kdt6_state::page0_r), this));
-	m_cpu->space(AS_PROGRAM).install_read_handler(0x1000, 0x1fff, read8_delegate(FUNC(kdt6_state::page1_r), this));
+	m_cpu->space(AS_PROGRAM).install_read_handler(0x0000, 0x0fff, read8_delegate(*this, FUNC(kdt6_state::page0_r)));
+	m_cpu->space(AS_PROGRAM).install_read_handler(0x1000, 0x1fff, read8_delegate(*this, FUNC(kdt6_state::page1_r)));
 
 	m_fdc->set_rate(250000);
 
@@ -637,7 +637,7 @@ void kdt6_state::psi98(machine_config &config)
 	m_crtc->set_screen("screen");
 	m_crtc->set_show_border_area(false);
 	m_crtc->set_char_width(8);
-	m_crtc->set_update_row_callback(FUNC(kdt6_state::crtc_update_row), this);
+	m_crtc->set_update_row_callback(FUNC(kdt6_state::crtc_update_row));
 	m_crtc->out_vsync_callback().set("ctc2", FUNC(z80ctc_device::trg2));
 
 	// sound hardware
@@ -696,8 +696,8 @@ void kdt6_state::psi98(machine_config &config)
 	z80pio_device &pio(Z80PIO(config, "pio", 16_MHz_XTAL / 4));
 	pio.out_int_callback().set_inputline(m_cpu, INPUT_LINE_IRQ0);
 	pio.out_pa_callback().set(FUNC(kdt6_state::pio_porta_w));
-	pio.in_pb_callback().set("cent_data_in", FUNC(input_buffer_device::bus_r));
-	pio.out_pb_callback().set("cent_data_out", FUNC(output_latch_device::bus_w));
+	pio.in_pb_callback().set("cent_data_in", FUNC(input_buffer_device::read));
+	pio.out_pb_callback().set("cent_data_out", FUNC(output_latch_device::write));
 
 	CENTRONICS(config, m_centronics, centronics_devices, "printer");
 	m_centronics->set_data_input_buffer("cent_data_in");

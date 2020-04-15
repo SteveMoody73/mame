@@ -346,7 +346,7 @@ READ8_MEMBER(odyssey2_state::io_read)
 {
 	if ((m_p1 & (P1_VDC_COPY_MODE_ENABLE | P1_VDC_ENABLE)) == 0)
 	{
-		return m_i8244->read(space, offset);
+		return m_i8244->read(offset);
 	}
 	if (!(m_p1 & P1_EXT_RAM_ENABLE))
 	{
@@ -370,7 +370,7 @@ WRITE8_MEMBER(odyssey2_state::io_write)
 	}
 	else if (!(m_p1 & P1_VDC_ENABLE))
 	{
-		m_i8244->write(space, offset, data);
+		m_i8244->write(offset, data);
 	}
 }
 
@@ -379,7 +379,7 @@ READ8_MEMBER(g7400_state::io_read)
 {
 	if ((m_p1 & (P1_VDC_COPY_MODE_ENABLE | P1_VDC_ENABLE)) == 0)
 	{
-		return m_i8244->read(space, offset);
+		return m_i8244->read(offset);
 	}
 	else if (!(m_p1 & P1_EXT_RAM_ENABLE))
 	{
@@ -407,7 +407,7 @@ WRITE8_MEMBER(g7400_state::io_write)
 	}
 	else if (!(m_p1 & P1_VDC_ENABLE))
 	{
-		m_i8244->write(space, offset, data);
+		m_i8244->write(offset, data);
 	}
 	else if (!(m_p1 & P1_VPP_ENABLE))
 	{
@@ -696,7 +696,7 @@ void odyssey2_state::odyssey2(machine_config &config)
 	m_maincpu->t0_in_cb().set("cartslot", FUNC(o2_cart_slot_device::t0_read));
 	m_maincpu->t1_in_cb().set(FUNC(odyssey2_state::t1_read));
 
-	config.m_minimum_quantum = attotime::from_hz(60);
+	config.set_maximum_quantum(attotime::from_hz(60));
 
 	/* video hardware */
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
@@ -733,7 +733,7 @@ void odyssey2_state::videopac(machine_config &config)
 	m_maincpu->t0_in_cb().set("cartslot", FUNC(o2_cart_slot_device::t0_read));
 	m_maincpu->t1_in_cb().set(FUNC(odyssey2_state::t1_read));
 
-	config.m_minimum_quantum = attotime::from_hz(60);
+	config.set_maximum_quantum(attotime::from_hz(60));
 
 	/* video hardware */
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
@@ -771,7 +771,7 @@ void g7400_state::g7400(machine_config &config)
 	m_maincpu->t1_in_cb().set(FUNC(g7400_state::t1_read));
 	m_maincpu->prog_out_cb().set(m_i8243, FUNC(i8243_device::prog_w));
 
-	config.m_minimum_quantum = attotime::from_hz(60);
+	config.set_maximum_quantum(attotime::from_hz(60));
 
 	/* video hardware */
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
@@ -818,7 +818,7 @@ void g7400_state::odyssey3(machine_config &config)
 	m_maincpu->t1_in_cb().set(FUNC(g7400_state::t1_read));
 	m_maincpu->prog_out_cb().set(m_i8243, FUNC(i8243_device::prog_w));
 
-	config.m_minimum_quantum = attotime::from_hz(60);
+	config.set_maximum_quantum(attotime::from_hz(60));
 
 	/* video hardware */
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));

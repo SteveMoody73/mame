@@ -222,7 +222,7 @@ WRITE8_MEMBER(wallc_state::videoram_w)
 
 TILE_GET_INFO_MEMBER(wallc_state::get_bg_tile_info)
 {
-	SET_TILE_INFO_MEMBER(0, m_videoram[tile_index] | 0x100, 1, 0);
+	tileinfo.set(0, m_videoram[tile_index] | 0x100, 1, 0);
 }
 
 TILE_GET_INFO_MEMBER(wallc_state::get_bg_tile_info_unkitpkr)
@@ -233,27 +233,27 @@ TILE_GET_INFO_MEMBER(wallc_state::get_bg_tile_info_unkitpkr)
 	if (m_bookkeeping_mode || (tile_index & 0x1f) < 0x08 || (tile_index & 0x1f) >= 0x10)
 		code |= 0x100;
 
-	SET_TILE_INFO_MEMBER(0, code, 1, 0);
+	tileinfo.set(0, code, 1, 0);
 }
 
 TILE_GET_INFO_MEMBER(wallc_state::get_bg_tile_info_sidampkr)
 {
-	SET_TILE_INFO_MEMBER(0, m_videoram[tile_index] | 0x100, 0, 0);
+	tileinfo.set(0, m_videoram[tile_index] | 0x100, 0, 0);
 }
 
 void wallc_state::video_start()
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(wallc_state::get_bg_tile_info), this), TILEMAP_SCAN_COLS_FLIP_Y, 8, 8, 32, 32);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(wallc_state::get_bg_tile_info)), TILEMAP_SCAN_COLS_FLIP_Y, 8, 8, 32, 32);
 }
 
 VIDEO_START_MEMBER(wallc_state, unkitpkr)
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(wallc_state::get_bg_tile_info_unkitpkr), this), TILEMAP_SCAN_COLS_FLIP_Y, 8, 8, 32, 32);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(wallc_state::get_bg_tile_info_unkitpkr)), TILEMAP_SCAN_COLS_FLIP_Y, 8, 8, 32, 32);
 }
 
 VIDEO_START_MEMBER(wallc_state, sidampkr)
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(wallc_state::get_bg_tile_info_sidampkr), this), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(wallc_state::get_bg_tile_info_sidampkr)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
 }
 
 uint32_t wallc_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)

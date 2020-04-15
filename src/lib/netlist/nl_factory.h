@@ -1,10 +1,9 @@
 // license:GPL-2.0+
 // copyright-holders:Couriersud
-/*
- * nl_factory.h
- *
- *
- */
+
+///
+/// \file nl_factory.h
+///
 
 #ifndef NLFACTORY_H_
 #define NLFACTORY_H_
@@ -28,7 +27,8 @@
 	static plib::unique_ptr<factory::element_t> NETLIB_NAME(p_alias ## _c) \
 			(const pstring &classname) \
 	{ \
-		return plib::make_unique<factory::device_element_t<ns :: NETLIB_NAME(chip)>>(p_name, classname, p_def_param, __FILE__); \
+		using devtype = factory::device_element_t<ns :: NETLIB_NAME(chip)>; \
+		return devtype::create(p_name, classname, p_def_param, __FILE__); \
 	} \
 	\
 	factory::constructor_ptr_t decl_ ## p_alias = NETLIB_NAME(p_alias ## _c);
@@ -55,23 +55,26 @@ namespace factory {
 
 		COPYASSIGNMOVE(element_t, default)
 
-		virtual unique_pool_ptr<device_t> Create(netlist_state_t &anetlist, const pstring &name) = 0;
+		virtual unique_pool_ptr<device_t> make_device(nlmempool &pool,
+			netlist_state_t &anetlist,
+			const pstring &name) = 0;
+
 		virtual void macro_actions(nlparse_t &nparser, const pstring &name)
 		{
 			plib::unused_var(nparser);
 			plib::unused_var(name);
 		}
 
-		const pstring &name() const { return m_name; }
-		const pstring &classname() const { return m_classname; }
-		const pstring &param_desc() const { return m_def_param; }
-		const pstring &sourcefile() const { return m_sourcefile; }
+		const pstring &name() const noexcept { return m_name; }
+		const pstring &classname() const noexcept { return m_classname; }
+		const pstring &param_desc() const noexcept { return m_def_param; }
+		const pstring &sourcefile() const noexcept { return m_sourcefile; }
 
 	private:
-		pstring m_name;                             /* device name */
-		pstring m_classname;                        /* device class name */
-		pstring m_def_param;                        /* default parameter */
-		pstring m_sourcefile;                       /* source file */
+		pstring m_name;                             ///< device name
+		pstring m_classname;                        ///< device class name
+		pstring m_def_param;                        ///< default parameter
+		pstring m_sourcefile;                       ///< source file
 	};
 
 	template <class C>
@@ -85,9 +88,18 @@ namespace factory {
 				const pstring &def_param, const pstring &sourcefile)
 		: element_t(name, classname, def_param, sourcefile) { }
 
-		unique_pool_ptr<device_t> Create(netlist_state_t &anetlist, const pstring &name) override
+		unique_pool_ptr<device_t> make_device(nlmempool &pool,
+			netlist_state_t &anetlist,
+			const pstring &name) override
 		{
-			return pool().make_unique<C>(anetlist, name);
+			return pool.make_unique<C>(anetlist, name);
+		}
+
+		static plib::unique_ptr<device_element_t<C>> create(const pstring &name,
+			const pstring &classname, const pstring &def_param,
+			const pstring &sourcefile)
+		{
+			return plib::make_unique<device_element_t<C>>(name, classname, def_param, sourcefile);
 		}
 	};
 
@@ -101,17 +113,17 @@ namespace factory {
 
 		template<class device_class>
 		void register_device(const pstring &name, const pstring &classname,
-			const pstring &def_param)
+			const pstring &def_param, const pstring &sourcefile)
 		{
-			register_device(plib::make_unique<device_element_t<device_class>>(name, classname, def_param));
+			register_device(device_element_t<device_class>::create(name, classname, def_param, sourcefile));
 		}
 
-		void register_device(plib::unique_ptr<element_t> &&factory);
+		void register_device(plib::unique_ptr<element_t> &&factory) noexcept(false);
 
-		element_t * factory_by_name(const pstring &devname);
+		element_t * factory_by_name(const pstring &devname) noexcept(false);
 
 		template <class C>
-		bool is_class(element_t *f)
+		bool is_class(element_t *f) noexcept
 		{
 			return dynamic_cast<device_element_t<C> *>(f) != nullptr;
 		}
@@ -147,7 +159,9 @@ namespace factory {
 		{
 		}
 
-		unique_pool_ptr<device_t> Create(netlist_state_t &anetlist, const pstring &name) override;
+		unique_pool_ptr<device_t> make_device(nlmempool &pool,
+			netlist_state_t &anetlist,
+			const pstring &name) override;
 
 		void macro_actions(nlparse_t &nparser, const pstring &name) override;
 
@@ -161,4 +175,4 @@ namespace factory {
 	} // namespace devices
 } // namespace netlist
 
-#endif /* NLFACTORY_H_ */
+#endif // NLFACTORY_H_

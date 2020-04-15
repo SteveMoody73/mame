@@ -235,6 +235,8 @@ WRITE8_MEMBER(sorcerer_state::port48_w)
 
 	if (BIT(data, 0)) floppy = m_floppy40->get_device();
 	if (BIT(data, 1)) floppy = m_floppy41->get_device();
+	if (BIT(data, 2)) floppy = m_floppy42->get_device();
+	if (BIT(data, 3)) floppy = m_floppy43->get_device();
 
 	m_fdc4->set_floppy(floppy);
 
@@ -264,6 +266,8 @@ WRITE8_MEMBER(sorcerer_state::port34_w)
 
 	if (BIT(data, 0)) floppy = m_floppy30->get_device();
 	if (BIT(data, 1)) floppy = m_floppy31->get_device();
+	if (BIT(data, 2)) floppy = m_floppy32->get_device();
+	if (BIT(data, 3)) floppy = m_floppy33->get_device();
 
 	m_fdc3->set_floppy(floppy);
 
@@ -463,7 +467,7 @@ void sorcerer_state::machine_start_common(u16 endmem)
 	}
 
 	if (m_cart && m_cart->exists())
-		space.install_read_handler(0xc000, 0xdfff, read8sm_delegate(FUNC(generic_slot_device::read_rom),(generic_slot_device*)m_cart));
+		space.install_read_handler(0xc000, 0xdfff, read8sm_delegate(*m_cart, FUNC(generic_slot_device::read_rom)));
 }
 
 void sorcerer_state::machine_start()

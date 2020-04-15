@@ -1,5 +1,8 @@
 <?xml version="1.0"?>
 <!DOCTYPE softwarelist SYSTEM "softwarelist.dtd">
+<!--
+license:CC0
+-->
 <softwarelist name="ibm5170_cdrom" description="IBM PC/AT CD-ROM images">
 
 	<!--                                         -->
@@ -1981,7 +1984,7 @@
 	<software name="f29ret" supported="no">
 		<description>F-29 Retaliator</description>
 		<year>1995</year>
-		<publisher>Hit Squad</publisher>
+		<publisher>The Hit Squad</publisher>
 
 		<part name="cdrom" interface="cdrom">
 			<diskarea name="cdrom">

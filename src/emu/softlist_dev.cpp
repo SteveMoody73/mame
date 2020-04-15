@@ -9,13 +9,14 @@
 ***************************************************************************/
 
 #include "emu.h"
-#include "emuopts.h"
-#include "diimage.h"
-#include "romload.h"
 #include "softlist_dev.h"
+
+#include "diimage.h"
+#include "emuopts.h"
+#include "romload.h"
 #include "validity.h"
 
-#include <ctype.h>
+#include <cctype>
 
 
 //**************************************************************************
@@ -80,9 +81,9 @@ bool image_software_list_loader::load_software(device_image_interface &image, so
 //  software_list_device - constructor
 //-------------------------------------------------
 
-software_list_device::software_list_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
-	: device_t(mconfig, SOFTWARE_LIST, tag, owner, clock),
-	m_list_type(SOFTWARE_LIST_ORIGINAL_SYSTEM),
+software_list_device::software_list_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock) :
+	device_t(mconfig, SOFTWARE_LIST, tag, owner, clock),
+	m_list_type(softlist_type::ORIGINAL_SYSTEM),
 	m_filter(nullptr),
 	m_parsed(false),
 	m_file(mconfig.options().hash_path(), OPEN_FLAG_READ),
@@ -220,7 +221,7 @@ void software_list_device::display_matches(const machine_config &config, const c
 		if (matches[0] != nullptr)
 		{
 			// different output depending on original system or compatible
-			if (swlistdev.list_type() == SOFTWARE_LIST_ORIGINAL_SYSTEM)
+			if (swlistdev.is_original())
 				osd_printf_error("* Software list \"%s\" (%s) matches: \n", swlistdev.list_name(), swlistdev.description());
 			else
 				osd_printf_error("* Compatible software list \"%s\" (%s) matches: \n", swlistdev.list_name(), swlistdev.description());
@@ -282,7 +283,7 @@ void software_list_device::parse()
 	m_errors.clear();
 
 	// attempt to open the file
-	osd_file::error filerr = m_file.open(m_list_name.c_str(), ".xml");
+	const osd_file::error filerr = m_file.open(m_list_name + ".xml");
 	if (filerr == osd_file::error::NONE)
 	{
 		// parse if no error
@@ -384,7 +385,7 @@ device_image_interface *software_list_device::find_mountable_image(const machine
 	// When softlists were refactored in MAME 0.183, this was changed to build a "plan" for what needs to be loaded, so
 	// it was incorrect to check the image slot.  This is why an overload for find_mountable_image() was created that
 	// takes an std::function.  This overload is being preserved for compatibility with existing code, but I regard the
-	// continued existance of this overload is a red flag.
+	// continued existence of this overload as a red flag.
 	return find_mountable_image(
 		mconfig,
 		part,
@@ -489,7 +490,7 @@ void software_list_device::internal_validity_check(validity_checker &valid)
 			}
 
 			// make sure the parent exists
-			const software_info *swinfo2 = find(swinfo.parentname().c_str());
+			const software_info *swinfo2 = find(swinfo.parentname());
 
 			if (swinfo2 == nullptr)
 				osd_printf_error("%s: parent '%s' software for '%s' not found\n", filename(), swinfo.parentname(), shortname);

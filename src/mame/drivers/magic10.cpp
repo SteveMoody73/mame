@@ -229,7 +229,7 @@ WRITE16_MEMBER(magic10_state::layer2_videoram_w)
 
 TILE_GET_INFO_MEMBER(magic10_state::get_layer0_tile_info)
 {
-	SET_TILE_INFO_MEMBER(1,
+	tileinfo.set(1,
 		m_layer0_videoram[tile_index * 2],
 		m_layer0_videoram[tile_index * 2 + 1] & 0x0f,
 		TILE_FLIPYX((m_layer0_videoram[tile_index * 2 + 1] & 0xc0) >> 6));
@@ -237,7 +237,7 @@ TILE_GET_INFO_MEMBER(magic10_state::get_layer0_tile_info)
 
 TILE_GET_INFO_MEMBER(magic10_state::get_layer1_tile_info)
 {
-	SET_TILE_INFO_MEMBER(1,
+	tileinfo.set(1,
 		m_layer1_videoram[tile_index * 2],
 		m_layer1_videoram[tile_index * 2 + 1] & 0x0f,
 		TILE_FLIPYX((m_layer1_videoram[tile_index * 2 + 1] & 0xc0) >> 6));
@@ -245,7 +245,7 @@ TILE_GET_INFO_MEMBER(magic10_state::get_layer1_tile_info)
 
 TILE_GET_INFO_MEMBER(magic10_state::get_layer2_tile_info)
 {
-	SET_TILE_INFO_MEMBER(0,
+	tileinfo.set(0,
 		m_layer2_videoram[tile_index * 2],
 		m_layer2_videoram[tile_index * 2 + 1] & 0x0f,0);
 }
@@ -253,9 +253,9 @@ TILE_GET_INFO_MEMBER(magic10_state::get_layer2_tile_info)
 
 void magic10_state::video_start()
 {
-	m_layer0_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(magic10_state::get_layer0_tile_info),this), TILEMAP_SCAN_ROWS, 16, 16, 32, 32);
-	m_layer1_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(magic10_state::get_layer1_tile_info),this), TILEMAP_SCAN_ROWS, 16, 16, 32, 32);
-	m_layer2_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(magic10_state::get_layer2_tile_info),this), TILEMAP_SCAN_ROWS, 8, 8, 64, 64);
+	m_layer0_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(magic10_state::get_layer0_tile_info)), TILEMAP_SCAN_ROWS, 16, 16, 32, 32);
+	m_layer1_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(magic10_state::get_layer1_tile_info)), TILEMAP_SCAN_ROWS, 16, 16, 32, 32);
+	m_layer2_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(magic10_state::get_layer2_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 64, 64);
 
 	m_layer1_tilemap->set_transparent_pen(0);
 	m_layer2_tilemap->set_transparent_pen(0);

@@ -611,7 +611,7 @@ WRITE8_MEMBER(sapi_state::port13_w)
 
 READ8_MEMBER( sapi_state::port40_r )
 {
-	return ~m_uart->get_received_data();
+	return ~m_uart->receive();
 }
 
 READ8_MEMBER(sapi_state::port41_r)
@@ -624,7 +624,7 @@ READ8_MEMBER(sapi_state::port41_r)
 
 WRITE8_MEMBER( sapi_state::port43_w )
 {
-	m_uart->set_transmit_data(~data);
+	m_uart->transmit(~data);
 }
 
 READ_LINE_MEMBER( sapi_state::si )
@@ -846,7 +846,7 @@ void sapi_state::sapi3b(machine_config &config)
 	crtc.set_screen("screen");
 	crtc.set_show_border_area(false);
 	crtc.set_char_width(6);
-	crtc.set_update_row_callback(FUNC(sapi_state::crtc_update_row), this);
+	crtc.set_update_row_callback(FUNC(sapi_state::crtc_update_row));
 
 	subdevice<screen_device>("screen")->set_screen_update("crtc", FUNC(mc6845_device::screen_update));
 	subdevice<screen_device>("screen")->set_no_palette();

@@ -245,6 +245,7 @@ static NETLIST_START(TTL_7414_GATE)
 	ALIAS(A, X.A)
 	ALIAS(Q, X.Q)
 	ALIAS(GND, X.GND)
+	ALIAS(VCC, X.VCC)
 NETLIST_END()
 
 static NETLIST_START(TTL_74LS14_GATE)
@@ -252,6 +253,7 @@ static NETLIST_START(TTL_74LS14_GATE)
 	ALIAS(A, X.A)
 	ALIAS(Q, X.Q)
 	ALIAS(GND, X.GND)
+	ALIAS(VCC, X.VCC)
 NETLIST_END()
 
 static NETLIST_START(TTL_7414_DIP)
@@ -263,7 +265,7 @@ static NETLIST_START(TTL_7414_DIP)
 	SCHMITT_TRIGGER(F, "DM7414")
 
 	NET_C(A.GND, B.GND, C.GND, D.GND, E.GND, F.GND)
-	DUMMY_INPUT(VCC)
+	NET_C(A.VCC, B.VCC, C.VCC, D.VCC, E.VCC, F.VCC)
 
 	DIPPINS(   /*       +--------------+      */
 		A.A,   /*    A1 |1     ++    14| VCC  */ VCC.I,
@@ -286,7 +288,7 @@ static NETLIST_START(TTL_74LS14_DIP)
 	SCHMITT_TRIGGER(F, "DM74LS14")
 
 	NET_C(A.GND, B.GND, C.GND, D.GND, E.GND, F.GND)
-	DUMMY_INPUT(VCC)
+	NET_C(A.VCC, B.VCC, C.VCC, D.VCC, E.VCC, F.VCC)
 
 	DIPPINS(   /*       +--------------+      */
 		A.A,   /*    A1 |1     ++    14| VCC  */ VCC.I,
@@ -353,7 +355,7 @@ static NETLIST_START(TTL_7420_DIP)
 
 	NET_C(A.VCC, B.VCC)
 	NET_C(A.GND, B.GND)
-	DUMMY_INPUT(NC)
+	NC_PIN(NC)
 
 	DIPPINS(  /*       +--------------+      */
 		A.A,  /*    A1 |1     ++    14| VCC  */ A.VCC,
@@ -395,13 +397,14 @@ static NETLIST_START(TTL_7425_DIP)
 
 	NET_C(A.VCC, B.VCC)
 	NET_C(A.GND, B.GND)
-	DUMMY_INPUT(X)
+	NC_PIN(XA) // FIXME: Functionality needs to be implemented
+	NC_PIN(XB) // FIXME: Functionality needs to be implemented
 
 	DIPPINS(  /*       +--------------+      */
 		A.A,  /*    A1 |1     ++    14| VCC  */ A.VCC,
 		A.B,  /*    B1 |2           13| D2   */ B.D,
-		X.I,  /*    X1 |3           12| C2   */ B.C,
-		A.C,  /*    C1 |4    7425   11| X2   */ X.I,
+		XA.I, /*    X1 |3           12| C2   */ B.C,
+		A.C,  /*    C1 |4    7425   11| X2   */ XB.I,
 		A.D,  /*    D1 |5           10| B2   */ B.B,
 		A.Q,  /*    Y1 |6            9| A2   */ B.A,
 		A.GND,/*   GND |7            8| Y2   */ B.Q
@@ -471,15 +474,17 @@ NETLIST_END()
 static NETLIST_START(TTL_7430_DIP)
 	TTL_7430_GATE(A)
 
-	DUMMY_INPUT(NC)
+	NC_PIN(NC9)
+	NC_PIN(NC10)
+	NC_PIN(NC13)
 
 	DIPPINS(  /*       +--------------+      */
 		A.A,  /*     A |1     ++    14| VCC  */ A.VCC,
-		A.B,  /*     B |2           13| NC   */ NC.I,
+		A.B,  /*     B |2           13| NC   */ NC13.I,
 		A.C,  /*     C |3           12| H    */ A.H,
 		A.D,  /*     D |4    7430   11| G    */ A.G,
-		A.E,  /*     E |5           10| NC   */ NC.I,
-		A.F,  /*     F |6            9| NC   */ NC.I,
+		A.E,  /*     E |5           10| NC   */ NC10.I,
+		A.F,  /*     F |6            9| NC   */ NC9.I,
 		A.GND,/*   GND |7            8| Y    */ A.Q
 			  /*       +--------------+      */
 	)
@@ -892,7 +897,7 @@ NETLIST_START(TTL74XX_lib)
 	NET_MODEL("DM7414         SCHMITT_TRIGGER(VTP=1.7 VTM=0.9 VI=4.35 RI=6.15k VOH=3.5 ROH=120 VOL=0.1 ROL=37.5 TPLH=15 TPHL=15)")
 	NET_MODEL("TTL_7414_GATE  SCHMITT_TRIGGER(VTP=1.7 VTM=0.9 VI=4.35 RI=6.15k VOH=3.5 ROH=120 VOL=0.1 ROL=37.5 TPLH=15 TPHL=15)")
 	NET_MODEL("DM74LS14       SCHMITT_TRIGGER(VTP=1.6 VTM=0.8 VI=4.4 RI=19.3k VOH=3.45 ROH=130 VOL=0.1 ROL=31.2 TPLH=15 TPHL=15)")
-	//NET_MODEL("DM7414 FAMILY(FV=5 IVL=0.16 IVH=0.4 OVL=0.1 OVH=0.05 ORL=10.0 ORH=1.0e8)")
+	//NET_MODEL("DM7414 FAMILY(IVL=0.16 IVH=0.4 OVL=0.1 OVH=0.05 ORL=10.0 ORH=1.0e8)")
 
 
 	TRUTHTABLE_START(TTL_7400_GATE, 2, 1, "")

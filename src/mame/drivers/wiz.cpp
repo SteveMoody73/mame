@@ -108,7 +108,7 @@ TODO:
   "THE MICROPHONE IS OUT OF CONTROL, SO THIS GAME DEPENDS ON THE BUTTONS"
   There's no additional hw or connectors on the pcb
   (except for small (bit 0 - ON, bit 1 - ON)  DSW near AY chips )
-  Tomasz Slanina -  dox@space.pl
+  Tomasz Slanina
 
 Notes:
   The microphone is for summoning clouds. The game falls back to use
@@ -123,7 +123,7 @@ Stephh's notes (based on the games Z80 code and some tests) :
 
   - Here are some infos about the "Debug Mode" Dip Switch :
 
-      * when it it set to OFF, the value which was previously written
+      * when it is set to OFF, the value which was previously written
         to 0xc500 is NOT erased, but the only value written to it is 0x00.
       * when it is set to ON, 0x00 is ALWAYS written to 0xc500.
         (check code at 0x0ef6)

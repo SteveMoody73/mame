@@ -896,8 +896,8 @@ void applix_state::applix(machine_config &config)
 	m_crtc->set_screen("screen");
 	m_crtc->set_show_border_area(true);
 	m_crtc->set_char_width(8);
-	m_crtc->set_update_row_callback(FUNC(applix_state::crtc_update_row), this);
-	m_crtc->set_begin_update_callback(FUNC(applix_state::crtc_update_border), this);
+	m_crtc->set_update_row_callback(FUNC(applix_state::crtc_update_row));
+	m_crtc->set_begin_update_callback(FUNC(applix_state::crtc_update_border));
 	m_crtc->out_vsync_callback().set(FUNC(applix_state::vsync_w));
 
 	VIA6522(config, m_via, 30_MHz_XTAL / 4 / 10); // VIA uses 68000 E clock
@@ -943,6 +943,8 @@ void applix_state::applix(machine_config &config)
 	serial_b.rxd_handler().set("scc", FUNC(scc8530_device::rxb_w));
 	serial_b.cts_handler().set("scc", FUNC(scc8530_device::ctsb_w));
 	serial_b.cts_handler().set("scc", FUNC(scc8530_device::dcdb_w));
+
+	SOFTWARE_LIST(config, "flop_list").set_original("applix_flop");
 }
 
 /* ROM definition */

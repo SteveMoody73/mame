@@ -15,15 +15,16 @@ This entire hardware series is generally called 'GX400'
     Salamander (Version J)  (Game 587) PWB(B) 201012A GX587
     Lifeforce (US)          (Game 587) PWB(B) 201012A GX587
     Lifeforce (Japan)       (Game 587) PWB(B) 201012A GX587
+    Black Panther           (Game 604) GX604 PWB(B) 201017A
     City Bomber (World)     (Game 787) PWB(B) 250102A
     City Bomber (Japan)     (Game 787) PWB(B) 250102A
     Kitten Kaboodle         (Game 712) PWB(B) 250102A
     Nyan Nyan Panic (Japan) (Game 712) PWB(B) 250102A
     Hyper Crash (Version D) (Game 790) GX790 PWB(B) 250093A
     Hyper Crash (Version C) (Game 790) GX790 PWB(B) 250093A
-TODO: find pcb pics for below
-    Black Panther           (Game 604)
+
 Most of these boards share the same bottom/gfx board, labeled 'GX400PWB // (A)200204B'
+Black Panther uses a 'GX400PWB // (A)200204C' bottom/gfx board
 
 driver by Bryan McPhail
 
@@ -313,7 +314,7 @@ READ16_MEMBER(nemesis_state::konamigt_input_word_r)
 */
 
 	int data = ioport("IN3")->read();
-	int data2 = ioport("PADDLE")->read();
+	int data2 = ioport("WHEEL")->read();
 
 	int ret=0x0000;
 
@@ -932,8 +933,8 @@ static INPUT_PORTS_START( konamigt )
 	PORT_SERVICE_DIPLOC( 0x04, IP_ACTIVE_LOW, "SW3:3" )
 	PORT_BIT( 0xfa, IP_ACTIVE_LOW, IPT_UNUSED )
 
-	PORT_START("PADDLE")
-	PORT_BIT( 0x7f, 0x40, IPT_PADDLE ) PORT_SENSITIVITY(25) PORT_KEYDELTA(10)
+	PORT_START("WHEEL")    /* Wheel (360deg) */
+	PORT_BIT( 0xff, 0x00, IPT_DIAL ) PORT_SENSITIVITY(25) PORT_KEYDELTA(5)
 INPUT_PORTS_END
 
 
@@ -984,8 +985,8 @@ static INPUT_PORTS_START( rf2 )
 	PORT_SERVICE_DIPLOC( 0x04, IP_ACTIVE_LOW, "SW3:3" )
 	PORT_BIT( 0xfa, IP_ACTIVE_LOW, IPT_UNUSED )
 
-	PORT_START("PADDLE")
-	PORT_BIT( 0x7f, 0x40, IPT_PADDLE ) PORT_SENSITIVITY(25) PORT_KEYDELTA(10)
+	PORT_START("WHEEL")    /* Wheel (360deg) */
+	PORT_BIT( 0xff, 0x00, IPT_DIAL ) PORT_SENSITIVITY(25) PORT_KEYDELTA(5)
 INPUT_PORTS_END
 
 
@@ -1770,8 +1771,8 @@ void nemesis_state::nemesis(machine_config &config)
 	ay1.add_route(ALL_OUTPUTS, "filter1", 0.20);
 
 	ay8910_device &ay2(AY8910(config, "ay2", 14318180/8));
-	ay2.port_a_write_callback().set(m_k005289, FUNC(k005289_device::k005289_control_A_w));
-	ay2.port_b_write_callback().set(m_k005289, FUNC(k005289_device::k005289_control_B_w));
+	ay2.port_a_write_callback().set(m_k005289, FUNC(k005289_device::control_A_w));
+	ay2.port_b_write_callback().set(m_k005289, FUNC(k005289_device::control_B_w));
 	ay2.add_route(0, "filter2", 1.00);
 	ay2.add_route(1, "filter3", 1.00);
 	ay2.add_route(2, "filter4", 1.00);
@@ -1834,8 +1835,8 @@ void nemesis_state::gx400(machine_config &config)
 	ay1.add_route(ALL_OUTPUTS, "filter1", 0.20);
 
 	ay8910_device &ay2(AY8910(config, "ay2", 14318180/8));
-	ay2.port_a_write_callback().set(m_k005289, FUNC(k005289_device::k005289_control_A_w));
-	ay2.port_b_write_callback().set(m_k005289, FUNC(k005289_device::k005289_control_B_w));
+	ay2.port_a_write_callback().set(m_k005289, FUNC(k005289_device::control_A_w));
+	ay2.port_b_write_callback().set(m_k005289, FUNC(k005289_device::control_B_w));
 	ay2.add_route(0, "filter2", 1.00);
 	ay2.add_route(1, "filter3", 1.00);
 	ay2.add_route(2, "filter4", 1.00);
@@ -1900,8 +1901,8 @@ void nemesis_state::konamigt(machine_config &config)
 	ay1.add_route(ALL_OUTPUTS, "filter1", 0.20);
 
 	ay8910_device &ay2(AY8910(config, "ay2", 14318180/8));
-	ay2.port_a_write_callback().set(m_k005289, FUNC(k005289_device::k005289_control_A_w));
-	ay2.port_b_write_callback().set(m_k005289, FUNC(k005289_device::k005289_control_B_w));
+	ay2.port_a_write_callback().set(m_k005289, FUNC(k005289_device::control_A_w));
+	ay2.port_b_write_callback().set(m_k005289, FUNC(k005289_device::control_B_w));
 	ay2.add_route(0, "filter2", 1.00);
 	ay2.add_route(1, "filter3", 1.00);
 	ay2.add_route(2, "filter4", 1.00);
@@ -1964,8 +1965,8 @@ void nemesis_state::rf2_gx400(machine_config &config)
 	ay1.add_route(ALL_OUTPUTS, "filter1", 0.20);
 
 	ay8910_device &ay2(AY8910(config, "ay2", 14318180/8));
-	ay2.port_a_write_callback().set(m_k005289, FUNC(k005289_device::k005289_control_A_w));
-	ay2.port_b_write_callback().set(m_k005289, FUNC(k005289_device::k005289_control_B_w));
+	ay2.port_a_write_callback().set(m_k005289, FUNC(k005289_device::control_A_w));
+	ay2.port_b_write_callback().set(m_k005289, FUNC(k005289_device::control_B_w));
 	ay2.add_route(0, "filter2", 1.00);
 	ay2.add_route(1, "filter3", 1.00);
 	ay2.add_route(2, "filter4", 1.00);
@@ -2972,8 +2973,8 @@ void nemesis_state::bubsys(machine_config &config)
 	ay1.add_route(ALL_OUTPUTS, "filter1", 0.20);
 
 	ay8910_device &ay2(AY8910(config, "ay2", 14318180/8));
-	ay2.port_a_write_callback().set(m_k005289, FUNC(k005289_device::k005289_control_A_w));
-	ay2.port_b_write_callback().set(m_k005289, FUNC(k005289_device::k005289_control_B_w));
+	ay2.port_a_write_callback().set(m_k005289, FUNC(k005289_device::control_A_w));
+	ay2.port_b_write_callback().set(m_k005289, FUNC(k005289_device::control_B_w));
 	ay2.add_route(0, "filter2", 1.00);
 	ay2.add_route(1, "filter3", 1.00);
 	ay2.add_route(2, "filter4", 1.00);

@@ -759,7 +759,7 @@ void ace_state::ace(machine_config &config)
 	Z80(config, m_maincpu, XTAL(6'500'000)/2);
 	m_maincpu->set_addrmap(AS_PROGRAM, &ace_state::ace_mem);
 	m_maincpu->set_addrmap(AS_IO, &ace_state::ace_io);
-	config.m_minimum_quantum = attotime::from_hz(60);
+	config.set_maximum_quantum(attotime::from_hz(60));
 
 	// video hardware
 	screen_device &screen(SCREEN(config, SCREEN_TAG, SCREEN_TYPE_RASTER));
@@ -790,7 +790,11 @@ void ace_state::ace(machine_config &config)
 	m_cassette->add_route(ALL_OUTPUTS, "mono", 0.05);
 	m_cassette->set_interface("jupace_cass");
 
-	SNAPSHOT(config, "snapshot", "ace", attotime::from_seconds(1)).set_load_callback(FUNC(ace_state::snapshot_cb), this);
+	// snapshot
+	snapshot_image_device &snapshot(SNAPSHOT(config, "snapshot", "ace"));
+	snapshot.set_delay(attotime::from_double(1.0));
+	snapshot.set_load_callback(FUNC(ace_state::snapshot_cb));
+	snapshot.set_interface("jupace_snap");
 
 	I8255A(config, m_ppi);
 	m_ppi->in_pb_callback().set(FUNC(ace_state::sby_r));
@@ -800,7 +804,7 @@ void ace_state::ace(machine_config &config)
 	m_z80pio->out_int_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ0);
 	m_z80pio->in_pa_callback().set(FUNC(ace_state::pio_pa_r));
 	m_z80pio->out_pa_callback().set(FUNC(ace_state::pio_pa_w));
-	m_z80pio->out_pb_callback().set("cent_data_out", FUNC(output_latch_device::bus_w));
+	m_z80pio->out_pb_callback().set("cent_data_out", FUNC(output_latch_device::write));
 
 	CENTRONICS(config, m_centronics, centronics_devices, "printer");
 
@@ -811,6 +815,7 @@ void ace_state::ace(machine_config &config)
 	RAM(config, RAM_TAG).set_default_size("1K").set_extra_options("16K,32K,48K");
 
 	SOFTWARE_LIST(config, "cass_list").set_original("jupace_cass");
+	SOFTWARE_LIST(config, "snap_list").set_original("jupace_snap");
 }
 
 

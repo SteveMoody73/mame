@@ -94,7 +94,6 @@ public:
 	void init_m72_8751();
 	void init_dbreedm72();
 	void init_nspirit();
-	void init_loht();
 	void init_imgfight();
 
 private:
@@ -176,7 +175,6 @@ private:
 	DECLARE_WRITE16_MEMBER(imgfight_sample_trigger_w);
 	DECLARE_WRITE16_MEMBER(loht_sample_trigger_w);
 	DECLARE_WRITE16_MEMBER(dbreedm72_sample_trigger_w);
-	DECLARE_WRITE16_MEMBER(airduelm72_sample_trigger_w);
 	DECLARE_WRITE16_MEMBER(dkgenm72_sample_trigger_w);
 	DECLARE_WRITE16_MEMBER(gallop_sample_trigger_w);
 	void rtype2_port02_w(u8 data);

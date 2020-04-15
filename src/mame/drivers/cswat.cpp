@@ -34,8 +34,8 @@ TODO:
 class cswat_state : public driver_device
 {
 public:
-	cswat_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
+	cswat_state(const machine_config &mconfig, device_type type, const char *tag) :
+		driver_device(mconfig, type, tag),
 		m_maincpu(*this, "maincpu"),
 		m_gfxdecode(*this, "gfxdecode"),
 		m_videoram(*this, "videoram"),
@@ -93,12 +93,12 @@ TILE_GET_INFO_MEMBER(cswat_state::get_tile_info)
 	int code = m_videoram[tile_index] | (attr << 8 & 0x300);
 	int flags = TILE_FLIPYX(attr >> 2);
 
-	SET_TILE_INFO_MEMBER(0, code, color, flags);
+	tileinfo.set(0, code, color, flags);
 }
 
 void cswat_state::video_start()
 {
-	m_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(cswat_state::get_tile_info),this), tilemap_mapper_delegate(FUNC(cswat_state::tilemap_scan_rows),this), 8, 8, 36, 28);
+	m_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(cswat_state::get_tile_info)), tilemap_mapper_delegate(*this, FUNC(cswat_state::tilemap_scan_rows)), 8, 8, 36, 28);
 }
 
 uint32_t cswat_state::screen_update_cswat(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)

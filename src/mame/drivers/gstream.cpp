@@ -780,9 +780,14 @@ uint32_t gstream_state::screen_update(screen_device &screen, bitmap_rgb32 &bitma
 	draw_bg(bitmap, cliprect, 1, m_vram + 0x400/4);
 	draw_bg(bitmap, cliprect, 0, m_vram + 0x000/4); // move on top for x2222 , check
 
-
-	for (i = 0x0000 / 4; i < 0x4000 / 4; i += 4)
+	int clk = 0;
+	int clk_max = 432 * 262; // total usable cycle count for sprites; TODO : measure screen size, related to that?
+	for (i = 0x0000 / 4; i < 0x4000 / 4; i += 4) // can't be drawable everything
 	{
+		clk += 8+128; // uses 8 cycle per RAM, 128 cycle per drawing tile
+		if (clk >= clk_max)
+			break;
+
 		/* Upper bits are used by the tilemaps */
 		int code = m_vram[i + 0] & 0xffff;
 		int x = m_vram[i + 1] & 0x1ff;
@@ -1088,7 +1093,7 @@ READ32_MEMBER(gstream_state::x2222_speedup2_r)
 
 void gstream_state::init_gstream()
 {
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0xd1ee0, 0xd1ee3, read32_delegate(FUNC(gstream_state::gstream_speedup_r), this));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0xd1ee0, 0xd1ee3, read32_delegate(*this, FUNC(gstream_state::gstream_speedup_r)));
 
 	m_xoffset = 2;
 }
@@ -1116,8 +1121,8 @@ void gstream_state::rearrange_sprite_data(uint8_t* ROM, uint32_t* NEW, uint32_t*
 
 void gstream_state::init_x2222()
 {
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x7ffac, 0x7ffaf, read32_delegate(FUNC(gstream_state::x2222_speedup_r), this)); // older
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x84e3c, 0x84e3f, read32_delegate(FUNC(gstream_state::x2222_speedup2_r), this)); // newer
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x7ffac, 0x7ffaf, read32_delegate(*this, FUNC(gstream_state::x2222_speedup_r))); // older
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x84e3c, 0x84e3f, read32_delegate(*this, FUNC(gstream_state::x2222_speedup2_r))); // newer
 
 	rearrange_sprite_data(memregion("sprites")->base(), (uint32_t*)memregion("gfx1")->base(), (uint32_t*)memregion("gfx1_lower")->base()  );
 	rearrange_tile_data(memregion("bg1")->base(), (uint32_t*)memregion("gfx2")->base(), (uint32_t*)memregion("gfx2_lower")->base());

@@ -273,8 +273,6 @@ Namco System 21 Video Hardware
 
 #define ENABLE_LOGGING      0
 
-#define NAMCOS21_NUM_COLORS 0x8000
-
 class namcos21_c67_state : public driver_device
 {
 public:
@@ -369,6 +367,8 @@ uint32_t namcos21_c67_state::screen_update(screen_device &screen, bitmap_ind16 &
 	int pivot = 3;
 	int pri;
 	bitmap.fill(0xff, cliprect );
+	screen.priority().fill(0, cliprect);
+	m_c355spr->get_sprites(cliprect); // TODO : buffered?
 
 	m_c355spr->draw(screen, bitmap, cliprect, 2 );
 
@@ -796,7 +796,7 @@ void namcos21_c67_state::namcos21(machine_config &config)
 	NAMCOS21_DSP_C67(config, m_namcos21_dsp_c67, 0);
 	m_namcos21_dsp_c67->set_renderer_tag("namcos21_3d");
 
-	config.m_minimum_quantum = attotime::from_hz(12000);
+	config.set_maximum_quantum(attotime::from_hz(12000));
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_1);
 
@@ -814,7 +814,7 @@ void namcos21_c67_state::namcos21(machine_config &config)
 	configure_c148_standard(config);
 	NAMCO_C139(config, m_sci, 0);
 
-	PALETTE(config, m_palette).set_format(palette_device::xBRG_888, NAMCOS21_NUM_COLORS);
+	PALETTE(config, m_palette).set_format(palette_device::xBRG_888, 0x10000/2);
 
 	NAMCO_C355SPR(config, m_c355spr, 0);
 	m_c355spr->set_screen(m_screen);
@@ -823,6 +823,7 @@ void namcos21_c67_state::namcos21(machine_config &config)
 	m_c355spr->set_tile_callback(namco_c355spr_device::c355_obj_code2tile_delegate());
 	m_c355spr->set_palxor(0xf); // reverse mapping
 	m_c355spr->set_color_base(0x1000);
+	m_c355spr->set_external_prifill(true);
 
 	SPEAKER(config, "lspeaker").front_left();
 	SPEAKER(config, "rspeaker").front_right();

@@ -177,8 +177,7 @@ void segajw_state::segajw_map(address_map &map)
 {
 	map(0x000000, 0x03ffff).rom();
 
-	map(0x080000, 0x080001).rw("hd63484", FUNC(hd63484_device::status16_r), FUNC(hd63484_device::address16_w));
-	map(0x080002, 0x080003).rw("hd63484", FUNC(hd63484_device::data16_r), FUNC(hd63484_device::data16_w));
+	map(0x080000, 0x080003).rw("hd63484", FUNC(hd63484_device::read16), FUNC(hd63484_device::write16));
 
 	map(0x180000, 0x180001).portr("DSW0");
 	map(0x180005, 0x180005).r("soundlatch2", FUNC(generic_latch_8_device::read)).w(m_soundlatch, FUNC(generic_latch_8_device::write)).umask16(0x00ff);
@@ -381,7 +380,7 @@ void segajw_state::segajw(machine_config &config)
 	m_audiocpu->set_addrmap(AS_PROGRAM, &segajw_state::segajw_audiocpu_map);
 	m_audiocpu->set_addrmap(AS_IO, &segajw_state::segajw_audiocpu_io_map);
 
-	config.m_minimum_quantum = attotime::from_hz(2000);
+	config.set_maximum_quantum(attotime::from_hz(2000));
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_NONE);
 

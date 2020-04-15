@@ -68,7 +68,7 @@ WRITE16_MEMBER(tigeroad_state::tigeroad_soundcmd_w)
 WRITE8_MEMBER(tigeroad_state::msm5205_w)
 {
 	m_msm->reset_w(BIT(data, 7));
-	m_msm->write_data(data);
+	m_msm->data_w(data);
 	m_msm->vclk_w(1);
 	m_msm->vclk_w(0);
 }
@@ -714,7 +714,7 @@ void tigeroad_state::f1dream_comad(machine_config &config)
 	m_audiocpu->set_addrmap(AS_PROGRAM, &tigeroad_state::comad_sound_map);
 	m_audiocpu->set_addrmap(AS_IO, &tigeroad_state::comad_sound_io_map);
 
-	config.m_minimum_quantum = attotime::from_hz(3600);
+	config.set_maximum_quantum(attotime::from_hz(3600));
 
 	/* video hardware */
 	BUFFERED_SPRITERAM16(config, "spriteram");

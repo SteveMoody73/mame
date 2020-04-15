@@ -50,7 +50,7 @@ TILE_GET_INFO_MEMBER(suna8_state::get_tile_info)
 		code = m_spriteram[ 2 * tile_index + 0 ];
 		attr = m_spriteram[ 2 * tile_index + 1 ];
 	}
-	SET_TILE_INFO_MEMBER(m_page / 8,
+	tileinfo.set(m_page / 8,
 			( (attr & 0x03) << 8 ) + code + m_tiles*0x400,
 			(attr >> 2) & 0xf,
 			TILE_FLIPYX( (attr >> 6) & 3 ));
@@ -155,10 +155,8 @@ void suna8_state::suna8_vh_start_common(bool has_text, GFXBANK_TYPE_T gfxbank_ty
 	}
 
 #if TILEMAPS
-	m_bg_tilemap = &machine().tilemap().create(m_gfxdecode, tilemap_get_info_delegate(FUNC(suna8_state::get_tile_info),this), TILEMAP_SCAN_COLS,
-
-								8, 8, 0x20*(m_has_text ? 4 : 16), 0x20);
-
+	m_bg_tilemap = &machine().tilemap().create(m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(suna8_state::get_tile_info)), TILEMAP_SCAN_COLS,
+			8, 8, 0x20*(m_has_text ? 4 : 16), 0x20);
 	m_bg_tilemap->set_transparent_pen(15);
 #endif
 }

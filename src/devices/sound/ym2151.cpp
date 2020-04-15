@@ -5,6 +5,8 @@
 #include "ym2151.h"
 
 DEFINE_DEVICE_TYPE(YM2151, ym2151_device, "ym2151", "Yamaha YM2151 OPM")
+DEFINE_DEVICE_TYPE(YM2164, ym2164_device, "ym2164", "Yamaha YM2164 OPP")
+DEFINE_DEVICE_TYPE(YM2414, ym2414_device, "ym2414", "Yamaha YM2414 OPZ")
 
 
 #define FREQ_SH         16  /* 16.16 fixed point (frequency calculations) */
@@ -404,6 +406,21 @@ void ym2151_device::calculate_timers()
 	{
 		/* ASG 980324: changed to compute both tim_B_tab and timer_B_time */
 		timer_B_time[i] = clocks_to_attotime(1024 * (256 - i));
+	}
+}
+
+void ym2164_device::calculate_timers()
+{
+	/* calculate timers' deltas */
+	for (int i=0; i<1024; i++)
+	{
+		/* ASG 980324: changed to compute both tim_A_tab and timer_A_time */
+		timer_A_time[i] = clocks_to_attotime(64 * (1024 - i));
+	}
+	for (int i=0; i<256; i++)
+	{
+		/* ASG 980324: changed to compute both tim_B_tab and timer_B_time */
+		timer_B_time[i] = clocks_to_attotime(2048 * (256 - i));
 	}
 }
 
@@ -910,6 +927,16 @@ void ym2151_device::write_reg(int r, int v)
 	}
 }
 
+void ym2164_device::write_reg(int r, int v)
+{
+	if (r < 0x08)
+		logerror("%s: Writing %02X to undocumented register %d\n", machine().describe_context(), v, r);
+	else if (r == 0x09)
+		ym2151_device::write_reg(0x01, v);
+	else
+		ym2151_device::write_reg(r, v);
+}
+
 void ym2151_device::device_post_load()
 {
 	for (int j=0; j<8; j++)
@@ -934,6 +961,8 @@ void ym2151_device::device_start()
 
 	eg_timer_add  = 1 << EG_SH;
 	eg_timer_overflow = 3 * eg_timer_add;
+
+	irqlinestate = 0;
 
 	/* save all 32 operators */
 	for (int j=0; j<32; j++)
@@ -1660,14 +1689,39 @@ void ym2151_device::advance()
 //  ym2151_device - constructor
 //-------------------------------------------------
 
-ym2151_device::ym2151_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, YM2151, tag, owner, clock),
+ym2151_device::ym2151_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
+	: device_t(mconfig, type, tag, owner, clock),
 		device_sound_interface(mconfig, *this),
 		m_stream(nullptr),
 		m_lastreg(0),
 		m_irqhandler(*this),
 		m_portwritehandler(*this),
 		m_reset_active(false)
+{
+}
+
+ym2151_device::ym2151_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: ym2151_device(mconfig, YM2151, tag, owner, clock)
+{
+}
+
+
+//-------------------------------------------------
+//  ym2164_device - constructor
+//-------------------------------------------------
+
+ym2164_device::ym2164_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: ym2151_device(mconfig, YM2164, tag, owner, clock)
+{
+}
+
+
+//-------------------------------------------------
+//  ym2414_device - constructor
+//-------------------------------------------------
+
+ym2414_device::ym2414_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: ym2151_device(mconfig, YM2414, tag, owner, clock)
 {
 }
 

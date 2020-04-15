@@ -75,11 +75,11 @@ NETLIST_END()
  * ---------------------------------------------------------------------------*/
 
 static NETLIST_START(family_models)
-	NET_MODEL("FAMILY _(TYPE=CUSTOM FV=5 IVL=0.16 IVH=0.4 OVL=0.1 OVH=1.0 ORL=1.0 ORH=130.0)")
+	NET_MODEL("FAMILY _(TYPE=CUSTOM IVL=0.16 IVH=0.4 OVL=0.1 OVH=1.0 ORL=1.0 ORH=130.0)")
 	NET_MODEL("OPAMP _()")
 	NET_MODEL("SCHMITT_TRIGGER _()")
 
-	NET_MODEL("74XXOC FAMILY(FV=5 IVL=0.16 IVH=0.4 OVL=0.1 OVH=0.05 ORL=10.0 ORH=1.0e8)")
+	NET_MODEL("74XXOC FAMILY(IVL=0.16 IVH=0.4 OVL=0.1 OVH=0.05 ORL=10.0 ORH=1.0e8)")
 	NET_MODEL("74XX FAMILY(TYPE=TTL)")
 	NET_MODEL("CD4XXX FAMILY(TYPE=CD4XXX)")
 NETLIST_END()
@@ -89,9 +89,7 @@ NETLIST_END()
  * ---------------------------------------------------------------------------*/
 
 NETLIST_START(base)
-	TTL_INPUT(ttlhigh, 1)
-	TTL_INPUT(ttllow, 0)
-	NET_REGISTER_DEV(GND, GND)
+	NET_REGISTER_DEV(GNDA, GND)
 	NET_REGISTER_DEV(PARAMETER, NETLIST)
 
 	LOCAL_SOURCE(diode_models)

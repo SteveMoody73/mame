@@ -89,7 +89,7 @@ TILE_GET_INFO_MEMBER(chance32_state::get_fg_tile_info)
 {
 	int code = (m_fgram[tile_index * 2 + 1] << 8) | m_fgram[tile_index * 2];
 	int flip = (~code >> 12)&1;
-	SET_TILE_INFO_MEMBER(1,
+	tileinfo.set(1,
 			code & 0x0fff,
 			code >> 13,
 			TILE_FLIPYX(flip<<1)|flip);
@@ -99,7 +99,7 @@ TILE_GET_INFO_MEMBER(chance32_state::get_bg_tile_info)
 {
 	int code = (m_bgram[tile_index * 2 +1] << 8) | m_bgram[tile_index * 2];
 	int flip = (~code >> 12)&1;
-	SET_TILE_INFO_MEMBER(0,
+	tileinfo.set(0,
 			code & 0x0fff,
 			code >> 13,
 			TILE_FLIPYX(flip<<1|flip));
@@ -108,10 +108,10 @@ TILE_GET_INFO_MEMBER(chance32_state::get_bg_tile_info)
 
 void chance32_state::video_start()
 {
-	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(chance32_state::get_fg_tile_info),this), TILEMAP_SCAN_ROWS, 16, 8, 35, 29);
+	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(chance32_state::get_fg_tile_info)), TILEMAP_SCAN_ROWS, 16, 8, 35, 29);
 	m_fg_tilemap->set_transparent_pen(0);
 
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(chance32_state::get_bg_tile_info),this), TILEMAP_SCAN_ROWS, 16, 8, 35, 29);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(chance32_state::get_bg_tile_info)), TILEMAP_SCAN_ROWS, 16, 8, 35, 29);
 
 	m_fg_tilemap->set_flip(TILE_FLIPX|TILE_FLIPY);
 	m_bg_tilemap->set_flip(TILE_FLIPX|TILE_FLIPY);

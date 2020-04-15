@@ -720,9 +720,9 @@ void tiki100_state::tiki100(machine_config &config)
 	m_exp->busrq_wr_callback().set(FUNC(tiki100_state::busrq_w));
 	m_exp->mrq_rd_callback().set(FUNC(tiki100_state::mrq_r));
 	m_exp->mrq_wr_callback().set(FUNC(tiki100_state::mrq_w));
-	TIKI100_BUS_SLOT(config, "slot1", tiki100_cards, "8088");
-	TIKI100_BUS_SLOT(config, "slot2", tiki100_cards, "hdc");
-	TIKI100_BUS_SLOT(config, "slot3", tiki100_cards, nullptr);
+	TIKI100_BUS_SLOT(config, "slot1", m_exp, tiki100_cards, "8088");
+	TIKI100_BUS_SLOT(config, "slot2", m_exp, tiki100_cards, "hdc");
+	TIKI100_BUS_SLOT(config, "slot3", m_exp, tiki100_cards, nullptr);
 
 	/* devices */
 	Z80DART(config, m_dart, 8_MHz_XTAL / 4);
@@ -736,8 +736,8 @@ void tiki100_state::tiki100(machine_config &config)
 
 	Z80PIO(config, m_pio, 8_MHz_XTAL / 4);
 	m_pio->out_int_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ0);
-	m_pio->in_pa_callback().set("cent_data_in", FUNC(input_buffer_device::bus_r));
-	m_pio->out_pa_callback().set("cent_data_out", FUNC(output_latch_device::bus_w));
+	m_pio->in_pa_callback().set("cent_data_in", FUNC(input_buffer_device::read));
+	m_pio->out_pa_callback().set("cent_data_out", FUNC(output_latch_device::write));
 	m_pio->in_pb_callback().set(FUNC(tiki100_state::pio_pb_r));
 	m_pio->out_pb_callback().set(FUNC(tiki100_state::pio_pb_w));
 

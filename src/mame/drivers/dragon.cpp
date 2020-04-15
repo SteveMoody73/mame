@@ -29,6 +29,7 @@
 #include "bus/coco/coco_ssc.h"
 #include "bus/coco/coco_orch90.h"
 #include "bus/coco/coco_gmc.h"
+#include "bus/coco/coco_psg.h"
 
 
 //**************************************************************************
@@ -179,6 +180,7 @@ void dragon_cart(device_slot_interface &device)
 	device.option_add("orch90", COCO_ORCH90);
 	device.option_add("gmc", COCO_PAK_GMC);
 	device.option_add("pak", COCO_PAK);
+	device.option_add("ccpsg", COCO_PSG);
 	device.option_add_internal("amtor", DRAGON_AMTOR);
 }
 
@@ -339,7 +341,7 @@ void d64plus_state::d64plus(machine_config &config)
 	m_crtc->set_screen("plus_screen");
 	m_crtc->set_show_border_area(false);
 	m_crtc->set_char_width(8);
-	m_crtc->set_update_row_callback(FUNC(d64plus_state::crtc_update_row), this);
+	m_crtc->set_update_row_callback(FUNC(d64plus_state::crtc_update_row));
 }
 
 void dragon_alpha_state::dgnalpha(machine_config &config)

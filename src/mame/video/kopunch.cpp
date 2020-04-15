@@ -83,7 +83,7 @@ TILE_GET_INFO_MEMBER(kopunch_state::get_fg_tile_info)
 {
 	int code = m_vram_fg[tile_index];
 
-	SET_TILE_INFO_MEMBER(0, code, 0, 0);
+	tileinfo.set(0, code, 0, 0);
 }
 
 TILE_GET_INFO_MEMBER(kopunch_state::get_bg_tile_info)
@@ -91,13 +91,13 @@ TILE_GET_INFO_MEMBER(kopunch_state::get_bg_tile_info)
 	// note: highest bit is unused
 	int code = (m_vram_bg[tile_index] & 0x7f) | m_gfxbank << 7;
 
-	SET_TILE_INFO_MEMBER(1, code, 0, 0);
+	tileinfo.set(1, code, 0, 0);
 }
 
 void kopunch_state::video_start()
 {
-	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(kopunch_state::get_fg_tile_info),this), TILEMAP_SCAN_ROWS,  8,  8, 32, 32);
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(kopunch_state::get_bg_tile_info),this), TILEMAP_SCAN_ROWS, 16, 16, 16, 16);
+	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(kopunch_state::get_fg_tile_info)), TILEMAP_SCAN_ROWS,  8,  8, 32, 32);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(kopunch_state::get_bg_tile_info)), TILEMAP_SCAN_ROWS, 16, 16, 16, 16);
 
 	m_fg_tilemap->set_transparent_pen(0);
 }

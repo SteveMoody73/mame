@@ -9,6 +9,7 @@
 
     Notes:
     - To enter test mode, hold down 1P Start and 2P Start, then reset
+      (only works for version 9.0)
     - One of the ROMs contains a message that this game was created
       by "Pacific Polytechnical Corporation, Santa Cruz"
 
@@ -91,7 +92,7 @@ public:
 	DECLARE_READ8_MEMBER(via_system_pb_r);
 	DECLARE_WRITE8_MEMBER(via_system_pa_w);
 	DECLARE_WRITE8_MEMBER(via_system_pb_w);
-	DECLARE_WRITE8_MEMBER(bankswitch_w);
+	void bankswitch_w(uint8_t data);
 
 	void beezer(machine_config &config);
 	void banked_map(address_map &map);
@@ -444,7 +445,7 @@ WRITE8_MEMBER( beezer_state::via_system_pb_w )
 	m_pbus = data;
 }
 
-WRITE8_MEMBER( beezer_state::bankswitch_w )
+void beezer_state::bankswitch_w(uint8_t data)
 {
 	m_x = BIT(data, 3);
 	m_y = BIT(data, 4);
@@ -467,8 +468,8 @@ void beezer_state::machine_start()
 	m_scanline_timer = timer_alloc(TIMER_SCANLINE);
 
 	// register for state saving
-	save_pointer(NAME(m_ch_sign), 4);
-	save_pointer(NAME(m_dac_data), 4);
+	save_item(NAME(m_ch_sign));
+	save_item(NAME(m_dac_data));
 	save_item(NAME(m_count));
 	save_item(NAME(m_noise));
 	save_item(NAME(m_pbus));
@@ -482,7 +483,7 @@ void beezer_state::machine_reset()
 	m_pbus = 0xff;
 
 	// initialize memory banks
-	bankswitch_w(machine().dummy_space(), 0, 0);
+	bankswitch_w(0);
 
 	// start timer
 	m_dac_timer->adjust(attotime::zero, 0, attotime::from_hz((XTAL(4'000'000) / 4) / 16));
@@ -631,5 +632,5 @@ ROM_END
 //**************************************************************************
 
 //    YEAR  NAME     PARENT  MACHINE  INPUT   CLASS         INIT        ROTATION  COMPANY            FULLNAME          FLAGS
-GAME( 1982, beezer,  0,      beezer,  beezer, beezer_state, empty_init, ROT90,    "Tong Electronic", "Beezer (set 1)", MACHINE_IMPERFECT_SOUND )
-GAME( 1982, beezer1, beezer, beezer,  beezer, beezer_state, empty_init, ROT90,    "Tong Electronic", "Beezer (set 2)", MACHINE_IMPERFECT_SOUND )
+GAME( 1982, beezer,  0,      beezer,  beezer, beezer_state, empty_init, ROT90,    "Tong Electronic", "Beezer (version 9.0)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE ) // Has test mode, shows version
+GAME( 1982, beezer1, beezer, beezer,  beezer, beezer_state, empty_init, ROT90,    "Tong Electronic", "Beezer (unknown earlier version)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE ) // No test mode, possibly earlier?

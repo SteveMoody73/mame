@@ -138,7 +138,7 @@ TILE_GET_INFO_MEMBER(phoenix_state::get_fg_tile_info)
 	code = m_videoram_pg[m_videoram_pg_index][tile_index];
 	col = (code >> 5);
 	col = col | 0x08 | (m_palette_bank << 4);
-	SET_TILE_INFO_MEMBER(1,
+	tileinfo.set(1,
 			code,
 			col,
 			0);
@@ -151,7 +151,7 @@ TILE_GET_INFO_MEMBER(phoenix_state::get_bg_tile_info)
 	code = m_videoram_pg[m_videoram_pg_index][tile_index + 0x800];
 	col = (code >> 5);
 	col = col | 0x00 | (m_palette_bank << 4);
-	SET_TILE_INFO_MEMBER(0,
+	tileinfo.set(0,
 			code,
 			col,
 			0);
@@ -178,8 +178,8 @@ VIDEO_START_MEMBER(phoenix_state,phoenix)
 	m_palette_bank = 0;
 	m_cocktail_mode = 0;
 
-	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(phoenix_state::get_fg_tile_info),this),TILEMAP_SCAN_ROWS,8,8,32,32);
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(phoenix_state::get_bg_tile_info),this),TILEMAP_SCAN_ROWS,8,8,32,32);
+	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(phoenix_state::get_fg_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(phoenix_state::get_bg_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
 
 	m_fg_tilemap->set_transparent_pen(0);
 

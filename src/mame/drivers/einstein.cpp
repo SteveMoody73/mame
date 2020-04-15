@@ -419,8 +419,11 @@ WRITE8_MEMBER(einstein_state::evdpint_msk_w)
 
 READ8_MEMBER( einstein_state::rom_r )
 {
-	m_rom_enabled ^= 1;
-	m_bank1->set_entry(m_rom_enabled);
+	if (!machine().side_effects_disabled())
+	{
+		m_rom_enabled ^= 1;
+		m_bank1->set_entry(m_rom_enabled);
+	}
 
 	return 0xff;
 }
@@ -831,7 +834,7 @@ void einstein_state::einstein(machine_config &config)
 
 	z80pio_device& pio(Z80PIO(config, IC_I063, XTAL_X002 / 2));
 	pio.out_int_callback().set(FUNC(einstein_state::int_w<0>));
-	pio.out_pa_callback().set("cent_data_out", FUNC(output_latch_device::bus_w));
+	pio.out_pa_callback().set("cent_data_out", FUNC(output_latch_device::write));
 	pio.out_ardy_callback().set(FUNC(einstein_state::ardy_w));
 	pio.in_pb_callback().set("user", FUNC(einstein_userport_device::read));
 	pio.out_pb_callback().set("user", FUNC(einstein_userport_device::write));

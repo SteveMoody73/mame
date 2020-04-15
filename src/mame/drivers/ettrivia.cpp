@@ -227,7 +227,7 @@ void ettrivia_state::get_tile_info(tile_data &tileinfo, int tile_index, uint8_t 
 
 	code += m_gfx_bank * 0x100;
 
-	SET_TILE_INFO_MEMBER(gfx_code,code,color,0);
+	tileinfo.set(gfx_code,code,color,0);
 }
 
 TILE_GET_INFO_MEMBER(ettrivia_state::get_tile_info_bg)
@@ -277,8 +277,8 @@ void ettrivia_state::ettrivia_palette(palette_device &palette) const
 
 void ettrivia_state::video_start()
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(ettrivia_state::get_tile_info_bg),this),TILEMAP_SCAN_ROWS,8,8,64,32 );
-	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(ettrivia_state::get_tile_info_fg),this),TILEMAP_SCAN_ROWS,8,8,64,32 );
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(ettrivia_state::get_tile_info_bg)), TILEMAP_SCAN_ROWS, 8,8,64,32);
+	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(ettrivia_state::get_tile_info_fg)), TILEMAP_SCAN_ROWS, 8,8,64,32);
 
 	m_fg_tilemap->set_transparent_pen(0);
 }

@@ -725,7 +725,7 @@ void fitfight_state::fitfight(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &fitfight_state::fitfight_main_map);
 	m_maincpu->set_vblank_int("screen", FUNC(fitfight_state::irq2_line_hold));
 
-	upd7810_device &audiocpu(UPD7810(config, m_audiocpu, 12000000));
+	upd78c10_device &audiocpu(UPD78C10(config, m_audiocpu, 12000000));
 	audiocpu.set_addrmap(AS_PROGRAM, &fitfight_state::snd_mem);
 	audiocpu.pa_in_cb().set(FUNC(fitfight_state::snd_porta_r));
 	audiocpu.pa_out_cb().set(FUNC(fitfight_state::snd_porta_w));
@@ -984,7 +984,7 @@ void fitfight_state::init_fitfight()
 {
 //  uint16_t *mem16 = (uint16_t *)memregion("maincpu")->base();
 //  mem16[0x0165B2/2] = 0x4e71; // for now so it boots
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x700000, 0x700001, read16_delegate(FUNC(fitfight_state::fitfight_700000_r),this));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x700000, 0x700001, read16_delegate(*this, FUNC(fitfight_state::fitfight_700000_r)));
 	m_bbprot_kludge = 0;
 }
 
@@ -992,7 +992,7 @@ void fitfight_state::init_histryma()
 {
 //  uint16_t *mem16 = (uint16_t *)memregion("maincpu")->base();
 //  mem16[0x017FDC/2] = 0x4e71; // for now so it boots
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x700000, 0x700001, read16_delegate(FUNC(fitfight_state::histryma_700000_r),this));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x700000, 0x700001, read16_delegate(*this, FUNC(fitfight_state::histryma_700000_r)));
 	m_bbprot_kludge = 0;
 }
 
@@ -1003,7 +1003,7 @@ void fitfight_state::init_bbprot()
 
 void fitfight_state::init_hotmindff()
 {
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x200000, 0x200001, read16_delegate(FUNC(fitfight_state::hotmindff_unk_r),this));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x200000, 0x200001, read16_delegate(*this, FUNC(fitfight_state::hotmindff_unk_r)));
 	init_fitfight();
 }
 

@@ -1751,7 +1751,7 @@ TILE_GET_INFO_MEMBER(namcos22_state::get_text_tile_info)
 	* ----.xx--.----.---- flip
 	* ----.--xx.xxxx.xxxx code
 	*/
-	SET_TILE_INFO_MEMBER(0, data & 0x03ff, data >> 12, TILE_FLIPYX((data & 0x0c00) >> 10));
+	tileinfo.set(0, data & 0x03ff, data >> 12, TILE_FLIPYX((data & 0x0c00) >> 10));
 }
 
 WRITE32_MEMBER(namcos22_state::namcos22_textram_w)
@@ -2576,7 +2576,7 @@ void namcos22_state::video_start()
 	m_posirq_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(namcos22_state::posirq_callback),this));
 
 	m_mix_bitmap = std::make_unique<bitmap_ind16>(640, 480);
-	m_bgtilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(namcos22_state::get_text_tile_info), this), TILEMAP_SCAN_ROWS, 16, 16, 64, 64);
+	m_bgtilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(namcos22_state::get_text_tile_info)), TILEMAP_SCAN_ROWS, 16, 16, 64, 64);
 	m_bgtilemap->set_transparent_pen(0xf);
 
 	m_gfxdecode->gfx(0)->set_source((u8 *)m_cgram.target());

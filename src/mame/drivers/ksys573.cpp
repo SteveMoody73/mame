@@ -346,10 +346,10 @@ G: gun mania only, drives air soft gun (this game uses real BB bullet)
 
 #include "emu.h"
 #include "cpu/psx/psx.h"
+#include "bus/ata/ataintf.h"
+#include "bus/ata/cr589.h"
 #include "machine/adc083x.h"
-#include "machine/ataintf.h"
 #include "machine/bankdev.h"
-#include "machine/cr589.h"
 #include "machine/ds2401.h"
 #include "machine/linflash.h"
 #include "machine/k573cass.h"
@@ -931,7 +931,7 @@ READ16_MEMBER( ksys573_state::ge765pwbba_r )
 	{
 	case 0x4c:
 	case 0x4d:
-		return m_upd4701->read_y(space, offset & 1);
+		return m_upd4701->read_y(offset & 1);
 
 	default:
 		verboselog( 0, "ge765pwbba_r: unhandled offset %08x %08x\n", offset, mem_mask );
@@ -1800,7 +1800,7 @@ void ksys573_state::punchmania_cassette_install(device_t *device)
 {
 	auto game = downcast<konami573_cassette_xi_device *>(device);
 	auto adc0838 = device->subdevice<adc083x_device>("adc0838");
-	adc0838->set_input_callback(adc083x_device::input_delegate(FUNC(konami573_cassette_xi_device::punchmania_inputs_callback), game));
+	adc0838->set_input_callback(*game, FUNC(konami573_cassette_xi_device::punchmania_inputs_callback));
 }
 
 int pad_light[ 6 ];

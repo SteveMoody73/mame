@@ -56,7 +56,7 @@ WRITE8_MEMBER( mbee_state::pio_port_b_w )
 	m_speaker->level_w(BIT(data, 6));
 }
 
-READ8_MEMBER( mbee_state::pio_port_b_r )
+uint8_t mbee_state::pio_port_b_r()
 {
 	uint8_t data = 0;
 
@@ -185,7 +185,7 @@ TIMER_CALLBACK_MEMBER( mbee_state::timer_newkb )
 		m_b2 = 1; // set irq
 
 	if (m_b2)
-		m_pio->port_b_write(pio_port_b_r(generic_space(),0,0xff));
+		m_pio->port_b_write(pio_port_b_r());
 
 	timer_set(attotime::from_hz(50), TIMER_MBEE_NEWKB);
 }
@@ -252,7 +252,7 @@ WRITE_LINE_MEMBER( mbee_state::rtc_irq_w )
 	m_b7_rtc = (state) ? 0 : 1; // inverted by IC15 (pins 8,9,10)
 
 	if ((m_io_config->read() & 0xc0) == 0x40) // RTC selected in config menu
-		m_pio->port_b_write(pio_port_b_r(generic_space(),0,0xff));
+		m_pio->port_b_write(pio_port_b_r());
 }
 
 
@@ -309,8 +309,8 @@ void mbee_state::setup_banks(uint8_t data, bool first_time, uint8_t b_mask)
 				if (!BIT(b_byte, 4))
 				{
 					// select video
-					mem.install_read_handler (b_vid, b_vid + 0x7ff, read8_delegate(FUNC(mbee_state::video_low_r), this));
-					mem.install_read_handler (b_vid + 0x800, b_vid + 0xfff, read8_delegate(FUNC(mbee_state::video_high_r), this));
+					mem.install_read_handler (b_vid, b_vid + 0x7ff, read8_delegate(*this, FUNC(mbee_state::video_low_r)));
+					mem.install_read_handler (b_vid + 0x800, b_vid + 0xfff, read8_delegate(*this, FUNC(mbee_state::video_high_r)));
 				}
 				else
 				{
@@ -341,8 +341,8 @@ void mbee_state::setup_banks(uint8_t data, bool first_time, uint8_t b_mask)
 				if (!BIT(b_byte, 4))
 				{
 					// select video
-					mem.install_write_handler (b_vid, b_vid + 0x7ff, write8_delegate(FUNC(mbee_state::video_low_w), this));
-					mem.install_write_handler (b_vid + 0x800, b_vid + 0xfff, write8_delegate(FUNC(mbee_state::video_high_w), this));
+					mem.install_write_handler (b_vid, b_vid + 0x7ff, write8_delegate(*this, FUNC(mbee_state::video_low_w)));
+					mem.install_write_handler (b_vid + 0x800, b_vid + 0xfff, write8_delegate(*this, FUNC(mbee_state::video_high_w)));
 				}
 				else
 				{

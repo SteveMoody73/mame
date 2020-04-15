@@ -1,45 +1,44 @@
 // license:GPL-2.0+
 // copyright-holders:Couriersud
-/*
- * ppmf.h
- *
- */
 
 #ifndef PPMF_H_
 #define PPMF_H_
+
+///
+/// \file ppmf.h
+///
+///
+/// PMF_TYPE_GNUC_PMF
+///      Use standard pointer to member function syntax C++11
+///
+///  PMF_TYPE_GNUC_PMF_CONV
+///      Use gnu extension and convert the pmf to a function pointer.
+///      This is not standard compliant and needs
+///      -Wno-pmf-conversions to compile.
+///
+///  PMF_TYPE_INTERNAL
+///      Use the same approach as MAME for deriving the function pointer.
+///      This is compiler-dependent as well
+///
+///  Benchmarks for ./nltool -c run -f src/mame/machine/nl_pong.cpp -t 10 -n pong_fast
+///
+///  PMF_TYPE_INTERNAL:       215%    215%
+///  PMF_TYPE_GNUC_PMF:       163%    196%
+///  PMF_TYPE_GNUC_PMF_CONV:  215%    215%
+///  PMF_TYPE_VIRTUAL:        213%    209%
+///
+///  The whole exercise was done to avoid virtual calls. In prior versions of
+///  netlist, the INTERNAL and GNUC_PMF_CONV approach provided significant improvement.
+///  Since than, "hot" was removed from functions declared as virtual.
+///  This may explain that the recent benchmarks show no difference at all.
+///
 
 #include "pconfig.h"
 
 #include <cstdint> // uintptr_t
 #include <utility>
 
-/*
- *
- * PMF_TYPE_GNUC_PMF
- *      Use standard pointer to member function syntax C++11
- *
- *  PMF_TYPE_GNUC_PMF_CONV
- *      Use gnu extension and convert the pmf to a function pointer.
- *      This is not standard compliant and needs
- *      -Wno-pmf-conversions to compile.
- *
- *  PMF_TYPE_INTERNAL
- *      Use the same approach as MAME for deriving the function pointer.
- *      This is compiler-dependent as well
- *
- *  Benchmarks for ./nltool -c run -f src/mame/machine/nl_pong.cpp -t 10 -n pong_fast
- *
- *  PMF_TYPE_INTERNAL:       215%    215%
- *  PMF_TYPE_GNUC_PMF:       163%    196%
- *  PMF_TYPE_GNUC_PMF_CONV:  215%    215%
- *  PMF_TYPE_VIRTUAL:        213%    209%
- *
- *  The whole exercise was done to avoid virtual calls. In prior versions of
- *  netlist, the INTERNAL and GNUC_PMF_CONV approach provided significant improvement.
- *  Since than, "hot" was removed from functions declared as virtual.
- *  This may explain that the recent benchmarks show no difference at all.
- *
- */
+
 
 //============================================================
 //  Macro magic
@@ -52,7 +51,7 @@
 #define PPMF_TYPE_INTERNAL        2
 
 #if defined(__GNUC__)
-	/* does not work in versions over 4.7.x of 32bit MINGW  */
+	// does not work in versions over 4.7.x of 32bit MINGW
 	#if defined(__MINGW32__) && !defined(__x86_64) && defined(__i386__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 7)))
 		#define PHAS_PMF_INTERNAL 0
 	#elif defined(__MINGW32__) && !defined(__x86_64) && defined(__i386__)
@@ -98,12 +97,13 @@
 #endif
 
 namespace plib {
-/*
- * The following class was derived from the MAME delegate.h code.
- * It derives a pointer to a member function.
- */
 
 #if (PHAS_PMF_INTERNAL > 0)
+	///
+	/// \brief Used to derive a pointer to a member function.
+	///
+	/// The following class was derived from the MAME delegate.h code.
+	///
 	class mfp
 	{
 	public:
@@ -130,7 +130,7 @@ namespace plib {
 			mfp mfpo(mftp);
 			//return mfpo.update_after_bind<FunctionType>(object);
 			generic_function rfunc(nullptr);
-			auto robject = reinterpret_cast<generic_class *>(object);
+			auto *robject = reinterpret_cast<generic_class *>(object);
 			mfpo.convert_to_generic(rfunc, robject);
 			func = reinterpret_cast<FunctionType>(rfunc);
 			object = reinterpret_cast<ObjectType *>(robject);
@@ -144,7 +144,7 @@ namespace plib {
 			{
 				// apply the "this" delta to the object first
 				// NOLINTNEXTLINE(clang-analyzer-core.UndefinedBinaryOperatorResult)
-				auto o_p_delta = reinterpret_cast<generic_class *>(reinterpret_cast<std::uint8_t *>(object) + m_this_delta);
+				auto *o_p_delta = reinterpret_cast<generic_class *>(reinterpret_cast<std::uint8_t *>(object) + m_this_delta);
 
 				// if the low bit of the vtable index is clear, then it is just a raw function pointer
 				if (!(m_function & 1))
@@ -232,8 +232,8 @@ namespace plib {
 		}
 		bool is_set() const {
 #if defined(_MSC_VER) || (defined (__INTEL_COMPILER) && defined (_M_X64))
-			int *p = reinterpret_cast<int *>(&m_func);
-			int *e = p + sizeof(generic_function) / sizeof(int);
+			const int *p = reinterpret_cast<const int *>(&m_func);
+			const int *e = p + sizeof(generic_function) / sizeof(int);
 			for (; p < e; p++)
 				if (*p != 0)
 					return true;
@@ -273,7 +273,7 @@ namespace plib {
 	#endif
 		}
 		template<typename O>
-		R call(O *obj, Targs... args) const noexcept(true)
+		R call(O *obj, Targs&&... args) const noexcept(true)
 		{
 			using function_ptr = MEMBER_ABI R (*)(O *obj, Targs... args);
 			return (reinterpret_cast<function_ptr>(m_func))(obj, std::forward<Targs>(args)...);
@@ -311,7 +311,7 @@ namespace plib {
 			m_obj = reinterpret_cast<generic_class *>(object);
 		}
 
-		inline R operator()(Targs ... args) const noexcept(true)
+		inline R operator()(Targs... args) const noexcept(true)
 		{
 			return this->call(m_obj, std::forward<Targs>(args)...);
 		}
@@ -325,4 +325,4 @@ namespace plib {
 
 } // namespace plib
 
-#endif /* PPMF_H_ */
+#endif // PPMF_H_

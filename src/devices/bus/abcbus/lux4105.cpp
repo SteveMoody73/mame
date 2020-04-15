@@ -6,6 +6,37 @@
 
 *********************************************************************/
 
+/*
+
+PCB Layout
+----------
+
+DATABOARD 4105-10
+
+|-------------------------------------------|
+|-  LS367   LS74    LS32    LS00    LS38 LED|
+||                                         -|
+||  LS367   LS06    LS38            LS14   ||
+|C                                         C|
+|N  ALS08   LS08    81LS96                 N|
+|1                                         2|
+||  81LS95  74S373  LS273           74S240 ||
+||                                         -|
+|-  SW1     DM8131  LS175           SW2     |
+|-------------------------------------------|
+
+Notes:
+    All IC's shown.
+
+    DM8131  - National Semiconductor DM8131N 6-Bit Unified Bus Comparator
+    LED     - Power LED
+    SW1     - Drive settings
+    SW2     - Card address
+    CN1     - 2x32 PCB header, ABC 1600 bus
+    CN2     - 2x25 PCB header, Xebec S1410
+
+*/
+
 #include "emu.h"
 #include "lux4105.h"
 #include "bus/scsi/scsihd.h"
@@ -95,17 +126,17 @@ void luxor_4105_device::device_add_mconfig(machine_config &config)
 
 INPUT_PORTS_START( luxor_4105 )
 	PORT_START("1E")
-	PORT_DIPNAME( 0x03, 0x00, "Stepping" ) PORT_DIPLOCATION("1E:1,2")
+	PORT_DIPNAME( 0x03, 0x03, "Stepping" ) PORT_DIPLOCATION("1E:1,2")
 	PORT_DIPSETTING(    0x00, DEF_STR( Normal ) )
 	PORT_DIPSETTING(    0x01, "Half (Seagate/Texas)" )
 	PORT_DIPSETTING(    0x02, "Half (Tandon)" )
 	PORT_DIPSETTING(    0x03, "Buffered" )
-	PORT_DIPNAME( 0x0c, 0x00, "Heads" ) PORT_DIPLOCATION("1E:3,4")
+	PORT_DIPNAME( 0x0c, 0x04, "Heads" ) PORT_DIPLOCATION("1E:3,4")
 	PORT_DIPSETTING(    0x00, "2" )
 	PORT_DIPSETTING(    0x04, "4" )
 	PORT_DIPSETTING(    0x08, "6" )
 	PORT_DIPSETTING(    0x0c, "8" )
-	PORT_DIPNAME( 0xf0, 0x00, "Drive Type" ) PORT_DIPLOCATION("1E:5,6,7,8")
+	PORT_DIPNAME( 0xf0, 0x30, "Drive Type" ) PORT_DIPLOCATION("1E:5,6,7,8")
 	PORT_DIPSETTING(    0x00, "Seagate ST506" )
 	PORT_DIPSETTING(    0x10, "Rodime RO100" )
 	PORT_DIPSETTING(    0x20, "Shugart SA600" )
@@ -254,7 +285,7 @@ uint8_t luxor_4105_device::abcbus_stat()
 		    1       ?
 		    2       ?
 		    3       ?
-		    4
+		    4       0
 		    5
 		    6       ? (tested at 014D9A, after command 08 sent and 1 byte read from SASI, should be 1)
 		    7

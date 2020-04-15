@@ -136,7 +136,7 @@ READ8_MEMBER(argo_state::argo_io_r)
 
 	case 0xE8: // wants bit 4 low then high
 		{
-			u8 data = m_dma->read(space, 8);
+			u8 data = m_dma->read(8);
 			data |= (m_framecnt << 4);  // hack because dma update_flag is not emulated
 			return data;
 		}
@@ -184,7 +184,7 @@ WRITE8_MEMBER(argo_state::argo_io_w)
 			memmove(m_p_videoram, m_p_videoram+80, 24*80);
 			m_scroll_ctrl = 0;
 		}
-		m_dma->write(space, 8, data);
+		m_dma->write(8, data);
 		break;
 
 	default:
@@ -495,7 +495,7 @@ void argo_state::argo(machine_config &config)
 
 	i8275_device &crtc(I8275(config, "crtc", XTAL(20'000'000) / 12));  // unknown frequency
 	crtc.set_character_width(6);
-	crtc.set_display_callback(FUNC(argo_state::display_pixels), this);
+	crtc.set_display_callback(FUNC(argo_state::display_pixels));
 	crtc.drq_wr_callback().set(m_dma, FUNC(i8257_device::dreq2_w));
 	crtc.set_screen("screen");
 }

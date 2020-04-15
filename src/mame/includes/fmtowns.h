@@ -142,7 +142,7 @@ class towns_state : public driver_device
 	void townssj(machine_config &config);
 
 	INTERRUPT_GEN_MEMBER(towns_vsync_irq);
-	
+
 protected:
 	uint16_t m_towns_machine_id;  // default is 0x0101
 
@@ -159,7 +159,7 @@ protected:
 
 	required_device<ram_device> m_ram;
 	required_device<cpu_device> m_maincpu;
-	
+
 	required_device_array<upd71071_device, 2> m_dma;
 	optional_device<fmscsi_device> m_scsi;
 	required_device_array<floppy_connector, 2> m_flop;
@@ -233,7 +233,7 @@ private:
 	uint8_t m_towns_mouse_output;
 	uint8_t m_towns_mouse_x;
 	uint8_t m_towns_mouse_y;
-	uint8_t m_towns_volume[8];  // volume ports
+	uint8_t m_towns_volume[4];  // volume ports
 	uint8_t m_towns_volume_select;
 	uint8_t m_towns_scsi_control;
 	uint8_t m_towns_scsi_status;
@@ -366,6 +366,7 @@ private:
 	uint8_t speaker_get_spk();
 	void speaker_set_spkrdata(uint8_t data);
 	uint8_t towns_cdrom_read_byte_software();
+	void cdda_db_to_gain(float db);
 
 	required_ioport m_ctrltype;
 	required_ioport_array<4> m_kb_ports;

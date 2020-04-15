@@ -69,6 +69,7 @@ ccpu_cpu_device::ccpu_cpu_device(const machine_config &mconfig, const char *tag,
 	, m_data_config("data", ENDIANNESS_BIG, 16, 32, -1)
 	, m_io_config("io", ENDIANNESS_BIG, 8, 5, 0)
 	, m_external_input(*this)
+	, m_vector_callback(*this)
 	, m_flags(0)
 {
 }
@@ -82,7 +83,7 @@ device_memory_interface::space_config_vector ccpu_cpu_device::memory_space_confi
 	};
 }
 
-READ8_MEMBER( ccpu_cpu_device::read_jmi )
+uint8_t ccpu_cpu_device::read_jmi()
 {
 	/* this routine is called when there is no external input */
 	/* and the JMI jumper is present */
@@ -103,7 +104,7 @@ void ccpu_cpu_device::device_start()
 {
 	/* copy input params */
 	m_external_input.resolve_safe(0);
-	m_vector_callback.bind_relative_to(*owner());
+	m_vector_callback.resolve();
 	assert(!m_vector_callback.isnull());
 
 	m_program = &space(AS_PROGRAM);

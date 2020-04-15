@@ -192,7 +192,7 @@ public:
 		m_inputs(*this, "IN.%u", 0)
 	{ }
 
-	// machine drivers
+	// machine configs
 	void ubc(machine_config &config);
 	void vbrc(machine_config &config);
 	void bv3(machine_config &config);
@@ -267,7 +267,7 @@ WRITE8_MEMBER(card_state::speech_w)
 	if (m_speech == nullptr)
 		return;
 
-	m_speech->data_w(space, 0, data & 0x3f);
+	m_speech->data_w(data & 0x3f);
 	m_speech->start_w(1);
 	m_speech->start_w(0);
 }
@@ -478,7 +478,7 @@ static INPUT_PORTS_START( brc )
 	PORT_BIT(0x08, IP_ACTIVE_HIGH, IPT_KEYPAD) PORT_CODE(KEYCODE_N) PORT_NAME("Diamonds")
 
 	PORT_START("IN.7")
-	PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_KEYPAD)
+	PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_UNUSED)
 	PORT_BIT(0x02, IP_ACTIVE_HIGH, IPT_KEYPAD) PORT_CODE(KEYCODE_A) PORT_NAME("BR")
 	PORT_BIT(0x04, IP_ACTIVE_HIGH, IPT_KEYPAD) PORT_CODE(KEYCODE_Z) PORT_NAME("DL")
 	PORT_BIT(0x08, IP_ACTIVE_HIGH, IPT_KEYPAD) PORT_CODE(KEYCODE_B) PORT_NAME("Clubs")
@@ -556,7 +556,7 @@ INPUT_PORTS_END
 
 
 /******************************************************************************
-    Machine Drivers
+    Machine Configs
 ******************************************************************************/
 
 void card_state::brc_base(machine_config &config)
@@ -565,7 +565,7 @@ void card_state::brc_base(machine_config &config)
 	Z80(config, m_maincpu, 5_MHz_XTAL/2);
 	m_maincpu->set_addrmap(AS_PROGRAM, &card_state::main_map);
 	m_maincpu->set_addrmap(AS_IO, &card_state::main_io);
-	config.m_perfect_cpu_quantum = subtag("maincpu");
+	config.set_perfect_quantum(m_maincpu);
 
 	I8041A(config, m_mcu, 5_MHz_XTAL);
 	m_mcu->p1_out_cb().set(FUNC(card_state::mcu_p1_w));

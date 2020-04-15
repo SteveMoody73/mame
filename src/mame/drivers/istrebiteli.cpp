@@ -237,7 +237,7 @@ void istrebiteli_state::motogonki_palette(palette_device &palette) const
 
 TILE_GET_INFO_MEMBER(istrebiteli_state::get_tile_info)
 {
-	SET_TILE_INFO_MEMBER(0, m_tileram[tile_index] & 0x1f, 0, 0);
+	tileinfo.set(0, m_tileram[tile_index] & 0x1f, 0, 0);
 }
 
 void istrebiteli_state::init_istreb()
@@ -272,14 +272,14 @@ void istrebiteli_state::init_moto()
 
 void istrebiteli_state::video_start()
 {
-	m_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(istrebiteli_state::get_tile_info), this), TILEMAP_SCAN_ROWS,
+	m_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(istrebiteli_state::get_tile_info)), TILEMAP_SCAN_ROWS,
 		8, 16, 16, 1);
 	m_tilemap->set_scrolldx(96, 96);
 }
 
 VIDEO_START_MEMBER(istrebiteli_state, moto)
 {
-	m_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(istrebiteli_state::get_tile_info), this), TILEMAP_SCAN_ROWS,
+	m_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(istrebiteli_state::get_tile_info)), TILEMAP_SCAN_ROWS,
 		8, 16, 16, 1);
 	m_tilemap->set_scrolldx(96, 96);
 	m_tilemap->set_scrolldy(8, 8);

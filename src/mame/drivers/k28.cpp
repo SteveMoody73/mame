@@ -203,7 +203,7 @@ WRITE8_MEMBER(k28_state::mcu_p2_w)
 	m_vfd->data_w(data & 1);
 
 	// d0-d3: VSM data, input mux and SC-01 phoneme lower nibble
-	m_tms6100->add_w(space, 0, data);
+	m_tms6100->add_w(data);
 	m_inp_mux = (m_inp_mux & ~0xf) | (~data & 0xf);
 	m_phoneme = (m_phoneme & ~0xf) | (data & 0xf);
 }
@@ -305,7 +305,7 @@ void k28_state::k28(machine_config &config)
 
 	TMS6100(config, m_tms6100, 3.579545_MHz_XTAL / 15); // CLK tied to 8021 ALE pin
 
-	TIMER(config, "on_button").configure_generic(timer_device::expired_delegate());
+	TIMER(config, "on_button").configure_generic(nullptr);
 
 	/* video hardware */
 	MM5445(config, m_vfd).output_cb().set(FUNC(k28_state::vfd_output_w));

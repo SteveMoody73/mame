@@ -24,8 +24,8 @@
 class cultures_state : public driver_device
 {
 public:
-	cultures_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
+	cultures_state(const machine_config &mconfig, device_type type, const char *tag) :
+		driver_device(mconfig, type, tag),
 		m_maincpu(*this, "maincpu"),
 		m_gfxdecode(*this, "gfxdecode"),
 		m_vrambank(*this, "vrambank"),
@@ -92,26 +92,26 @@ public:
 TILE_GET_INFO_MEMBER(cultures_state::get_bg1_tile_info)
 {
 	int const code = m_bg1_rom[0x200000/2 + m_bg1_bank * 0x80000/2 + tile_index];
-	SET_TILE_INFO_MEMBER(1, code, code >> 12, 0);
+	tileinfo.set(1, code, code >> 12, 0);
 }
 
 TILE_GET_INFO_MEMBER(cultures_state::get_bg2_tile_info)
 {
 	int const code = m_bg2_rom[0x200000/2 + m_bg2_bank * 0x80000/2 + tile_index];
-	SET_TILE_INFO_MEMBER(2, code, code >> 12, 0);
+	tileinfo.set(2, code, code >> 12, 0);
 }
 
 TILE_GET_INFO_MEMBER(cultures_state::get_bg0_tile_info)
 {
 	int const code = m_bg0_videoram[tile_index * 2] + (m_bg0_videoram[tile_index * 2 + 1] << 8);
-	SET_TILE_INFO_MEMBER(0, code, code >> 12, 0);
+	tileinfo.set(0, code, code >> 12, 0);
 }
 
 void cultures_state::video_start()
 {
-	m_bg0_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(cultures_state::get_bg0_tile_info),this),TILEMAP_SCAN_ROWS, 8, 8, 64, 128);
-	m_bg1_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(cultures_state::get_bg1_tile_info),this),TILEMAP_SCAN_ROWS, 8, 8, 512, 512);
-	m_bg2_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(cultures_state::get_bg2_tile_info),this),TILEMAP_SCAN_ROWS, 8, 8, 512, 512);
+	m_bg0_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(cultures_state::get_bg0_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 64, 128);
+	m_bg1_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(cultures_state::get_bg1_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 512, 512);
+	m_bg2_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(cultures_state::get_bg2_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 512, 512);
 
 	m_bg1_tilemap->set_transparent_pen(0);
 	m_bg0_tilemap->set_transparent_pen(0);

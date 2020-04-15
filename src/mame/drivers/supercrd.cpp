@@ -274,13 +274,13 @@ TILE_GET_INFO_MEMBER(supercrd_state::get_bg_tile_info)
 	int code = attr & 0xfff;
 	int color = m_colorram[offs] >> 4;  // 4 bits for color.
 
-	SET_TILE_INFO_MEMBER(0, code, color, 0);
+	tileinfo.set(0, code, color, 0);
 }
 
 
 void supercrd_state::video_start()
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supercrd_state::get_bg_tile_info),this), TILEMAP_SCAN_ROWS, 4, 8, 96, 29);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supercrd_state::get_bg_tile_info)), TILEMAP_SCAN_ROWS, 4, 8, 96, 29);
 }
 
 

@@ -224,7 +224,7 @@ READ8_MEMBER( vic20_state::read )
 			}
 			else if (offset >= 0x9000 && offset < 0x9010)
 			{
-				data = m_vic->read(space, offset & 0x0f);
+				data = m_vic->read(offset & 0x0f);
 			}
 			break;
 
@@ -299,7 +299,7 @@ WRITE8_MEMBER( vic20_state::write )
 			}
 			else if (offset >= 0x9000 && offset < 0x9010)
 			{
-				m_vic->write(space, offset & 0x0f, data);
+				m_vic->write(offset & 0x0f, data);
 			}
 			break;
 
@@ -809,8 +809,8 @@ void vic20_state::vic20(machine_config &config, const char* softlist_filter)
 	m_vic->set_addrmap(0, &vic20_state::vic_videoram_map);
 	m_vic->set_addrmap(1, &vic20_state::vic_colorram_map);
 
-	m_vic->potx_rd_callback().set(m_joy, FUNC(vcs_control_port_device::pot_x_r));
-	m_vic->poty_rd_callback().set(m_joy, FUNC(vcs_control_port_device::pot_y_r));
+	m_vic->potx_rd_callback().set(m_joy, FUNC(vcs_control_port_device::read_pot_x));
+	m_vic->poty_rd_callback().set(m_joy, FUNC(vcs_control_port_device::read_pot_y));
 	m_vic->add_route(ALL_OUTPUTS, "mono", 0.25);
 
 	PET_DATASSETTE_PORT(config, m_cassette, 0);
@@ -844,11 +844,11 @@ void vic20_state::vic20(machine_config &config, const char* softlist_filter)
 	m_user->pl_handler().set(m_via1, FUNC(via6522_device::write_pb7));
 	m_user->pm_handler().set(m_via1, FUNC(via6522_device::write_cb2));
 
-	QUICKLOAD(config, "quickload", "p00,prg", CBM_QUICKLOAD_DELAY).set_load_callback(FUNC(vic20_state::quickload_vc20), this);
+	QUICKLOAD(config, "quickload", "p00,prg", CBM_QUICKLOAD_DELAY).set_load_callback(FUNC(vic20_state::quickload_vc20));
 
-	SOFTWARE_LIST(config, "cart_list").set_type("vic1001_cart", SOFTWARE_LIST_ORIGINAL_SYSTEM).set_filter(softlist_filter);
-	SOFTWARE_LIST(config, "cass_list").set_type("vic1001_cass", SOFTWARE_LIST_ORIGINAL_SYSTEM).set_filter(softlist_filter);
-	SOFTWARE_LIST(config, "flop_list").set_type("vic1001_flop", SOFTWARE_LIST_ORIGINAL_SYSTEM).set_filter(softlist_filter);
+	SOFTWARE_LIST(config, "cart_list").set_original("vic1001_cart").set_filter(softlist_filter);
+	SOFTWARE_LIST(config, "cass_list").set_original("vic1001_cass").set_filter(softlist_filter);
+	SOFTWARE_LIST(config, "flop_list").set_original("vic1001_flop").set_filter(softlist_filter);
 
 	RAM(config, m_ram);
 	m_ram->set_default_size("5K");
@@ -860,7 +860,6 @@ void vic20_state::add_clocked_devices(machine_config &config, uint32_t clock)
 	// basic machine hardware
 	M6502(config, m_maincpu, clock);
 	m_maincpu->set_addrmap(AS_PROGRAM, &vic20_state::vic20_mem);
-	m_maincpu->disable_cache(); // address decoding is 100% dynamic, no RAM/ROM banks
 
 	VIA6522(config, m_via1, clock);
 	m_via1->readpa_handler().set(FUNC(vic20_state::via1_pa_r));

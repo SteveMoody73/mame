@@ -77,7 +77,7 @@ public:
 	DECLARE_INPUT_CHANGED_MEMBER(reset_button) { update_reset(); }
 	DECLARE_INPUT_CHANGED_MEMBER(halt_button) { m_maincpu->set_input_line(M6502_NMI_LINE, newval ? ASSERT_LINE : CLEAR_LINE); update_reset(); }
 
-	// machine drivers
+	// machine configs
 	void arb(machine_config &config);
 	void v2(machine_config &config);
 
@@ -256,7 +256,7 @@ INPUT_PORTS_END
 
 
 /******************************************************************************
-    Machine Drivers
+    Machine Configs
 ******************************************************************************/
 
 void arb_state::v2(machine_config &config)
@@ -298,8 +298,8 @@ void arb_state::arb(machine_config &config)
 	m_via->set_clock(4_MHz_XTAL/4); // R6522P
 
 	/* cartridge */
-	GENERIC_CARTSLOT(config, m_cart, generic_plain_slot, "arb", "bin");
-	m_cart->set_device_load(FUNC(arb_state::cart_load), this);
+	GENERIC_CARTSLOT(config, m_cart, generic_plain_slot, "arb");
+	m_cart->set_device_load(FUNC(arb_state::cart_load));
 	m_cart->set_must_be_loaded(true);
 
 	SOFTWARE_LIST(config, "cart_list").set_original("arb");

@@ -367,7 +367,7 @@ cosmac_device::cosmac_device(const machine_config &mconfig, device_type type, co
 		m_io_config("io", ENDIANNESS_LITTLE, 8, 3),
 		m_read_wait(*this),
 		m_read_clear(*this),
-		m_read_ef{{*this}, {*this}, {*this}, {*this}},
+		m_read_ef(*this),
 		m_write_q(*this),
 		m_read_dma(*this),
 		m_write_dma(*this),
@@ -459,8 +459,7 @@ void cosmac_device::device_start()
 	// resolve callbacks
 	m_read_wait.resolve();
 	m_read_clear.resolve();
-	for (auto &cb : m_read_ef)
-		cb.resolve();
+	m_read_ef.resolve_all();
 	m_write_q.resolve_safe();
 	m_read_dma.resolve_safe(0);
 	m_write_dma.resolve_safe();
@@ -711,7 +710,7 @@ offs_t cosmac_device::get_memory_address()
 //  cycles it takes for one instruction to execute
 //-------------------------------------------------
 
-uint32_t cosmac_device::execute_min_cycles() const
+uint32_t cosmac_device::execute_min_cycles() const noexcept
 {
 	return 8 * 2;
 }
@@ -722,7 +721,7 @@ uint32_t cosmac_device::execute_min_cycles() const
 //  cycles it takes for one instruction to execute
 //-------------------------------------------------
 
-uint32_t cosmac_device::execute_max_cycles() const
+uint32_t cosmac_device::execute_max_cycles() const noexcept
 {
 	return 8 * 3;
 }
@@ -733,7 +732,7 @@ uint32_t cosmac_device::execute_max_cycles() const
 //  input/interrupt lines
 //-------------------------------------------------
 
-uint32_t cosmac_device::execute_input_lines() const
+uint32_t cosmac_device::execute_input_lines() const noexcept
 {
 	return 7;
 }

@@ -41,7 +41,7 @@ TILE_GET_INFO_MEMBER(renegade_state::get_bg_tilemap_info)
 {
 	const uint8_t *source = &m_bg_videoram[tile_index];
 	uint8_t attributes = source[0x400]; /* CCC??BBB */
-	SET_TILE_INFO_MEMBER(1 + (attributes & 0x7),
+	tileinfo.set(1 + (attributes & 0x7),
 		source[0],
 		attributes >> 5,
 		0);
@@ -51,7 +51,7 @@ TILE_GET_INFO_MEMBER(renegade_state::get_fg_tilemap_info)
 {
 	const uint8_t *source = &m_fg_videoram[tile_index];
 	uint8_t attributes = source[0x400];
-	SET_TILE_INFO_MEMBER(0,
+	tileinfo.set(0,
 		((attributes & 3) << 8) | source[0],
 		attributes >> 6,
 		0);
@@ -59,8 +59,8 @@ TILE_GET_INFO_MEMBER(renegade_state::get_fg_tilemap_info)
 
 void renegade_state::video_start()
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(renegade_state::get_bg_tilemap_info),this), TILEMAP_SCAN_ROWS,      16, 16, 64, 16);
-	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(renegade_state::get_fg_tilemap_info),this), TILEMAP_SCAN_ROWS,   8, 8, 32, 32);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(renegade_state::get_bg_tilemap_info)), TILEMAP_SCAN_ROWS, 16, 16, 64, 16);
+	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(renegade_state::get_fg_tilemap_info)), TILEMAP_SCAN_ROWS,  8,  8, 32, 32);
 
 	m_fg_tilemap->set_transparent_pen(0);
 	m_bg_tilemap->set_scrolldx(256, 0);

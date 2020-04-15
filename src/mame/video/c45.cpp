@@ -234,8 +234,8 @@ void namco_c45_road_device::draw(bitmap_ind16 &bitmap, const rectangle &cliprect
 void namco_c45_road_device::device_start()
 {
 	// create a tilemap for the road
-	m_tilemap = &machine().tilemap().create(*this, tilemap_get_info_delegate(FUNC(namco_c45_road_device::get_road_info), this),
-		TILEMAP_SCAN_ROWS, ROAD_TILE_SIZE, ROAD_TILE_SIZE, ROAD_COLS, ROAD_ROWS);
+	m_tilemap = &machine().tilemap().create(*this, tilemap_get_info_delegate(*this, FUNC(namco_c45_road_device::get_road_info)),
+			TILEMAP_SCAN_ROWS, ROAD_TILE_SIZE, ROAD_TILE_SIZE, ROAD_COLS, ROAD_ROWS);
 }
 
 
@@ -263,5 +263,5 @@ TILE_GET_INFO_MEMBER( namco_c45_road_device::get_road_info )
 	uint16_t data = m_tmapram[tile_index];
 	int tile = data & 0x3ff;
 	int color = data >> 10;
-	SET_TILE_INFO_MEMBER(0, tile, color, 0);
+	tileinfo.set(0, tile, color, 0);
 }

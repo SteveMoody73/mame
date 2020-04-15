@@ -94,7 +94,7 @@ TILE_GET_INFO_MEMBER(gaplus_base_state::get_tile_info)
 	const uint8_t attr = m_videoram[tile_index + 0x400];
 	tileinfo.category = (attr & 0x40) >> 6;
 	tileinfo.group = attr & 0x3f;
-	SET_TILE_INFO_MEMBER(0,
+	tileinfo.set(0,
 			m_videoram[tile_index] + ((attr & 0x80) << 1),
 			attr & 0x3f,
 			0);
@@ -171,7 +171,7 @@ void gaplus_base_state::starfield_init()
 
 void gaplus_base_state::video_start()
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(gaplus_state::get_tile_info),this),tilemap_mapper_delegate(FUNC(gaplus_state::tilemap_scan),this),8,8,36,28);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(gaplus_state::get_tile_info)), tilemap_mapper_delegate(*this, FUNC(gaplus_state::tilemap_scan)), 8,8,36,28);
 
 	m_bg_tilemap->configure_groups(*m_gfxdecode->gfx(0), 0xff);
 

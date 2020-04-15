@@ -235,8 +235,8 @@ WRITE8_MEMBER(combatsc_state::combatscb_bankselect_w)
 		if (data == 0x1f)
 		{
 			membank("bank1")->set_entry(8 + (data & 1));
-			space.install_write_handler(0x4000, 0x7fff, write8_delegate(FUNC(combatsc_state::combatscb_io_w),this));
-			space.install_read_handler(0x4400, 0x4403, read8_delegate(FUNC(combatsc_state::combatscb_io_r),this));/* IO RAM & Video Registers */
+			space.install_write_handler(0x4000, 0x7fff, write8_delegate(*this, FUNC(combatsc_state::combatscb_io_w)));
+			space.install_read_handler(0x4400, 0x4403, read8_delegate(*this, FUNC(combatsc_state::combatscb_io_r))); // IO RAM & Video Registers
 		}
 		else
 		{
@@ -405,7 +405,7 @@ WRITE8_MEMBER(combatsc_state::combatscb_msm_w)
 	membank("bl_abank")->set_entry(BIT(data, 7));
 
 	m_msm->reset_w(BIT(data, 4));
-	m_msm->write_data(data & 0x0f);
+	m_msm->data_w(data & 0x0f);
 }
 
 WRITE8_MEMBER(combatsc_state::combatscb_sound_irq_ack)
@@ -710,7 +710,7 @@ void combatsc_state::combatsc(machine_config &config)
 	Z80(config, m_audiocpu, 3579545);   /* 3.579545 MHz */
 	m_audiocpu->set_addrmap(AS_PROGRAM, &combatsc_state::combatsc_sound_map);
 
-	config.m_minimum_quantum = attotime::from_hz(1200);
+	config.set_maximum_quantum(attotime::from_hz(1200));
 
 	MCFG_MACHINE_START_OVERRIDE(combatsc_state,combatsc)
 
@@ -762,7 +762,7 @@ void combatsc_state::combatscb(machine_config &config)
 	Z80(config, m_audiocpu, 3579545);   /* 3.579545 MHz */
 	m_audiocpu->set_addrmap(AS_PROGRAM, &combatsc_state::combatscb_sound_map);
 
-	config.m_minimum_quantum = attotime::from_hz(1200);
+	config.set_maximum_quantum(attotime::from_hz(1200));
 
 	MCFG_MACHINE_START_OVERRIDE(combatsc_state,combatscb)
 

@@ -249,13 +249,13 @@ READ16_MEMBER(x68k_state::scc_r )
 	switch(offset)
 	{
 	case 0:
-		return m_scc->reg_r(space, 0);
+		return m_scc->reg_r(0);
 	case 1:
 		return read_mouse();
 	case 2:
-		return m_scc->reg_r(space, 1);
+		return m_scc->reg_r(1);
 	case 3:
-		return m_scc->reg_r(space, 3);
+		return m_scc->reg_r(3);
 	default:
 		return 0xff;
 	}
@@ -268,7 +268,7 @@ WRITE16_MEMBER(x68k_state::scc_w )
 	switch(offset)
 	{
 	case 0:
-		m_scc->reg_w(space, 0,(uint8_t)data);
+		m_scc->reg_w(0,(uint8_t)data);
 		if((m_scc->get_reg_b(5) & 0x02) != m_scc_prev)
 		{
 			if(m_scc->get_reg_b(5) & 0x02)  // Request to Send
@@ -281,13 +281,13 @@ WRITE16_MEMBER(x68k_state::scc_w )
 		}
 		break;
 	case 1:
-		m_scc->reg_w(space, 2,(uint8_t)data);
+		m_scc->reg_w(2,(uint8_t)data);
 		break;
 	case 2:
-		m_scc->reg_w(space, 1,(uint8_t)data);
+		m_scc->reg_w(1,(uint8_t)data);
 		break;
 	case 3:
-		m_scc->reg_w(space, 3,(uint8_t)data);
+		m_scc->reg_w(3,(uint8_t)data);
 		break;
 	}
 	m_scc_prev = m_scc->get_reg_b(5) & 0x02;
@@ -1181,7 +1181,7 @@ void x68k_state::cpu_space_map(address_map &map)
 	map(0xfffff9, 0xfffff9).r(FUNC(x68k_state::iack4));
 	map(0xfffffb, 0xfffffb).r(FUNC(x68k_state::iack5));
 	map(0xfffffd, 0xfffffd).r(m_mfpdev, FUNC(mc68901_device::get_vector));
-	map(0xffffff, 0xffffff).lr8("nmiack", []() { return m68000_base_device::autovector(7); });
+	map(0xffffff, 0xffffff).lr8(NAME([] () { return m68000_base_device::autovector(7); }));
 }
 
 WRITE_LINE_MEMBER(x68ksupr_state::scsi_irq)
@@ -1625,19 +1625,18 @@ static void keyboard_devices(device_slot_interface &device)
 
 void x68k_state::x68000_base(machine_config &config)
 {
-	config.m_minimum_quantum = attotime::from_hz(60);
+	config.set_maximum_quantum(attotime::from_hz(60));
 
 	/* device hardware */
 	MC68901(config, m_mfpdev, 16_MHz_XTAL / 4);
 	m_mfpdev->set_timer_clock(16_MHz_XTAL / 4);
-	m_mfpdev->set_rx_clock(0);
-	m_mfpdev->set_tx_clock(0);
 	m_mfpdev->out_irq_cb().set(FUNC(x68k_state::mfp_irq_callback));
-	m_mfpdev->out_tbo_cb().set(m_mfpdev, FUNC(mc68901_device::clock_w));
+	m_mfpdev->out_tbo_cb().set(m_mfpdev, FUNC(mc68901_device::tc_w));
+	m_mfpdev->out_tbo_cb().append(m_mfpdev, FUNC(mc68901_device::rc_w));
 	m_mfpdev->out_so_cb().set("keyboard", FUNC(rs232_port_device::write_txd));
 
 	rs232_port_device &keyboard(RS232_PORT(config, "keyboard", keyboard_devices, "x68k"));
-	keyboard.rxd_handler().set(m_mfpdev, FUNC(mc68901_device::write_rx));
+	keyboard.rxd_handler().set(m_mfpdev, FUNC(mc68901_device::si_w));
 
 	I8255A(config, m_ppi, 0);
 	m_ppi->in_pa_callback().set(FUNC(x68k_state::ppi_port_a_r));

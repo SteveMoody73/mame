@@ -171,7 +171,7 @@ void trs80dt1_state::io_map(address_map &map)
 	map(0xac00, 0xafff).r(FUNC(trs80dt1_state::key_r));
 	map(0xb000, 0xb3ff).portr("X9");
 	map(0xb400, 0xb7ff).w(FUNC(trs80dt1_state::store_w));
-	map(0xb800, 0xbbff).w("cent_data_out", FUNC(output_latch_device::bus_w));
+	map(0xb800, 0xbbff).w("cent_data_out", FUNC(output_latch_device::write));
 	map(0xbc00, 0xbc01).mirror(0x3fe).rw(m_crtc, FUNC(i8276_device::read), FUNC(i8276_device::write)); // i8276
 }
 
@@ -348,7 +348,7 @@ void trs80dt1_state::trs80dt1(machine_config &config)
 
 	I8276(config, m_crtc, 12480000 / 8);
 	m_crtc->set_character_width(8);
-	m_crtc->set_display_callback(FUNC(trs80dt1_state::crtc_update_row), this);
+	m_crtc->set_display_callback(FUNC(trs80dt1_state::crtc_update_row));
 	m_crtc->drq_wr_callback().set_inputline(m_maincpu, MCS51_INT0_LINE); // BRDY pin goes through inverter to /INT0, so we don't invert
 	m_crtc->irq_wr_callback().set(m_7474, FUNC(ttl7474_device::clear_w)); // INT pin
 	m_crtc->irq_wr_callback().append(m_7474, FUNC(ttl7474_device::d_w));

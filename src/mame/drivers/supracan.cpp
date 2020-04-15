@@ -92,25 +92,25 @@ DEBUG TRICKS:
 #define DEBUG_PRIORITY          (0)
 #define DEBUG_PRIORITY_INDEX    (0) // 0-3
 
-#define LOG_UNKNOWNS	(1 << 0)
-#define LOG_DMA			(1 << 1)
-#define LOG_SPRDMA		(1 << 2)
-#define LOG_SPRITES		(1 << 3)
-#define LOG_TILEMAP0	(1 << 4)
-#define LOG_TILEMAP1	(1 << 5)
-#define LOG_TILEMAP2	(1 << 6)
-#define LOG_ROZ			(1 << 7)
-#define LOG_HFVIDEO		(1 << 8)
-#define LOG_IRQS		(1 << 9)
-#define LOG_SOUND		(1 << 10)
-#define LOG_HFUNKNOWNS	(1 << 11)
-#define LOG_68K_SOUND	(1 << 12)
-#define LOG_CONTROLS	(1 << 13)
-#define LOG_VIDEO		(LOG_SPRDMA | LOG_SPRITES | LOG_TILEMAP0 | LOG_TILEMAP1 | LOG_TILEMAP2 | LOG_ROZ)
-#define LOG_ALL			(LOG_UNKNOWNS | LOG_HFUNKNOWNS | LOG_DMA | LOG_VIDEO | LOG_HFVIDEO | LOG_IRQS | LOG_SOUND | LOG_68K_SOUND | LOG_CONTROLS)
-#define LOG_DEFAULT		(LOG_ALL & ~(LOG_HFVIDEO | LOG_HFUNKNOWNS))
+#define LOG_UNKNOWNS    (1 << 0)
+#define LOG_DMA         (1 << 1)
+#define LOG_SPRDMA      (1 << 2)
+#define LOG_SPRITES     (1 << 3)
+#define LOG_TILEMAP0    (1 << 4)
+#define LOG_TILEMAP1    (1 << 5)
+#define LOG_TILEMAP2    (1 << 6)
+#define LOG_ROZ         (1 << 7)
+#define LOG_HFVIDEO     (1 << 8)
+#define LOG_IRQS        (1 << 9)
+#define LOG_SOUND       (1 << 10)
+#define LOG_HFUNKNOWNS  (1 << 11)
+#define LOG_68K_SOUND   (1 << 12)
+#define LOG_CONTROLS    (1 << 13)
+#define LOG_VIDEO       (LOG_SPRDMA | LOG_SPRITES | LOG_TILEMAP0 | LOG_TILEMAP1 | LOG_TILEMAP2 | LOG_ROZ)
+#define LOG_ALL         (LOG_UNKNOWNS | LOG_HFUNKNOWNS | LOG_DMA | LOG_VIDEO | LOG_HFVIDEO | LOG_IRQS | LOG_SOUND | LOG_68K_SOUND | LOG_CONTROLS)
+#define LOG_DEFAULT     (LOG_ALL & ~(LOG_HFVIDEO | LOG_HFUNKNOWNS))
 
-#define VERBOSE			(0)
+#define VERBOSE         (0)
 #include "logmacro.h"
 
 class supracan_state : public driver_device
@@ -353,7 +353,7 @@ void supracan_state::get_tilemap_info_common(int layer, tile_data &tileinfo, int
 	int flipxy = (supracan_vram[count] & 0x0c00) >> 10;
 	int palette = ((supracan_vram[count] & 0xf000) >> 12) + palette_bank;
 
-	SET_TILE_INFO_MEMBER(region, tile, palette, TILE_FLIPXY(flipxy));
+	tileinfo.set(region, tile, palette, TILE_FLIPXY(flipxy));
 }
 
 // I wonder how different this really is.. my guess, not at all.
@@ -381,7 +381,7 @@ void supracan_state::get_roz_tilemap_info(int layer, tile_data &tileinfo, int co
 		if (count & 0x20) tile ^= 1;
 		tile |= (count & 0xc0) >> 2;
 
-		SET_TILE_INFO_MEMBER(region, tile, 0, 0);
+		tileinfo.set(region, tile, 0, 0);
 		return;
 	}
 
@@ -404,7 +404,7 @@ void supracan_state::get_roz_tilemap_info(int layer, tile_data &tileinfo, int co
 	int flipxy = (supracan_vram[count] & 0x0c00) >> 10;
 	int palette = ((supracan_vram[count] & 0xf000) >> 12) + palette_bank;
 
-	SET_TILE_INFO_MEMBER(region, tile, palette, TILE_FLIPXY(flipxy));
+	tileinfo.set(region, tile, palette, TILE_FLIPXY(flipxy));
 }
 
 
@@ -440,25 +440,25 @@ void supracan_state::video_start()
 	m_gfxdecode->gfx(4)->set_source(&m_vram_addr_swapped[0]);
 	m_gfxdecode->gfx(4)->set_xormask(0);
 
-	m_tilemap_sizes[0][0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_tilemap0_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
-	m_tilemap_sizes[0][1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_tilemap0_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
-	m_tilemap_sizes[0][2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_tilemap0_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 128, 32);
-	m_tilemap_sizes[0][3] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_tilemap0_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 64, 64);
+	m_tilemap_sizes[0][0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_tilemap0_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
+	m_tilemap_sizes[0][1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_tilemap0_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
+	m_tilemap_sizes[0][2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_tilemap0_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 128, 32);
+	m_tilemap_sizes[0][3] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_tilemap0_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 64, 64);
 
-	m_tilemap_sizes[1][0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_tilemap1_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
-	m_tilemap_sizes[1][1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_tilemap1_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
-	m_tilemap_sizes[1][2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_tilemap1_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 128, 32);
-	m_tilemap_sizes[1][3] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_tilemap1_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 64, 64);
+	m_tilemap_sizes[1][0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_tilemap1_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
+	m_tilemap_sizes[1][1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_tilemap1_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
+	m_tilemap_sizes[1][2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_tilemap1_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 128, 32);
+	m_tilemap_sizes[1][3] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_tilemap1_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 64, 64);
 
-	m_tilemap_sizes[2][0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_tilemap2_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
-	m_tilemap_sizes[2][1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_tilemap2_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
-	m_tilemap_sizes[2][2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_tilemap2_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 128, 32);
-	m_tilemap_sizes[2][3] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_tilemap2_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 64, 64);
+	m_tilemap_sizes[2][0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_tilemap2_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
+	m_tilemap_sizes[2][1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_tilemap2_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
+	m_tilemap_sizes[2][2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_tilemap2_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 128, 32);
+	m_tilemap_sizes[2][3] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_tilemap2_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 64, 64);
 
-	m_tilemap_sizes[3][0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_roz_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
-	m_tilemap_sizes[3][1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_roz_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
-	m_tilemap_sizes[3][2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_roz_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 128, 32);
-	m_tilemap_sizes[3][3] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(supracan_state::get_roz_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 64, 64);
+	m_tilemap_sizes[3][0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_roz_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
+	m_tilemap_sizes[3][1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_roz_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
+	m_tilemap_sizes[3][2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_roz_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 128, 32);
+	m_tilemap_sizes[3][3] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(supracan_state::get_roz_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 64, 64);
 }
 
 int supracan_state::get_tilemap_dimensions(int &xsize, int &ysize, int layer)
@@ -1952,7 +1952,7 @@ void supracan_state::machine_start()
 	m_line_off_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(supracan_state::line_off_callback), this));
 
 	if (m_cart->exists())
-		m_maincpu->space(AS_PROGRAM).install_read_handler(0x000000, 0x3fffff, read16s_delegate(FUNC(generic_slot_device::read16_rom),(generic_slot_device*)m_cart));
+		m_maincpu->space(AS_PROGRAM).install_read_handler(0x000000, 0x3fffff, read16s_delegate(*m_cart, FUNC(generic_slot_device::read16_rom)));
 }
 
 
@@ -2074,8 +2074,7 @@ void supracan_state::supracan(machine_config &config)
 	m_soundcpu->set_addrmap(AS_PROGRAM, &supracan_state::supracan_sound_mem);
 	m_soundcpu->set_vblank_int("screen", FUNC(supracan_state::sound_irq));
 
-	config.m_perfect_cpu_quantum = subtag("maincpu");
-	config.m_perfect_cpu_quantum = subtag("soundcpu");
+	config.set_perfect_quantum(m_soundcpu);
 
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
 	m_screen->set_raw(XTAL(10'738'635)/2, 348, 0, 256, 256, 0, 240);  /* No idea if this is correct */
@@ -2089,7 +2088,7 @@ void supracan_state::supracan(machine_config &config)
 	generic_cartslot_device &cartslot(GENERIC_CARTSLOT(config, "cartslot", generic_plain_slot, "supracan_cart"));
 	cartslot.set_width(GENERIC_ROM16_WIDTH);
 	cartslot.set_endian(ENDIANNESS_BIG);
-	cartslot.set_device_load(FUNC(supracan_state::cart_load), this);
+	cartslot.set_device_load(FUNC(supracan_state::cart_load));
 
 	SOFTWARE_LIST(config, "cart_list").set_original("supracan");
 }

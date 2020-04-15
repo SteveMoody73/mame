@@ -139,8 +139,6 @@ better notes (complete chip lists) for each board still needed
 #include "video/namcos21_3d.h"
 #include "emupal.h"
 
-#define NAMCOS21_NUM_COLORS 0x8000
-
 class gal3_state : public driver_device
 {
 public:
@@ -208,6 +206,10 @@ void gal3_state::video_start()
 
 uint32_t gal3_state::screen_update_left(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
+	bitmap.fill(0xff, cliprect); // TODO : actually laserdisc layer
+	screen.priority().fill(0, cliprect);
+	m_c355spr[0]->get_sprites(cliprect); // TODO : buffered?
+
 	int i;
 	char mst[18], slv[18];
 	static int pivot = 15;
@@ -258,6 +260,10 @@ uint32_t gal3_state::screen_update_left(screen_device &screen, bitmap_ind16 &bit
 
 uint32_t gal3_state::screen_update_right(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
+	bitmap.fill(0xff, cliprect); // TODO : actually laserdisc layer
+	screen.priority().fill(0, cliprect);
+	m_c355spr[1]->get_sprites(cliprect); // TODO : buffered?
+
 	static int pivot = 15;
 	int pri;
 
@@ -605,7 +611,7 @@ void gal3_state::gal3(machine_config &config)
     m68000_device &psn_b3_cpu(M68000(config, "psn_b3_cpu", 12000000)); // ??
     psn_b3_cpu.set_addrmap(AS_PROGRAM, &gal3_state::psn_b1_cpu_map);
 */
-	config.m_minimum_quantum = attotime::from_hz(60*8000); /* 8000 CPU slices per frame */
+	config.set_maximum_quantum(attotime::from_hz(60*8000)); /* 8000 CPU slices per frame */
 
 	NVRAM(config, "nvmem", nvram_device::DEFAULT_ALL_0);
 
@@ -619,7 +625,7 @@ void gal3_state::gal3(machine_config &config)
 	lscreen.set_screen_update(FUNC(gal3_state::screen_update_left));
 	lscreen.set_palette(m_palette[0]);
 
-	PALETTE(config, m_palette[0]).set_format(palette_device::xBRG_888, NAMCOS21_NUM_COLORS);
+	PALETTE(config, m_palette[0]).set_format(palette_device::xBRG_888, 0x10000/2);
 	m_palette[0]->set_membits(16);
 
 	NAMCO_C355SPR(config, m_c355spr[0], 0);
@@ -629,6 +635,7 @@ void gal3_state::gal3(machine_config &config)
 	m_c355spr[0]->set_tile_callback(namco_c355spr_device::c355_obj_code2tile_delegate());
 	m_c355spr[0]->set_palxor(0xf); // reverse mapping
 	m_c355spr[0]->set_color_base(0x1000); // TODO : verify palette offset
+	m_c355spr[0]->set_external_prifill(true);
 
 	NAMCOS21_3D(config, m_namcos21_3d[0], 0);
 	m_namcos21_3d[0]->set_zz_shift_mult(11, 0x200);
@@ -648,7 +655,7 @@ void gal3_state::gal3(machine_config &config)
 	rscreen.set_screen_update(FUNC(gal3_state::screen_update_right));
 	rscreen.set_palette(m_palette[1]);
 
-	PALETTE(config, m_palette[1]).set_format(palette_device::xBRG_888, NAMCOS21_NUM_COLORS);
+	PALETTE(config, m_palette[1]).set_format(palette_device::xBRG_888, 0x10000/2);
 	m_palette[1]->set_membits(16);
 
 	NAMCO_C355SPR(config, m_c355spr[1], 0);
@@ -658,6 +665,7 @@ void gal3_state::gal3(machine_config &config)
 	m_c355spr[1]->set_tile_callback(namco_c355spr_device::c355_obj_code2tile_delegate());
 	m_c355spr[1]->set_palxor(0xf); // reverse mapping
 	m_c355spr[1]->set_color_base(0x1000); // TODO : verify palette offset
+	m_c355spr[1]->set_external_prifill(true);
 
 	NAMCOS21_3D(config, m_namcos21_3d[1], 0);
 	m_namcos21_3d[1]->set_zz_shift_mult(11, 0x200);

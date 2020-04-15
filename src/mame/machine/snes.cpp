@@ -102,15 +102,8 @@ TIMER_CALLBACK_MEMBER(snes_state::snes_hirq_tick_callback)
 
 TIMER_CALLBACK_MEMBER(snes_state::snes_reset_oam_address)
 {
-	// make sure we're in the 65816's context since we're messing with the OAM and stuff
-	address_space &space = m_maincpu->space(AS_PROGRAM);
-
 	if (!m_ppu->screen_disabled()) //Reset OAM address, byuu says it happens at H=10
-	{
-		space.write_byte(OAMADDL, m_ppu->saved_oam_address_low()); /* Reset oam address */
-		space.write_byte(OAMADDH, m_ppu->saved_oam_address_high());
-		m_ppu->set_first_sprite();
-	}
+		m_ppu->oam_address_reset();
 }
 
 TIMER_CALLBACK_MEMBER(snes_state::snes_reset_hdma)
@@ -121,7 +114,7 @@ TIMER_CALLBACK_MEMBER(snes_state::snes_reset_hdma)
 
 TIMER_CALLBACK_MEMBER(snes_state::snes_update_io)
 {
-	io_read(m_maincpu->space(AS_PROGRAM),0,0,0);
+	io_read();
 	SNES_CPU_REG(HVBJOY) &= 0xfe;       /* Clear busy bit */
 
 	m_io_timer->adjust(attotime::never);
@@ -235,7 +228,7 @@ TIMER_CALLBACK_MEMBER(snes_state::snes_hblank_tick)
 			hdma(cpu0space);
 
 		if (m_screen->vpos() > 0)
-			m_screen->update_partial((m_ppu->interlace() == 2) ? (m_ppu->current_vert() * m_ppu->interlace()) : m_ppu->current_vert());
+			m_screen->update_partial((m_ppu->interlace() == 2) ? (m_ppu->current_vert() * m_ppu->interlace()) : m_ppu->current_vert() - 1);
 	}
 
 	// signal hblank
@@ -397,7 +390,7 @@ READ8_MEMBER( snes_state::snes_r_io )
 	// APU is mirrored from 2140 to 217f
 	if (offset >= APU00 && offset < WMDATA)
 	{
-		return m_spc700->spc_port_out(offset & 0x3);
+		return m_soundcpu->spc_port_out_r(offset & 0x3);
 	}
 
 	// DMA accesses are from 4300 to 437f
@@ -411,7 +404,7 @@ READ8_MEMBER( snes_state::snes_r_io )
 	switch (offset) // offset is from 0x000000
 	{
 		case WMDATA:    /* Data to read from WRAM */
-			value = m_maincpu->space(AS_PROGRAM).read_byte(0x7e0000 + m_wram_address++);
+			value = m_wram[m_wram_address++];
 			m_wram_address &= 0x1ffff;
 			return value;
 
@@ -487,7 +480,7 @@ WRITE8_MEMBER( snes_state::snes_w_io )
 	if (offset >= APU00 && offset < WMDATA)
 	{
 //      printf("816: %02x to APU @ %d (PC=%06x)\n", data, offset & 3,m_maincpu->pc());
-		m_spc700->spc_port_in(offset & 0x3, data);
+		m_soundcpu->spc_port_in_w(offset & 0x3, data);
 		machine().scheduler().boost_interleave(attotime::zero, attotime::from_usec(20));
 		return;
 	}
@@ -503,7 +496,7 @@ WRITE8_MEMBER( snes_state::snes_w_io )
 	switch (offset)
 	{
 		case WMDATA:    /* Data to write to WRAM */
-			m_maincpu->space(AS_PROGRAM).write_byte(0x7e0000 + m_wram_address++, data );
+			m_wram[m_wram_address++] = data;
 			m_wram_address &= 0x1ffff;
 			return;
 		case WMADDL:    /* Address to read/write to wram (low) */
@@ -727,7 +720,7 @@ READ8_MEMBER(snes_state::snes_r_bank1)
 	if (offset < 0x400000)
 	{
 		if (address < 0x2000)                                           /* Mirror of Low RAM */
-			value = m_maincpu->space(AS_PROGRAM).read_byte(0x7e0000 + address);
+			value = m_wram[address];
 		else if (address < 0x6000)                                      /* I/O */
 			value = snes_r_io(space, address);
 		else if (address < 0x8000)
@@ -838,7 +831,7 @@ WRITE8_MEMBER(snes_state::snes_w_bank1)
 	if (offset < 0x400000)
 	{
 		if (address < 0x2000)                           /* Mirror of Low RAM */
-			m_maincpu->space(AS_PROGRAM).write_byte(0x7e0000 + address, data);
+			m_wram[address] = data;
 		else if (address < 0x6000)                      /* I/O */
 			snes_w_io(space, address, data);
 		else if (address < 0x8000)
@@ -935,7 +928,7 @@ WRITE8_MEMBER(snes_state::snes_w_bank2)
 
 *************************************/
 
-WRITE8_MEMBER(snes_state::io_read)
+void snes_state::io_read()
 {
 	static const char *const portnames[2][2] =
 	{
@@ -1035,20 +1028,20 @@ void snes_state::snes_init_timers()
 
 	// SNES hcounter has a 0-339 range.  hblank starts at counter 260.
 	// clayfighter sets an HIRQ at 260, apparently it wants it to be before hdma kicks off, so we'll delay 2 pixels.
-	m_hblank_offset = 128;
+	m_hblank_offset = 274;
 	m_hblank_timer->adjust(m_screen->time_until_pos(m_ppu->vtotal() - 1, m_hblank_offset));
 }
 
 void snes_state::snes_init_ram()
 {
-	address_space &cpu0space = m_maincpu->space(AS_PROGRAM);
 	int i;
 
 	/* Init work RAM - 0x55 isn't exactly right but it's close */
 	/* make sure it happens to the 65816 (CPU 0) */
-	for (i = 0; i < (128*1024); i++)
+	const size_t size = m_wram.bytes();
+	for (i = 0; i < size; i++)
 	{
-		cpu0space.write_byte(0x7e0000 + i, 0x55);
+		m_wram[i] = 0x55;
 	}
 
 	/* Inititialize registers/variables */

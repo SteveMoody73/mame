@@ -30,7 +30,7 @@ inline void m72_state::m72_m81_get_tile_info(tile_data &tileinfo,int tile_index,
 	else pri = 0;
 /* attr & 0x0010 is used in bchopper and hharry, more priority? */
 
-	SET_TILE_INFO_MEMBER(gfxnum,
+	tileinfo.set(gfxnum,
 			code & 0x3fff,
 			attr & 0x000f,
 			TILE_FLIPYX((code & 0xc000) >> 14));
@@ -70,7 +70,7 @@ TILE_GET_INFO_MEMBER(m72_state::rtype2_get_tile_info)
 /* (m_videoram[N][tile_index+2] & 0x10) is used by majtitle on the green, but it's not clear for what */
 /* (m_videoram[N][tile_index+3] & 0xfe) are used as well */
 
-	SET_TILE_INFO_MEMBER(1,
+	tileinfo.set(1,
 			code,
 			attr & 0x000f,
 			TILE_FLIPYX((attr & 0x0060) >> 5));
@@ -95,8 +95,8 @@ void m72_state::register_savestate()
 
 VIDEO_START_MEMBER(m72_state,m72)
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(m72_state::get_bg_tile_info),this),TILEMAP_SCAN_ROWS,8,8,64,64);
-	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(m72_state::get_fg_tile_info),this),TILEMAP_SCAN_ROWS,8,8,64,64);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(m72_state::get_bg_tile_info)), TILEMAP_SCAN_ROWS, 8,8, 64,64);
+	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(m72_state::get_fg_tile_info)), TILEMAP_SCAN_ROWS, 8,8, 64,64);
 
 	m_fg_tilemap->set_transmask(0,0xffff,0x0001);
 	m_fg_tilemap->set_transmask(1,0x00ff,0xff01);
@@ -178,11 +178,11 @@ TILEMAP_MAPPER_MEMBER(m72_state::m82_scan_rows)
 
 VIDEO_START_MEMBER(m72_state,m82)
 {
-	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(m72_state::rtype2_get_tile_info<0>),this),TILEMAP_SCAN_ROWS,8,8,64,64);
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(m72_state::rtype2_get_tile_info<1>),this),TILEMAP_SCAN_ROWS,8,8,64,64);
+	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(m72_state::rtype2_get_tile_info<0>)), TILEMAP_SCAN_ROWS, 8,8, 64,64);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(m72_state::rtype2_get_tile_info<1>)), TILEMAP_SCAN_ROWS, 8,8, 64,64);
 // The tilemap can be 256x64, but seems to be used at 128x64 (scroll wraparound).
 // The layout ramains 256x64, the right half is just not displayed.
-	m_bg_tilemap_large = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(m72_state::rtype2_get_tile_info<1>),this),tilemap_mapper_delegate(FUNC(m72_state::m82_scan_rows),this),8,8,128,64);
+	m_bg_tilemap_large = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(m72_state::rtype2_get_tile_info<1>)), tilemap_mapper_delegate(*this, FUNC(m72_state::m82_scan_rows)), 8,8, 128,64);
 
 	m_fg_tilemap->set_transmask(0,0xffff,0x0001);
 	m_fg_tilemap->set_transmask(1,0x00ff,0xff01);
@@ -216,8 +216,8 @@ VIDEO_START_MEMBER(m72_state,m82)
 // M84
 VIDEO_START_MEMBER(m72_state,rtype2)
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(m72_state::rtype2_get_tile_info<1>),this),TILEMAP_SCAN_ROWS,8,8,64,64);
-	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(m72_state::rtype2_get_tile_info<0>),this),TILEMAP_SCAN_ROWS,8,8,64,64);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(m72_state::rtype2_get_tile_info<1>)), TILEMAP_SCAN_ROWS, 8,8, 64,64);
+	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(m72_state::rtype2_get_tile_info<0>)), TILEMAP_SCAN_ROWS, 8,8, 64,64);
 
 	m_fg_tilemap->set_transmask(0,0xffff,0x0001);
 	m_fg_tilemap->set_transmask(1,0x00ff,0xff01);

@@ -107,13 +107,13 @@ TILE_GET_INFO_MEMBER(homerun_state::get_tile_info)
 	u32 const tileno = (m_videoram[tile_index]) | ((m_videoram[tile_index | 0x1000] & 0x38) << 5) | ((m_gfx_ctrl & 1) << 11);
 	u16 const palno = (m_videoram[tile_index | 0x1000] & 0x07);
 
-	SET_TILE_INFO_MEMBER(0, tileno, palno, 0);
+	tileinfo.set(0, tileno, palno, 0);
 }
 
 
 void homerun_state::video_start()
 {
-	m_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(homerun_state::get_tile_info),this), TILEMAP_SCAN_ROWS, 8, 8, 64, 64);
+	m_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(homerun_state::get_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 64, 64);
 
 	save_item(NAME(m_gfx_ctrl));
 	save_item(NAME(m_scrolly));

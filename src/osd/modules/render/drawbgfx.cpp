@@ -278,11 +278,10 @@ int renderer_bgfx::create()
 		{
 			init.type = bgfx::RendererType::Direct3D11;
 		}
-// Throws exception on exit
-//		else if (backend == "dx12" || backend == "d3d12")
-//		{
-//			init.type = bgfx::RendererType::Direct3D12;
-//		}
+		else if (backend == "dx12" || backend == "d3d12")
+		{
+			init.type = bgfx::RendererType::Direct3D12;
+		}
 		else if (backend == "gles")
 		{
 			init.type = bgfx::RendererType::OpenGLES;
@@ -455,7 +454,7 @@ bgfx::VertexLayout ScreenVertex::ms_decl;
 void renderer_bgfx::put_packed_quad(render_primitive *prim, uint32_t hash, ScreenVertex* vertices)
 {
 	rectangle_packer::packed_rectangle& rect = m_hash_to_entry[hash];
-	float size = float(CACHE_SIZE);
+	auto size = float(CACHE_SIZE);
 	float u0 = (float(rect.x()) + 0.5f) / size;
 	float v0 = (float(rect.y()) + 0.5f) / size;
 	float u1 = u0 + (float(rect.width()) - 1.0f) / size;
@@ -518,7 +517,7 @@ void renderer_bgfx::vertex(ScreenVertex* vertex, float x, float y, float z, uint
 
 void renderer_bgfx::render_post_screen_quad(int view, render_primitive* prim, bgfx::TransientVertexBuffer* buffer, int32_t screen)
 {
-	ScreenVertex* vertices = reinterpret_cast<ScreenVertex*>(buffer->data);
+	auto* vertices = reinterpret_cast<ScreenVertex*>(buffer->data);
 
 	float x[4] = { prim->bounds.x0, prim->bounds.x1, prim->bounds.x0, prim->bounds.x1 };
 	float y[4] = { prim->bounds.y0, prim->bounds.y0, prim->bounds.y1, prim->bounds.y1 };
@@ -554,7 +553,7 @@ void renderer_bgfx::render_avi_quad()
 
 	bgfx::TransientVertexBuffer buffer;
 	bgfx::allocTransientVertexBuffer(&buffer, 6, ScreenVertex::ms_decl);
-	ScreenVertex* vertices = reinterpret_cast<ScreenVertex*>(buffer.data);
+	auto* vertices = reinterpret_cast<ScreenVertex*>(buffer.data);
 
 	float x[4] = { 0.0f, float(m_width[0]), 0.0f, float(m_width[0]) };
 	float y[4] = { 0.0f, 0.0f, float(m_height[0]), float(m_height[0]) };
@@ -577,7 +576,7 @@ void renderer_bgfx::render_avi_quad()
 
 void renderer_bgfx::render_textured_quad(render_primitive* prim, bgfx::TransientVertexBuffer* buffer)
 {
-	ScreenVertex* vertices = reinterpret_cast<ScreenVertex*>(buffer->data);
+	auto* vertices = reinterpret_cast<ScreenVertex*>(buffer->data);
 	uint32_t rgba = u32Color(prim->color.r * 255, prim->color.g * 255, prim->color.b * 255, prim->color.a * 255);
 
 	float x[4] = { prim->bounds.x0, prim->bounds.x1, prim->bounds.x0, prim->bounds.x1 };
@@ -598,19 +597,35 @@ void renderer_bgfx::render_textured_quad(render_primitive* prim, bgfx::Transient
 		texture_flags |= BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT;
 	}
 
+	const bool is_screen = PRIMFLAG_GET_SCREENTEX(prim->flags);
 	uint16_t tex_width(prim->texture.width);
 	uint16_t tex_height(prim->texture.height);
 
-	bgfx::TextureHandle texture = m_textures->create_or_update_mame_texture(prim->flags & PRIMFLAG_TEXFORMAT_MASK
-		, tex_width, tex_height, prim->texture.rowpixels, prim->texture.palette, prim->texture.base, prim->texture.seqid
-		, texture_flags, prim->texture.unique_id, prim->texture.old_id);
+	bgfx::TextureHandle texture = BGFX_INVALID_HANDLE;
+	if (is_screen)
+	{
+		const bgfx::Memory* mem = bgfx_util::mame_texture_data_to_argb32(prim->flags & PRIMFLAG_TEXFORMAT_MASK
+			, tex_width, tex_height, prim->texture.rowpixels, prim->texture.palette, prim->texture.base);
+		texture = bgfx::createTexture2D(tex_width, tex_height, false, 1, bgfx::TextureFormat::RGBA8, texture_flags, mem);
+	}
+	else
+	{
+		texture = m_textures->create_or_update_mame_texture(prim->flags & PRIMFLAG_TEXFORMAT_MASK
+			, tex_width, tex_height, prim->texture.rowpixels, prim->texture.palette, prim->texture.base, prim->texture.seqid
+			, texture_flags, prim->texture.unique_id, prim->texture.old_id);
+	}
 
-	bgfx_effect** effects = PRIMFLAG_GET_SCREENTEX(prim->flags) ? m_screen_effect : m_gui_effect;
+	bgfx_effect** effects = is_screen ? m_screen_effect : m_gui_effect;
 
 	uint32_t blend = PRIMFLAG_GET_BLENDMODE(prim->flags);
 	bgfx::setVertexBuffer(0,buffer);
 	bgfx::setTexture(0, effects[blend]->uniform("s_tex")->handle(), texture);
 	effects[blend]->submit(m_ortho_view->get_index());
+
+	if (is_screen)
+	{
+		bgfx::destroy(texture);
+	}
 }
 
 #define MAX_TEMP_COORDS 100
@@ -1185,7 +1200,8 @@ uint32_t renderer_bgfx::get_texture_hash(render_primitive *prim)
 	}
 	return hash;
 #else
-	return (reinterpret_cast<size_t>(prim->texture.base)) & 0xffffffff;
+	//return (reinterpret_cast<size_t>(prim->texture.base)) & 0xffffffff;
+	return (reinterpret_cast<size_t>(prim->texture.base) ^ reinterpret_cast<size_t>(prim->texture.palette)) & 0xffffffff;
 #endif
 }
 

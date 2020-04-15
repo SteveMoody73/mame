@@ -494,7 +494,7 @@ WRITE8_MEMBER(apple1_state::pia_display_w)
 // and to the display hardware
 WRITE_LINE_MEMBER(apple1_state::pia_display_gate_w)
 {
-	m_pia->write_portb((state << 7) ^ 0x80);
+	m_pia->portb_w((state << 7) ^ 0x80);
 
 	// falling edge means start the display timer
 	if (state == CLEAR_LINE)
@@ -615,7 +615,7 @@ void apple1_state::apple1(machine_config &config)
 	A1BUS(config, A1_BUS_TAG, 0).set_space(m_maincpu, AS_PROGRAM);
 	A1BUS_SLOT(config, "exp", 0, A1_BUS_TAG, apple1_cards, "cassette");
 
-	SNAPSHOT(config, "snapshot", "snp").set_load_callback(FUNC(apple1_state::snapshot_cb), this);
+	SNAPSHOT(config, "snapshot", "snp").set_load_callback(FUNC(apple1_state::snapshot_cb));
 
 	SOFTWARE_LIST(config, "cass_list").set_original("apple1");
 

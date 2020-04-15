@@ -6,7 +6,6 @@
 #include "imagedev/cassette.h"
 #include "machine/i8255.h"
 #include "machine/ins8250.h"
-#include "machine/pc_fdc.h"
 #include "machine/pc_lpt.h"
 #include "machine/pckeybrd.h"
 #include "machine/pic8259.h"
@@ -271,7 +270,7 @@ WRITE_LINE_MEMBER(pcjr_state::keyb_interrupt)
 {
 	int data;
 
-	if(state && (data = m_keyboard->read(machine().dummy_space(), 0)))
+	if(state && (data = m_keyboard->read()))
 	{
 		uint8_t   parity = 0;
 		int     i;
@@ -666,8 +665,8 @@ void pcjr_state::ibmpcjr(machine_config &config)
 	m_keyboard->keypress().set(FUNC(pcjr_state::keyb_interrupt));
 
 	/* cartridge */
-	GENERIC_CARTSLOT(config, "cartslot1", generic_plain_slot, "ibmpcjr_cart", "bin,jrc").set_device_load(FUNC(pcjr_state::cart1_load), this);
-	GENERIC_CARTSLOT(config, "cartslot2", generic_plain_slot, "ibmpcjr_cart", "bin,jrc").set_device_load(FUNC(pcjr_state::cart2_load), this);
+	GENERIC_CARTSLOT(config, "cartslot1", generic_plain_slot, "ibmpcjr_cart", "bin,jrc").set_device_load(FUNC(pcjr_state::cart1_load));
+	GENERIC_CARTSLOT(config, "cartslot2", generic_plain_slot, "ibmpcjr_cart", "bin,jrc").set_device_load(FUNC(pcjr_state::cart2_load));
 
 	/* internal ram */
 	RAM(config, m_ram).set_default_size("640K").set_extra_options("128K, 256K, 512K");

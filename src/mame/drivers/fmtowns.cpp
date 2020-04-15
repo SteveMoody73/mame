@@ -9,7 +9,7 @@
 
     CPU:  various AMD x86 CPUs, originally 80386DX (80387 available as an add-on).
           later models use 80386SX, 80486 and Pentium CPUs
-    Sound:  Yamaha YM3438
+    Sound:  Yamaha YM3438 (some later models are use YMF276; Low voltage variation of YM3438, needs External DAC)
             Ricoh RF5c68
             CD-DA
     Video:  Custom
@@ -30,7 +30,7 @@
 
 */
 
-/* 
+/*
 
 Regular models:
 
@@ -239,6 +239,7 @@ Notes:
 #include "screen.h"
 #include "softlist.h"
 #include "speaker.h"
+#include <math.h>
 
 
 // CD controller IRQ types
@@ -497,14 +498,14 @@ template<int Chip>
 READ8_MEMBER(towns_state::towns_dma_r)
 {
 	logerror("DMA#%01x: read register %i\n",Chip,offset);
-	return m_dma[Chip]->read(space, offset);
+	return m_dma[Chip]->read(offset);
 }
 
 template<int Chip>
 WRITE8_MEMBER(towns_state::towns_dma_w)
 {
 	logerror("DMA#%01x: wrote 0x%02x to register %i\n",Chip,data,offset);
-	m_dma[Chip]->write(space, offset, data);
+	m_dma[Chip]->write(offset, data);
 }
 
 /*
@@ -2037,20 +2038,20 @@ WRITE_LINE_MEMBER(towns_state::towns_scsi_drq)
 // Volume ports - I/O ports 0x4e0-0x4e3
 // 0x4e0 = input volume level
 // 0x4e1 = input channel select
-//         4 = Line in, left channel
-//         5 = Line in, right channel
+//         0 = Line in, left channel
+//         1 = Line in, right channel
 // 0x4e2 = output volume level
 // 0x4e3 = output channel select
+//         0 = CD-DA left channel
+//         1 = CD-DA right channel
 //         2 = MIC
 //         3 = MODEM
-//         4 = CD-DA left channel
-//         5 = CD-DA right channel
 READ8_MEMBER(towns_state::towns_volume_r)
 {
 	switch(offset)
 	{
 	case 2:
-		return(m_towns_volume[m_towns_volume_select]);
+		return(m_towns_volume[m_towns_volume_select & 3]);
 	case 3:
 		return m_towns_volume_select;
 	default:
@@ -2058,20 +2059,35 @@ READ8_MEMBER(towns_state::towns_volume_r)
 	}
 }
 
+void towns_state::cdda_db_to_gain(float db)
+{
+	float gain = powf(10, db / 20.0f);
+	int port = m_towns_volume_select & 3;
+	if(port > 1)
+		return;
+	if(db > 0)
+		gain = 0;
+	m_cdda->set_output_gain(port, gain);
+}
+
 WRITE8_MEMBER(towns_state::towns_volume_w)
 {
 	switch(offset)
 	{
 	case 2:
-		m_towns_volume[m_towns_volume_select] = data;
-		if(m_towns_volume_select == 4)
-			m_cdda->set_output_gain(0, data / 64.0f);
-		if(m_towns_volume_select == 5)
-			m_cdda->set_output_gain(1, data / 64.0f);
+		m_towns_volume[m_towns_volume_select & 3] = data;
+		if(!(m_towns_volume_select & 4) || (m_towns_volume_select & 0x18))
+			return;
+		cdda_db_to_gain((~data & 0x3f) * -0.5f);
 		break;
 	case 3:  // select channel
-		if(data < 8)
-			m_towns_volume_select = data;
+		m_towns_volume_select = data;
+		if(!(data & 4))
+			cdda_db_to_gain(1);
+		else if(data & 8)
+			cdda_db_to_gain(0);
+		else if(data & 0x10)
+			cdda_db_to_gain(-32.0f);
 		break;
 	default:
 		logerror("SND: Volume port %i set to %02x\n",offset,data);
@@ -2837,10 +2853,19 @@ void towns_state::towns_base(machine_config &config)
 	/* sound hardware */
 	SPEAKER(config, "lspeaker").front_left();
 	SPEAKER(config, "rspeaker").front_right();
+
 	ym3438_device &fm(YM3438(config, "fm", 16000000 / 2)); // actual clock speed unknown
 	fm.irq_handler().set(FUNC(towns_state::towns_fm_irq));
 	fm.add_route(0, "lspeaker", 1.00);
 	fm.add_route(1, "rspeaker", 1.00);
+
+/*
+    // Later model uses YMF276 for FM
+    ymf276_device &fm(YMF276(config, "fm", 16000000 / 2)); // actual clock speed unknown
+    fm.irq_handler().set(FUNC(towns_state::towns_fm_irq));
+    fm.add_route(0, "lspeaker", 1.00);
+    fm.add_route(1, "rspeaker", 1.00);
+*/
 
 	rf5c68_device &pcm(RF5C68(config, "pcm", 16000000 / 2));  // actual clock speed unknown
 	pcm.set_end_callback(FUNC(towns_state::towns_pcm_irq));
@@ -2980,7 +3005,7 @@ void towns_state::townssj(machine_config &config)
 	m_maincpu->set_addrmap(AS_IO, &towns_state::towns2_io);
 	m_maincpu->set_vblank_int("screen", FUNC(towns_state::towns_vsync_irq));
 	m_maincpu->set_irq_acknowledge_callback("pic8259_master", FUNC(pic8259_device::inta_cb));
-	
+
 	scsi_port_device &scsi(SCSI_PORT(config, "scsi", 0));
 	scsi.set_slot_device(1, "harddisk", SCSIHD, DEVICE_INPUT_DEFAULTS_NAME(SCSI_ID_0));
 	scsi.set_slot_device(2, "harddisk", SCSIHD, DEVICE_INPUT_DEFAULTS_NAME(SCSI_ID_1));
@@ -3045,7 +3070,7 @@ void marty_state::marty(machine_config &config)
 	m_maincpu->set_addrmap(AS_IO, &marty_state::towns16_io);
 	m_maincpu->set_vblank_int("screen", FUNC(towns_state::towns_vsync_irq));
 	m_maincpu->set_irq_acknowledge_callback("pic8259_master", FUNC(pic8259_device::inta_cb));
-	
+
 	FLOPPY_CONNECTOR(config.replace(), m_flop[1], towns_floppies, nullptr, towns_state::floppy_formats);
 
 	// 2 MB onboard, expandable to 4 MB with a Marty-only expansion card
@@ -3056,9 +3081,9 @@ void marty_state::marty(machine_config &config)
 
 /* ROM definitions */
 
-/* These ROMs were dumped from an FM Towns Model 2. Model 1 is assumed to use the same ROMs, since they were 
-   released at the same time, and the only differences are the amount of RAM and floppy drives. 
-   
+/* These ROMs were dumped from an FM Towns Model 2. Model 1 is assumed to use the same ROMs, since they were
+   released at the same time, and the only differences are the amount of RAM and floppy drives.
+
    The ROM is physically contained in three 4 Mbit chips: two MB834200-20 (DIP40) and one MB834200-25 (QFP44) */
 ROM_START( fmtowns )
 	ROM_REGION32_LE( 0x280000, "user", 0)
@@ -3081,7 +3106,7 @@ ROM_END
 
 /* 16MHz 80386SX, 2MB RAM expandable up to 10MB (due to the limited 24-bit address space of the CPU), dumped from a UX10 */
 ROM_START( fmtownsux )
-	ROM_REGION32_LE( 0x480000, "user", 0)
+	ROM_REGION16_LE( 0x480000, "user", 0)
 	ROM_LOAD("fmt_dos_a.rom",  0x000000, 0x080000, CRC(22270e9f) SHA1(a7e97b25ff72b14121146137db8b45d6c66af2ae) )
 	// no F20 ROM
 	ROM_LOAD("fmt_dic.rom",  0x100000, 0x080000, CRC(82d1daa2) SHA1(7564020dba71deee27184824b84dbbbb7c72aa4e) )
@@ -3142,7 +3167,7 @@ ROM_START( fmtownsftv )
 ROM_END
 
 ROM_START( fmtmarty )
-	ROM_REGION32_LE( 0x480000, "user", 0)
+	ROM_REGION16_LE( 0x480000, "user", 0)
 	ROM_LOAD("mrom.m36",  0x000000, 0x080000, CRC(9c0c060c) SHA1(5721c5f9657c570638352fa9acac57fa8d0b94bd) )
 	ROM_CONTINUE(0x280000,0x180000)
 	ROM_LOAD("mrom.m37",  0x400000, 0x080000, CRC(fb66bb56) SHA1(e273b5fa618373bdf7536495cd53c8aac1cce9a5) )
@@ -3152,7 +3177,7 @@ ROM_START( fmtmarty )
 ROM_END
 
 ROM_START( fmtmarty2 )
-	ROM_REGION32_LE( 0x480000, "user", 0)
+	ROM_REGION16_LE( 0x480000, "user", 0)
 	ROM_LOAD("fmt_dos.rom",  0x000000, 0x080000, CRC(2bc2af96) SHA1(99cd51c5677288ad8ef711b4ac25d981fd586884) )
 	ROM_LOAD("fmt_dic.rom",  0x100000, 0x080000, CRC(82d1daa2) SHA1(7564020dba71deee27184824b84dbbbb7c72aa4e) )
 	ROM_LOAD("fmt_fnt.rom",  0x180000, 0x040000, CRC(dd6fd544) SHA1(a216482ea3162f348fcf77fea78e0b2e4288091a) )
@@ -3166,7 +3191,7 @@ ROM_START( fmtmarty2 )
 ROM_END
 
 ROM_START( carmarty )
-	ROM_REGION32_LE( 0x480000, "user", 0)
+	ROM_REGION16_LE( 0x480000, "user", 0)
 	ROM_LOAD("fmt_dos.rom",  0x000000, 0x080000, CRC(2bc2af96) SHA1(99cd51c5677288ad8ef711b4ac25d981fd586884) )
 	ROM_LOAD("fmt_dic.rom",  0x100000, 0x080000, CRC(82d1daa2) SHA1(7564020dba71deee27184824b84dbbbb7c72aa4e) )
 	ROM_LOAD("fmt_fnt.rom",  0x180000, 0x040000, CRC(dd6fd544) SHA1(a216482ea3162f348fcf77fea78e0b2e4288091a) )

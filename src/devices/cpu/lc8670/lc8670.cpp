@@ -180,6 +180,7 @@ lc8670_cpu_device::lc8670_cpu_device(const machine_config &mconfig, const char *
 	, m_pc(0)
 	, m_ppc(0)
 	, m_bankswitch_func(*this)
+	, m_lcd_update_func(*this)
 {
 	memset(m_sfr, 0x00, sizeof(m_sfr));
 	memset(m_timer0, 0x00, sizeof(m_timer0));
@@ -202,8 +203,8 @@ void lc8670_cpu_device::device_start()
 	set_icountptr(m_icount);
 
 	// resolve callbacks
-	m_lcd_update_func.bind_relative_to(*owner());
 	m_bankswitch_func.resolve();
+	m_lcd_update_func.resolve();
 
 	// setup timers
 	m_basetimer = timer_alloc(BASE_TIMER);
@@ -905,17 +906,17 @@ void lc8670_cpu_device::timer1_tick()
 //  internal map handlers
 //**************************************************************************
 
-READ8_MEMBER(lc8670_cpu_device::mram_r)
+uint8_t lc8670_cpu_device::mram_r(offs_t offset)
 {
 	return m_mram[BIT(REG_PSW,1)*0x100 + offset];
 }
 
-WRITE8_MEMBER(lc8670_cpu_device::mram_w)
+void lc8670_cpu_device::mram_w(offs_t offset, uint8_t data)
 {
 	m_mram[BIT(REG_PSW,1)*0x100 + offset] = data;
 }
 
-READ8_MEMBER(lc8670_cpu_device::xram_r)
+uint8_t lc8670_cpu_device::xram_r(offs_t offset)
 {
 	if (!(REG_VCCR & 0x40) || machine().side_effects_disabled())  // XRAM access enabled
 	{
@@ -938,7 +939,7 @@ READ8_MEMBER(lc8670_cpu_device::xram_r)
 	return 0xff;
 }
 
-WRITE8_MEMBER(lc8670_cpu_device::xram_w)
+void lc8670_cpu_device::xram_w(offs_t offset, uint8_t data)
 {
 	if (!(REG_VCCR & 0x40) || machine().side_effects_disabled())  // XRAM access enabled
 	{
@@ -959,7 +960,7 @@ WRITE8_MEMBER(lc8670_cpu_device::xram_w)
 	}
 }
 
-READ8_MEMBER(lc8670_cpu_device::regs_r)
+uint8_t lc8670_cpu_device::regs_r(offs_t offset)
 {
 	switch(offset)
 	{
@@ -998,7 +999,7 @@ READ8_MEMBER(lc8670_cpu_device::regs_r)
 	return m_sfr[offset];
 }
 
-WRITE8_MEMBER(lc8670_cpu_device::regs_w)
+void lc8670_cpu_device::regs_w(offs_t offset, uint8_t data)
 {
 	switch(offset)
 	{

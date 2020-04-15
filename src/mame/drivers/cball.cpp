@@ -69,7 +69,7 @@ TILE_GET_INFO_MEMBER(cball_state::get_tile_info)
 {
 	uint8_t code = m_video_ram[tile_index];
 
-	SET_TILE_INFO_MEMBER(0, code, code >> 7, 0);
+	tileinfo.set(0, code, code >> 7, 0);
 }
 
 
@@ -82,7 +82,7 @@ WRITE8_MEMBER(cball_state::vram_w)
 
 void cball_state::video_start()
 {
-	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(cball_state::get_tile_info),this), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
+	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(cball_state::get_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
 }
 
 

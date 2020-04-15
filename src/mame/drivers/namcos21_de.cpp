@@ -51,8 +51,6 @@ Driver's Eyes works,
 
 #define ENABLE_LOGGING      0
 
-#define NAMCOS21_NUM_COLORS 0x8000
-
 DECLARE_DEVICE_TYPE(NAMCO_DE_PCB, namco_de_pcbstack_device)
 
 
@@ -170,7 +168,7 @@ void namco_de_pcbstack_device::device_add_mconfig(machine_config &config)
 	NAMCOS21_DSP(config, m_namcos21_dsp, 0);
 	m_namcos21_dsp->set_renderer_tag("namcos21_3d");
 
-	config.m_minimum_quantum = attotime::from_hz(6000); /* 100 CPU slices per frame */
+	config.set_maximum_quantum(attotime::from_hz(6000)); /* 100 CPU slices per frame */
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_1);
 
@@ -183,7 +181,7 @@ void namco_de_pcbstack_device::device_add_mconfig(machine_config &config)
 	m_screen->set_screen_update(FUNC(namco_de_pcbstack_device::screen_update));
 	m_screen->set_palette(m_palette);
 
-	PALETTE(config, m_palette).set_format(palette_device::xBRG_888, NAMCOS21_NUM_COLORS);
+	PALETTE(config, m_palette).set_format(palette_device::xBRG_888, 0x10000/2);
 
 	NAMCOS21_3D(config, m_namcos21_3d, 0);
 	m_namcos21_3d->set_fixed_palbase(0x3f00);
@@ -198,6 +196,7 @@ void namco_de_pcbstack_device::device_add_mconfig(machine_config &config)
 	m_c355spr->set_tile_callback(namco_c355spr_device::c355_obj_code2tile_delegate());
 	m_c355spr->set_palxor(0xf); // reverse mapping
 	m_c355spr->set_color_base(0x1000);
+	m_c355spr->set_external_prifill(true);
 
 	SPEAKER(config, "lspeaker").front_left();
 	SPEAKER(config, "rspeaker").front_right();
@@ -218,6 +217,8 @@ uint32_t namco_de_pcbstack_device::screen_update(screen_device &screen, bitmap_i
 	int pivot = 3;
 	int pri;
 	bitmap.fill(0xff, cliprect );
+	screen.priority().fill(0, cliprect);
+	m_c355spr->get_sprites(cliprect); // TODO : buffered?
 
 	m_c355spr->draw(screen, bitmap, cliprect, 2 );
 	m_c355spr->draw(screen, bitmap, cliprect, 14 );   //driver's eyes

@@ -112,8 +112,8 @@ void orca_ovg_40c_device::device_start()
 {
 	decode_gfx(gfxinfo);
 
-	m_bg_tilemap = &machine().tilemap().create(*this, tilemap_get_info_delegate(FUNC(orca_ovg_40c_device::get_bg_tile_info),this), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
-	m_fg_tilemap = &machine().tilemap().create(*this, tilemap_get_info_delegate(FUNC(orca_ovg_40c_device::get_fg_tile_info),this), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
+	m_bg_tilemap = &machine().tilemap().create(*this, tilemap_get_info_delegate(*this, FUNC(orca_ovg_40c_device::get_bg_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
+	m_fg_tilemap = &machine().tilemap().create(*this, tilemap_get_info_delegate(*this, FUNC(orca_ovg_40c_device::get_fg_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
 
 	m_fg_tilemap->set_transparent_pen(0);
 	m_fg_tilemap->set_scroll_cols(32);
@@ -207,7 +207,7 @@ TILE_GET_INFO_MEMBER(orca_ovg_40c_device::get_bg_tile_info)
 	int code = m_videoram_2[tile_index];
 	int color = (m_attributeram[(tile_index & 0x1f) << 1 | 1] >> 4) & 0x07;
 
-	SET_TILE_INFO_MEMBER(0, code, color, 0);
+	tileinfo.set(0, code, color, 0);
 }
 
 TILE_GET_INFO_MEMBER(orca_ovg_40c_device::get_fg_tile_info)
@@ -215,7 +215,7 @@ TILE_GET_INFO_MEMBER(orca_ovg_40c_device::get_fg_tile_info)
 	int code = m_videoram[tile_index];
 	int color = (m_attributeram[(tile_index & 0x1f) << 1 | 1] >> 0) & 0x07;
 
-	SET_TILE_INFO_MEMBER(3, code, color, 0);
+	tileinfo.set(3, code, color, 0);
 }
 
 void orca_ovg_40c_device::draw_bullets( bitmap_rgb32 &bitmap, const rectangle &cliprect )
@@ -283,7 +283,7 @@ void orca_ovg_40c_device::device_config_complete()
 		screen().set_raw(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART);
 
 	if (!screen().has_screen_update())
-		screen().set_screen_update(screen_update_rgb32_delegate(FUNC(orca_ovg_40c_device::screen_update), this));
+		screen().set_screen_update(*this, FUNC(orca_ovg_40c_device::screen_update));
 }
 
 void orca_ovg_40c_device::device_add_mconfig(machine_config &config)

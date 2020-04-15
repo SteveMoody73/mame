@@ -218,7 +218,7 @@ void tvc_state::set_mem_page(uint8_t data)
 		case 0xc0 : // External ROM selected
 			TVC_INSTALL_ROM_BANK(3, "bank4", 0xc000, 0xffff);
 			membank("bank4")->set_base(m_ext->base());
-			space.install_readwrite_handler (0xc000, 0xdfff, read8_delegate(FUNC(tvc_state::expansion_r), this), write8_delegate(FUNC(tvc_state::expansion_w), this), 0);
+			space.install_readwrite_handler(0xc000, 0xdfff, read8_delegate(*this, FUNC(tvc_state::expansion_r)), write8_delegate(*this, FUNC(tvc_state::expansion_w)), 0);
 			m_bank_type[3] = -1;
 			break;
 	}
@@ -372,7 +372,7 @@ void tvc_state::tvc_io(address_map &map)
 	map.unmap_value_high();
 	map.global_mask(0xff);
 	map(0x00, 0x00).w(FUNC(tvc_state::border_color_w));
-	map(0x01, 0x01).w("cent_data_out", FUNC(output_latch_device::bus_w));
+	map(0x01, 0x01).w("cent_data_out", FUNC(output_latch_device::write));
 	map(0x02, 0x02).w(FUNC(tvc_state::bank_w));
 	map(0x03, 0x03).w(FUNC(tvc_state::keyboard_w));
 	map(0x04, 0x06).w(FUNC(tvc_state::sound_w));
@@ -787,7 +787,7 @@ void tvc_state::tvc(machine_config &config)
 	crtc.set_screen("screen");
 	crtc.set_show_border_area(false);
 	crtc.set_char_width(8); /*?*/
-	crtc.set_update_row_callback(FUNC(tvc_state::crtc_update_row), this);
+	crtc.set_update_row_callback(FUNC(tvc_state::crtc_update_row));
 	crtc.out_cur_callback().set(FUNC(tvc_state::int_ff_set));
 
 	/* internal ram */
@@ -830,7 +830,7 @@ void tvc_state::tvc(machine_config &config)
 	m_cassette->add_route(ALL_OUTPUTS, "mono", 0.05);
 
 	/* quickload */
-	QUICKLOAD(config, "quickload", "cas", attotime::from_seconds(6)).set_load_callback(FUNC(tvc_state::quickload_cb), this);
+	QUICKLOAD(config, "quickload", "cas", attotime::from_seconds(6)).set_load_callback(FUNC(tvc_state::quickload_cb));
 
 	/* Software lists */
 	SOFTWARE_LIST(config, "cart_list").set_original("tvc_cart");

@@ -92,7 +92,7 @@ void tc0091lvc_device::cpu_map(address_map &map)
 {
 	// 0x0000-0x7fff ROM (0x0000-0x5fff Fixed, 0x6000-0x7fff Bankswitched)
 	map(0x0000, 0x5fff).r(FUNC(tc0091lvc_device::rom_r));
-	map(0x6000, 0x7fff).lr8("banked_rom_r", [this](offs_t offset) { return rom_r((m_rom_bank << 13) | (offset & 0x1fff)); });
+	map(0x6000, 0x7fff).lr8(NAME([this] (offs_t offset) { return rom_r((m_rom_bank << 13) | (offset & 0x1fff)); }));
 
 	// 0x8000-0xbfff External mappable area
 
@@ -110,7 +110,7 @@ void tc0091lvc_device::banked_map(address_map &map)
 	map(0x010000, 0x01ffff).readonly().share("vram");
 	// note, the way tiles are addressed suggests that 0x0000-0x3fff of this might be usable,
 	//       but we don't map it anywhere, so the first tiles are always blank at the moment.
-	map(0x014000, 0x01ffff).lw8("vram_w", [this](offs_t offset, u8 data) { vram_w(offset + 0x4000, data); });
+	map(0x014000, 0x01ffff).lw8(NAME([this] (offs_t offset, u8 data) { vram_w(offset + 0x4000, data); }));
 	map(0x040000, 0x05ffff).ram().share("bitmap_ram");
 	map(0x080000, 0x0801ff).ram().w("palette", FUNC(palette_device::write8)).share("palette");
 }
@@ -118,6 +118,7 @@ void tc0091lvc_device::banked_map(address_map &map)
 tc0091lvc_device::tc0091lvc_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
 	: device_t(mconfig, TC0091LVC, tag, owner, clock)
 	, device_gfx_interface(mconfig, *this, gfxinfo, "palette")
+	, m_irq_enable(0)
 	, m_bankdev(*this, "bankdev_%u", 0U)
 	, m_vram(*this, "vram")
 	, m_bitmap_ram(*this, "bitmap_ram")
@@ -134,7 +135,7 @@ TILE_GET_INFO_MEMBER(tc0091lvc_device::get_tile_info)
 			| ((m_vregs[(attr & 0xc) >> 2]) << 10);
 //          | (state->m_horshoes_gfxbank << 12);
 
-	SET_TILE_INFO_MEMBER(0,
+	tileinfo.set(0,
 			code,
 			(attr & 0xf0) >> 4,
 			0);
@@ -146,7 +147,7 @@ TILE_GET_INFO_MEMBER(tc0091lvc_device::get_tx_tile_info)
 	const u16 code = m_vram[0xa000 + (2 * tile_index)]
 			| ((attr & 0x07) << 8);
 
-	SET_TILE_INFO_MEMBER(2,
+	tileinfo.set(2,
 			code,
 			(attr & 0xf0) >> 4,
 			0);
@@ -183,9 +184,9 @@ void tc0091lvc_device::device_start()
 	m_vregs = make_unique_clear<u8[]>(0x100);
 	m_sprram_buffer = make_unique_clear<u8[]>(0x400);
 
-	tx_tilemap    = &machine().tilemap().create(*this, tilemap_get_info_delegate(FUNC(tc0091lvc_device::get_tx_tile_info), this),      TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
-	bg_tilemap[0] = &machine().tilemap().create(*this, tilemap_get_info_delegate(FUNC(tc0091lvc_device::get_tile_info<0x8000>), this), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
-	bg_tilemap[1] = &machine().tilemap().create(*this, tilemap_get_info_delegate(FUNC(tc0091lvc_device::get_tile_info<0x9000>), this), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
+	tx_tilemap    = &machine().tilemap().create(*this, tilemap_get_info_delegate(*this, FUNC(tc0091lvc_device::get_tx_tile_info)),      TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
+	bg_tilemap[0] = &machine().tilemap().create(*this, tilemap_get_info_delegate(*this, FUNC(tc0091lvc_device::get_tile_info<0x8000>)), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
+	bg_tilemap[1] = &machine().tilemap().create(*this, tilemap_get_info_delegate(*this, FUNC(tc0091lvc_device::get_tile_info<0x9000>)), TILEMAP_SCAN_ROWS, 8, 8, 64, 32);
 
 	tx_tilemap->set_transparent_pen(0);
 	bg_tilemap[0]->set_transparent_pen(0);

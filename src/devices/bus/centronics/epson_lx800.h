@@ -1,4 +1,4 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Dirk Best
 /**********************************************************************
 
@@ -57,13 +57,13 @@ private:
 
 	DECLARE_READ8_MEMBER(centronics_data_r);
 	DECLARE_WRITE_LINE_MEMBER(centronics_pe_w);
-	DECLARE_WRITE_LINE_MEMBER(paperempty_led_w);
 	DECLARE_WRITE_LINE_MEMBER(reset_w);
 
 	void lx800_mem(address_map &map);
 
 	required_device<cpu_device> m_maincpu;
 	required_device<beep_device> m_beep;
+	output_finder<> m_online_led;
 };
 
 

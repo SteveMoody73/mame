@@ -89,6 +89,7 @@
 #include "bus/a2bus/a2vulcan.h"
 #include "bus/a2bus/4play.h"
 //#include "bus/a2bus/pc_xporter.h"
+#include "bus/a2bus/byte8251.h"
 
 #include "bus/a2gameio/gameio.h"
 
@@ -1173,7 +1174,7 @@ void apple2gs_state::adb_check_mouse()
 			m_adb_kmstatus &= ~0x02;
 			if (m_adb_kmstatus & 0x40)
 			{
-				//raise_irq(IRQS_ADB);
+				raise_irq(IRQS_ADB);
 			}
 		}
 	}
@@ -1294,6 +1295,8 @@ void apple2gs_state::machine_start()
 	save_item(NAME(m_intflag));
 	save_item(NAME(m_vgcint));
 	save_item(NAME(m_inten));
+	save_item(NAME(m_slot_irq));
+	save_item(NAME(m_slow_counter));
 	save_item(m_clkdata, "CLKDATA");
 	save_item(m_clock_control, "CLKCTRL");
 	save_item(m_clock_read, "CLKRD");
@@ -1321,6 +1324,8 @@ void apple2gs_state::machine_start()
 	save_item(NAME(m_lastchar));
 	save_item(NAME(m_strobe));
 	save_item(NAME(m_transchar));
+	save_item(NAME(m_anykeydown));
+	save_item(NAME(m_repeatdelay));
 #endif
 	save_item(m_mouse_x, "MX");
 	save_item(m_mouse_y, "MY");
@@ -2306,6 +2311,12 @@ READ8_MEMBER(apple2gs_state::c000_r)
 		case 0x46:  // INTFLAG
 			return (m_an3 ? INTFLAG_AN3 : 0x00) | m_intflag;
 
+		case 0x47:  // CLRVBLINT
+			m_intflag &= ~(INTFLAG_VBL|INTFLAG_QUARTER);
+			lower_irq(IRQS_VBL);
+			lower_irq(IRQS_QTRSEC);
+			return read_floatingbus();
+
 		case 0x60: // button 3 on IIgs
 			return m_gameio->sw3_r() | uFloatingBus7;
 
@@ -2570,6 +2581,7 @@ WRITE8_MEMBER(apple2gs_state::c000_w)
 			{
 				m_bank0_atc->set_bank(1);
 				m_bank1_atc->set_bank(1);
+
 			}
 			break;
 
@@ -2647,7 +2659,7 @@ WRITE8_MEMBER(apple2gs_state::c000_w)
 			break;
 
 		case 0x47:  // CLRVBLINT
-			m_intflag &= ~INTFLAG_VBL;
+			m_intflag &= ~(INTFLAG_VBL|INTFLAG_QUARTER);
 			lower_irq(IRQS_VBL);
 			lower_irq(IRQS_QTRSEC);
 			break;
@@ -2912,9 +2924,15 @@ READ8_MEMBER(apple2gs_state::c800_r)
 
 	if ((offset == 0x7ff) && !machine().side_effects_disabled())
 	{
+		uint8_t rv = 0xff;
+		if ((m_cnxx_slot > 0) && (m_slotdevice[m_cnxx_slot] != nullptr))
+		{
+			rv = m_slotdevice[m_cnxx_slot]->read_c800(offset&0xfff);
+		}
+
 		m_cnxx_slot = CNXX_UNCLAIMED;
 		update_slotrom_banks();
-		return 0xff;
+		return rv;
 	}
 
 	if ((m_cnxx_slot > 0) && (m_slotdevice[m_cnxx_slot] != nullptr))
@@ -2948,16 +2966,16 @@ WRITE8_MEMBER(apple2gs_state::c800_w)
 {
 	slow_cycle();
 
+	if ((m_cnxx_slot > 0) && (m_slotdevice[m_cnxx_slot] != nullptr))
+	{
+		m_slotdevice[m_cnxx_slot]->write_c800(offset&0xfff, data);
+	}
+
 	if (offset == 0x7ff)
 	{
 		m_cnxx_slot = CNXX_UNCLAIMED;
 		update_slotrom_banks();
 		return;
-	}
-
-	if ((m_cnxx_slot > 0) && (m_slotdevice[m_cnxx_slot] != nullptr))
-	{
-		m_slotdevice[m_cnxx_slot]->write_c800(offset&0xfff, data);
 	}
 }
 
@@ -3443,6 +3461,11 @@ WRITE8_MEMBER(apple2gs_state::b1ram4000_w)
 
 READ8_MEMBER(apple2gs_state::bank0_c000_r)
 {
+	if (offset & 0x2000)
+	{
+		offset ^= 0x1000;
+	}
+
 	if (m_ramrd)
 	{
 		return m_ram_ptr[offset + 0x3c000];
@@ -3453,6 +3476,11 @@ READ8_MEMBER(apple2gs_state::bank0_c000_r)
 
 WRITE8_MEMBER(apple2gs_state::bank0_c000_w)
 {
+	if (offset & 0x2000)
+	{
+		offset ^= 0x1000;
+	}
+
 	if (m_ramwrt)
 	{
 		m_ram_ptr[offset + 0x3c000] = data;
@@ -3464,8 +3492,8 @@ WRITE8_MEMBER(apple2gs_state::bank0_c000_w)
 
 READ8_MEMBER(apple2gs_state::bank1_0000_r) { return m_ram_ptr[offset + 0x30000]; }
 WRITE8_MEMBER(apple2gs_state::bank1_0000_w) { m_ram_ptr[offset + 0x30000] = data; }
-READ8_MEMBER(apple2gs_state::bank1_c000_r) { return m_ram_ptr[offset + 0x3c000]; }
-WRITE8_MEMBER(apple2gs_state::bank1_c000_w) { m_ram_ptr[offset + 0x3c000] = data; }
+READ8_MEMBER(apple2gs_state::bank1_c000_r) { if (offset & 0x2000) offset ^= 0x1000; return m_ram_ptr[offset + 0x3c000]; }
+WRITE8_MEMBER(apple2gs_state::bank1_c000_w) { if (offset & 0x2000) offset ^= 0x1000; m_ram_ptr[offset + 0x3c000] = data; }
 WRITE8_MEMBER(apple2gs_state::bank1_0000_sh_w)
 {
 	m_ram_ptr[offset + 0x30000] = data;
@@ -4525,6 +4553,7 @@ static void apple2_cards(device_slot_interface &device)
 	device.option_add("4play", A2BUS_4PLAY); /* 4Play Joystick Card (Rev. B) */
 //  device.option_add("magicmusician", A2BUS_MAGICMUSICIAN);    /* Magic Musician Card */
 //  device.option_add("pcxport", A2BUS_PCXPORTER); /* Applied Engineering PC Transporter */
+	device.option_add("byte8251", A2BUS_BYTE8251); /* BYTE Magazine 8251 serial card */
 }
 
 void apple2gs_state::apple2gs(machine_config &config)
@@ -4536,7 +4565,7 @@ void apple2gs_state::apple2gs(machine_config &config)
 	m_maincpu->set_dasm_override(FUNC(apple2gs_state::dasm_trampoline));
 	TIMER(config, m_scantimer, 0);
 	m_scantimer->configure_scanline(FUNC(apple2gs_state::apple2_interrupt), "screen", 0, 1);
-	config.m_minimum_quantum = attotime::from_hz(60);
+	config.set_maximum_quantum(attotime::from_hz(60));
 
 	M50741(config, m_adbmicro, A2GS_MASTER_CLOCK/8);
 	m_adbmicro->read_p<0>().set(FUNC(apple2gs_state::adbmicro_p0_in));
@@ -4709,7 +4738,7 @@ void apple2gs_state::apple2gs(machine_config &config)
 	SOFTWARE_LIST(config, "flop525_clean").set_compatible("apple2_flop_clcracked"); // No filter on clean cracks yet.
 	// As WOZ images won't load in the 2GS driver yet, comment out the softlist entry.
 	//SOFTWARE_LIST(config, "flop525_orig").set_compatible("apple2_flop_orig").set_filter("A2GS");  // Filter list to compatible disks for this machine.
-	SOFTWARE_LIST(config, "flop525_misc").set_compatible("apple2_misc");
+	SOFTWARE_LIST(config, "flop525_misc").set_compatible("apple2_flop_misc");
 }
 
 void apple2gs_state::apple2gsr1(machine_config &config)

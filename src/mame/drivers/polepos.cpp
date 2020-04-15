@@ -477,7 +477,7 @@ void polepos_state::z8002_map_2(address_map &map)
 static INPUT_PORTS_START( polepos )
 	PORT_START("IN0")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNUSED )
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_NAME("Gear Change") PORT_CODE(KEYCODE_SPACE) POLEPOS_TOGGLE /* Gear */
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON3 ) PORT_NAME("Gear Change") POLEPOS_TOGGLE /* Gear */
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_MEMBER(polepos_state, auto_start_r)  // start 1, program controlled
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNUSED )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_COIN1 )
@@ -607,7 +607,7 @@ static INPUT_PORTS_START( topracern )
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_NAME("Gear Change") PORT_CODE(KEYCODE_SPACE) POLEPOS_TOGGLE /* Gear */
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON3 ) PORT_NAME("Gear Change") POLEPOS_TOGGLE /* Gear */
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1 )
 	PORT_SERVICE( 0x80, IP_ACTIVE_LOW )
 
@@ -898,7 +898,7 @@ void polepos_state::polepos(machine_config &config)
 
 	WATCHDOG_TIMER(config, "watchdog").set_vblank_count(m_screen, 16);   // 128V clocks the same as VBLANK
 
-	config.m_minimum_quantum = attotime::from_hz(6000);  /* some interleaving */
+	config.set_maximum_quantum(attotime::from_hz(6000));  /* some interleaving */
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_1);
 
@@ -1007,7 +1007,7 @@ void polepos_state::topracern(machine_config &config)
 
 	WATCHDOG_TIMER(config, "watchdog").set_vblank_count(m_screen, 16);   // 128V clocks the same as VBLANK
 
-	config.m_minimum_quantum = attotime::from_hz(6000);  /* some interleaving */
+	config.set_maximum_quantum(attotime::from_hz(6000));  /* some interleaving */
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_1);
 
@@ -2449,7 +2449,7 @@ ROM_END
 void polepos_state::init_polepos2()
 {
 	/* note that the bootleg version doesn't need this custom IC; it has a hacked ROM in its place */
-	m_subcpu->space(AS_PROGRAM).install_read_handler(0x4000, 0x5fff, read16_delegate(FUNC(polepos_state::polepos2_ic25_r),this));
+	m_subcpu->space(AS_PROGRAM).install_read_handler(0x4000, 0x5fff, read16_delegate(*this, FUNC(polepos_state::polepos2_ic25_r)));
 }
 
 

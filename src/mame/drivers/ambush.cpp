@@ -638,7 +638,7 @@ TILE_GET_INFO_MEMBER( ambush_state::ambush_char_tile_info )
 	int color = (m_color_bank << 4) | (attr & 0x0f);
 	tileinfo.category = BIT(attr, 4);
 
-	SET_TILE_INFO_MEMBER(0, code, color, 0);
+	tileinfo.set(0, code, color, 0);
 }
 
 TILE_GET_INFO_MEMBER( ambush_state::mariobl_char_tile_info )
@@ -650,7 +650,7 @@ TILE_GET_INFO_MEMBER( ambush_state::mariobl_char_tile_info )
 	int code = ((attr & 0x40) << 2) | m_video_ram[tile_index];
 	int color = ((attr & 0x40) >> 2) | 8 | (m_video_ram[tile_index] >> 5);
 
-	SET_TILE_INFO_MEMBER(0, code, color, 0);
+	tileinfo.set(0, code, color, 0);
 }
 
 TILE_GET_INFO_MEMBER( ambush_state::dkong3abl_char_tile_info )
@@ -663,7 +663,7 @@ TILE_GET_INFO_MEMBER( ambush_state::dkong3abl_char_tile_info )
 	int code = ((attr & 0x40) << 2) | m_video_ram[tile_index];
 	int color = (BIT(attr, 6) << 5) | (BIT(attr, 6) << 4) | (attr & 0x07);
 
-	SET_TILE_INFO_MEMBER(0, code, color, 0);
+	tileinfo.set(0, code, color, 0);
 }
 
 
@@ -681,7 +681,7 @@ MACHINE_START_MEMBER( ambush_state, ambush )
 	register_save_states();
 
 	// create character tilemap
-	m_char_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(ambush_state::ambush_char_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
+	m_char_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(ambush_state::ambush_char_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
 	m_char_tilemap->set_transparent_pen(0);
 	m_char_tilemap->set_scroll_cols(32);
 }
@@ -691,7 +691,7 @@ MACHINE_START_MEMBER( ambush_state, mariobl )
 	register_save_states();
 
 	// create character tilemap
-	m_char_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(ambush_state::mariobl_char_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
+	m_char_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(ambush_state::mariobl_char_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
 	m_char_tilemap->set_transparent_pen(0);
 	m_gfxdecode->gfx(0)->set_granularity(8);
 }
@@ -701,7 +701,7 @@ MACHINE_START_MEMBER( ambush_state, dkong3abl )
 	register_save_states();
 
 	// create character tilemap
-	m_char_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(ambush_state::dkong3abl_char_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
+	m_char_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(ambush_state::dkong3abl_char_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
 	m_char_tilemap->set_transparent_pen(0);
 }
 

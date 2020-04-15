@@ -65,11 +65,10 @@ public:
 		m_board(*this, "board"),
 		m_display(*this, "display"),
 		m_dac(*this, "dac"),
-		m_cart(*this, "cartslot"),
 		m_inputs(*this, "IN.0")
 	{ }
 
-	// machine drivers
+	// machine configs
 	void sc9b(machine_config &config);
 	void sc9c(machine_config &config);
 	void sc9d(machine_config &config);
@@ -84,7 +83,6 @@ protected:
 	required_device<sensorboard_device> m_board;
 	required_device<pwm_display_device> m_display;
 	required_device<dac_bit_interface> m_dac;
-	required_device<generic_slot_device> m_cart;
 	required_ioport m_inputs;
 
 	// address maps
@@ -94,8 +92,6 @@ protected:
 	// periodic interrupts
 	template<int Line> TIMER_DEVICE_CALLBACK_MEMBER(irq_on) { m_maincpu->set_input_line(Line, ASSERT_LINE); }
 	template<int Line> TIMER_DEVICE_CALLBACK_MEMBER(irq_off) { m_maincpu->set_input_line(Line, CLEAR_LINE); }
-
-	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(cart_load);
 
 	// I/O handlers
 	void update_display();
@@ -153,20 +149,6 @@ void sc9c_state::sc9c_set_cpu_freq()
 /******************************************************************************
     I/O
 ******************************************************************************/
-
-// cartridge
-
-DEVICE_IMAGE_LOAD_MEMBER(sc9_state::cart_load)
-{
-	u32 size = m_cart->common_get_size("rom");
-	m_cart->rom_alloc(size, GENERIC_ROM8_WIDTH, ENDIANNESS_LITTLE);
-	m_cart->common_load_rom(m_cart->get_rom_base(), size, "rom");
-
-	return image_init_result::PASS;
-}
-
-
-// TTL/generic
 
 void sc9_state::update_display()
 {
@@ -271,7 +253,7 @@ INPUT_PORTS_END
 
 
 /******************************************************************************
-    Machine Drivers
+    Machine Configs
 ******************************************************************************/
 
 void sc9_state::sc9d(machine_config &config)
@@ -280,7 +262,7 @@ void sc9_state::sc9d(machine_config &config)
 	M6502(config, m_maincpu, 3.9_MHz_XTAL/2); // R6502AP, 3.9MHz resonator
 	m_maincpu->set_addrmap(AS_PROGRAM, &sc9_state::sc9d_map);
 
-	const attotime irq_period = attotime::from_hz(610); // from 555 timer (22nF, 102K, 2.7K)
+	const attotime irq_period = attotime::from_hz(600); // from 555 timer (22nF, 102K, 2.7K), ideal frequency is 600Hz
 	TIMER(config, m_irq_on).configure_periodic(FUNC(sc9_state::irq_on<M6502_IRQ_LINE>), irq_period);
 	m_irq_on->set_start_delay(irq_period - attotime::from_usec(41)); // active for 41us
 	TIMER(config, "irq_off").configure_periodic(FUNC(sc9_state::irq_off<M6502_IRQ_LINE>), irq_period);
@@ -299,9 +281,7 @@ void sc9_state::sc9d(machine_config &config)
 	VOLTAGE_REGULATOR(config, "vref").add_route(0, "dac", 1.0, DAC_VREF_POS_INPUT);
 
 	/* cartridge */
-	GENERIC_CARTSLOT(config, m_cart, generic_plain_slot, "fidel_scc", "bin,dat");
-	m_cart->set_device_load(FUNC(sc9_state::cart_load), this);
-
+	GENERIC_CARTSLOT(config, "cartslot", generic_plain_slot, "fidel_scc");
 	SOFTWARE_LIST(config, "cart_list").set_original("fidel_scc");
 }
 

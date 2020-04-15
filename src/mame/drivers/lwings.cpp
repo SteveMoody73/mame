@@ -285,7 +285,7 @@ READ8_MEMBER(lwings_state::avengers_soundlatch2_r)
 WRITE8_MEMBER(lwings_state::msm5205_w)
 {
 	m_msm->reset_w(BIT(data, 7));
-	m_msm->write_data(data);
+	m_msm->data_w(data);
 	m_msm->vclk_w(1);
 	m_msm->vclk_w(0);
 }
@@ -1777,8 +1777,8 @@ ROM_END
 
 void lwings_state::init_avengersb()
 {
-	/* set up protection handlers */
-	m_maincpu->space(AS_PROGRAM).install_write_handler(0xf80c, 0xf80c, write8smo_delegate(FUNC(generic_latch_8_device::write), (generic_latch_8_device*)m_soundlatch));
+	// set up protection handlers
+	m_maincpu->space(AS_PROGRAM).install_write_handler(0xf80c, 0xf80c, write8smo_delegate(*m_soundlatch, FUNC(generic_latch_8_device::write)));
 }
 
 

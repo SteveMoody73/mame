@@ -1,7 +1,8 @@
 // license:GPL-2.0+
 // copyright-holders:FelipeSanches, Sandro Ronco
 //
-// Wacky Gator
+// Namco Gator Panic (Wani Wani Panic)
+// USA version distributed by Data East and renamed "Wacky Gator"
 //
 // Driver by Sandro Ronco and
 //  Felipe Correa da Silva Sanches <juca@members.fsf.org>
@@ -252,7 +253,7 @@ WRITE_LINE_MEMBER(wackygtr_state::adpcm_int)
 	if (!(m_adpcm_ctrl & 0x80))
 	{
 		uint8_t data = m_samples->base()[m_adpcm_pos & 0xffff];
-		m_msm->write_data((m_adpcm_sel ? data : (data >> 4)) & 0x0f);
+		m_msm->data_w((m_adpcm_sel ? data : (data >> 4)) & 0x0f);
 		m_adpcm_pos += m_adpcm_sel;
 		m_adpcm_sel ^= 1;
 	}
@@ -345,4 +346,4 @@ ROM_START( wackygtr )
 	ROM_LOAD("wp3-vo0.2h", 0x0000, 0x10000, CRC(91c7986f) SHA1(bc9fa0d41c1caa0f909a349f511d022b7e42c6cd))
 ROM_END
 
-GAME(1990, wackygtr,    0, wackygtr,  wackygtr, wackygtr_state, empty_init, ROT0, "Data East", "Wacky Gator", MACHINE_IS_SKELETON_MECHANICAL | MACHINE_CLICKABLE_ARTWORK)
+GAME(1988, wackygtr,    0, wackygtr,  wackygtr, wackygtr_state, empty_init, ROT0, "Namco (Data East license)", "Wacky Gator (US)", MACHINE_IS_SKELETON_MECHANICAL | MACHINE_CLICKABLE_ARTWORK)

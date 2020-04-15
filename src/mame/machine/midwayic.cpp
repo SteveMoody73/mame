@@ -756,11 +756,13 @@ void midway_ioasic_device::device_start()
 	/* configure the fifo */
 	if (m_has_dcs)
 	{
-		m_dcs->set_fifo_callbacks(read16_delegate(FUNC(midway_ioasic_device::fifo_r),this),
-			read16_delegate(FUNC(midway_ioasic_device::fifo_status_r),this),
-			write_line_delegate(FUNC(midway_ioasic_device::fifo_reset_w),this));
-		m_dcs->set_io_callbacks(write_line_delegate(FUNC(midway_ioasic_device::ioasic_output_full),this),
-			write_line_delegate(FUNC(midway_ioasic_device::ioasic_input_empty),this));
+		m_dcs->set_fifo_callbacks(
+				read16smo_delegate(*this, FUNC(midway_ioasic_device::fifo_r)),
+				read16_delegate(*this, FUNC(midway_ioasic_device::fifo_status_r)),
+				write_line_delegate(*this, FUNC(midway_ioasic_device::fifo_reset_w)));
+		m_dcs->set_io_callbacks(
+				write_line_delegate(*this, FUNC(midway_ioasic_device::ioasic_output_full)),
+				write_line_delegate(*this, FUNC(midway_ioasic_device::ioasic_input_empty)));
 	}
 
 	fifo_reset_w(1);
@@ -852,7 +854,7 @@ WRITE_LINE_MEMBER(midway_ioasic_device::ioasic_output_full)
  *
  *************************************/
 
-READ16_MEMBER(midway_ioasic_device::fifo_r)
+uint16_t midway_ioasic_device::fifo_r()
 {
 	uint16_t result = 0;
 
@@ -1163,7 +1165,7 @@ WRITE32_MEMBER( midway_ioasic_device::write )
 			/* sound reset? */
 			if (m_has_dcs)
 			{
-				m_dcs->reset_w(~newreg & 1);
+				m_dcs->reset_w(newreg & 1);
 			}
 			else if (m_has_cage)
 			{

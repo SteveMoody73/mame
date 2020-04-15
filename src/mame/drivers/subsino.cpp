@@ -387,20 +387,20 @@ TILE_GET_INFO_MEMBER(subsino_state::get_tile_info)
 	uint16_t color = (code >> 8) & 0x0f;
 	code = ((code & 0xf000) >> 4) + ((code & 0xff) >> 0);
 	code += m_tiles_offset;
-	SET_TILE_INFO_MEMBER(0, code, color, 0);
+	tileinfo.set(0, code, color, 0);
 }
 
 TILE_GET_INFO_MEMBER(subsino_state::get_stbsub_tile_info)
 {
 	uint16_t code = m_videoram[ tile_index ] + (m_colorram[ tile_index ] << 8);
 	code&= 0x3fff;
-	SET_TILE_INFO_MEMBER(0, code, 0, 0);
+	tileinfo.set(0, code, 0, 0);
 }
 
 
 VIDEO_START_MEMBER(subsino_state,subsino)
 {
-	m_tmap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(subsino_state::get_tile_info),this), TILEMAP_SCAN_ROWS, 8,8, 0x40,0x20);
+	m_tmap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(subsino_state::get_tile_info)), TILEMAP_SCAN_ROWS, 8,8, 0x40,0x20);
 	m_tmap->set_transparent_pen(0 );
 	m_tiles_offset = 0;
 }
@@ -419,7 +419,7 @@ TILE_GET_INFO_MEMBER(subsino_state::get_reel_tile_info)
 	int code = m_reel_ram[Reel][tile_index];
 	int colour = (m_out_c&0x7) + 8;
 
-	SET_TILE_INFO_MEMBER(1,
+	tileinfo.set(1,
 			code,
 			colour,
 			0);
@@ -431,7 +431,7 @@ TILE_GET_INFO_MEMBER(subsino_state::get_stbsub_reel_tile_info)
 	int code = m_reel_ram[Reel][tile_index];
 	int attr = m_reel_attr[Reel][tile_index];
 
-	SET_TILE_INFO_MEMBER(1,
+	tileinfo.set(1,
 			code | (attr << 8),
 			0,
 			0);
@@ -442,9 +442,9 @@ VIDEO_START_MEMBER(subsino_state, reels)
 {
 	VIDEO_START_CALL_MEMBER( subsino );
 
-	m_reel_tilemap[0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(subsino_state::get_reel_tile_info<0>), this), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
-	m_reel_tilemap[1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(subsino_state::get_reel_tile_info<1>), this), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
-	m_reel_tilemap[2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(subsino_state::get_reel_tile_info<2>), this), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
+	m_reel_tilemap[0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(subsino_state::get_reel_tile_info<0>)), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
+	m_reel_tilemap[1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(subsino_state::get_reel_tile_info<1>)), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
+	m_reel_tilemap[2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(subsino_state::get_reel_tile_info<2>)), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
 
 	m_reel_tilemap[0]->set_scroll_cols(64);
 	m_reel_tilemap[1]->set_scroll_cols(64);
@@ -454,12 +454,12 @@ VIDEO_START_MEMBER(subsino_state, reels)
 
 VIDEO_START_MEMBER(subsino_state,stbsub)
 {
-	m_tmap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(subsino_state::get_stbsub_tile_info), this), TILEMAP_SCAN_ROWS, 8, 8, 0x40, 0x20);
+	m_tmap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(subsino_state::get_stbsub_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 0x40, 0x20);
 	m_tmap->set_transparent_pen(0 );
 
-	m_reel_tilemap[0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(subsino_state::get_stbsub_reel_tile_info<0>), this), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
-	m_reel_tilemap[1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(subsino_state::get_stbsub_reel_tile_info<1>), this), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
-	m_reel_tilemap[2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(subsino_state::get_stbsub_reel_tile_info<2>), this), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
+	m_reel_tilemap[0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(subsino_state::get_stbsub_reel_tile_info<0>)), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
+	m_reel_tilemap[1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(subsino_state::get_stbsub_reel_tile_info<1>)), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
+	m_reel_tilemap[2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(subsino_state::get_stbsub_reel_tile_info<2>)), TILEMAP_SCAN_ROWS, 8, 32, 64, 8);
 
 	m_reel_tilemap[0]->set_scroll_cols(64);
 	m_reel_tilemap[1]->set_scroll_cols(64);
