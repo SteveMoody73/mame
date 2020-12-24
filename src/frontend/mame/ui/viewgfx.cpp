@@ -641,7 +641,6 @@ static void palette_handle_keys(running_machine &machine, ui_gfx_state &state)
 static void palette_handle_save(running_machine &machine, ui_gfx_state &state)
 {
 	device_palette_interface *palette = state.palette.interface;
-	palette_device *paldev = dynamic_cast<palette_device *>(&palette->device());
 
 	int x, y;
 
@@ -1255,8 +1254,6 @@ static void gfxset_handle_save(running_machine &machine, ui_gfx_state &state)
 			state.palette.devindex = 0;
 			palette_set_device(machine, state);
 
-			int entries = gfx.palette().entries();
-
 			const rgb_t *palette = gfx.palette().palette()->entry_list_raw() + gfx.colorbase() + color * gfx.granularity();
 
 			// save the file
@@ -1337,7 +1334,6 @@ static void gfxset_draw_save_item(gfx_element &gfx, int index, bitmap_ind16 &bit
 {
 	int width = (rotate & ORIENTATION_SWAP_XY) ? gfx.height() : gfx.width();
 	int height = (rotate & ORIENTATION_SWAP_XY) ? gfx.width() : gfx.height();
-	const rgb_t *palette = gfx.palette().palette()->entry_list_raw() + gfx.colorbase() + color * gfx.granularity();
 	int x, y;
 
 	// loop over rows in the cell

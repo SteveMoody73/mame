@@ -247,7 +247,7 @@ void ks0164_cpu_device::execute_run()
 		case 0x00: case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x06: case 0x07: {
 			// Conditional branches
 			// 00cc ccoo oooo oooo
-			bool cond;
+			bool cond = false;
 			switch((opcode >> 10) & 0xf) {
 			case 0x0: cond = !(m_r[R_PSW] & F_Z); break;
 			case 0x1: cond =   m_r[R_PSW] & F_Z ; break;
@@ -350,7 +350,7 @@ void ks0164_cpu_device::execute_run()
 				u16 v1 = m_r[(opcode >> 4) & 7];
 				u16 v2 = m_program_cache->read_word(m_r[R_PC]);
 				m_r[R_PC] += 2;
-				u16 res;
+				u16 res = 0;
 				switch(bitswap<2>(opcode, 11, 7)) {
 				case 0: res = v1 > v2 ? v1 : v2; break;
 				case 1: res = s16(v1) > s16(v2) ? v1 : v2; break;
