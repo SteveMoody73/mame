@@ -26,22 +26,12 @@
 #include "emu.h"
 #include "includes/coco12.h"
 
-#include "bus/coco/coco_dcmodem.h"
-#include "bus/coco/coco_dwsock.h"
-#include "bus/coco/coco_fdc.h"
-#include "bus/coco/coco_gmc.h"
-#include "bus/coco/coco_multi.h"
-#include "bus/coco/coco_orch90.h"
-#include "bus/coco/coco_pak.h"
-#include "bus/coco/coco_psg.h"
-#include "bus/coco/coco_rs232.h"
-#include "bus/coco/coco_ssc.h"
+#include "bus/coco/cococart.h"
 #include "bus/coco/coco_t4426.h"
 
 #include "cpu/m6809/m6809.h"
 #include "cpu/m6809/hd6309.h"
 #include "imagedev/cassette.h"
-#include "sound/volt_reg.h"
 
 #include "softlist.h"
 #include "speaker.h"
@@ -52,12 +42,57 @@
 //  ADDRESS MAPS
 //**************************************************************************
 
-//-------------------------------------------------
-//  ADDRESS_MAP( coco_mem )
-//-------------------------------------------------
-
-void coco_state::coco_mem(address_map &map)
+void coco12_state::coco_mem(address_map &map)
 {
+	map(0x0000, 0xffff).rw(m_sam, FUNC(sam6883_device::read), FUNC(sam6883_device::write));
+}
+
+
+void coco12_state::coco_ram(address_map &map)
+{
+	// mapped by configure_sam
+}
+
+void coco12_state::coco_rom0(address_map &map)
+{
+	// $8000-$9FFF
+	map(0x0000, 0x1fff).rom().region(MAINCPU_TAG, 0x0000).nopw();
+}
+
+void coco12_state::coco_rom1(address_map &map)
+{
+	// $A000-$BFFF
+	map(0x0000, 0x1fff).rom().region(MAINCPU_TAG, 0x2000).nopw();
+}
+
+void coco12_state::coco_rom2(address_map &map)
+{
+	// $C000-$FEFF
+	map(0x0000, 0x3eff).rw(m_cococart, FUNC(cococart_slot_device::cts_read), FUNC(cococart_slot_device::cts_write));
+}
+
+void coco12_state::coco_io0(address_map &map)
+{
+	// $FF00-$FF1F
+	map(0x00, 0x03).mirror(0x1c).rw(PIA0_TAG, FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+}
+
+void coco12_state::coco_io1(address_map &map)
+{
+	// $FF20-$FF3F
+	map(0x00, 0x03).mirror(0x1c).r(PIA1_TAG, FUNC(pia6821_device::read)).w(FUNC(coco12_state::ff20_write));
+}
+
+void coco12_state::coco_io2(address_map &map)
+{
+	// $FF40-$FF5F
+	map(0x00, 0x1f).rw(FUNC(coco12_state::ff40_read), FUNC(coco12_state::ff40_write));
+}
+
+void coco12_state::coco_ff60(address_map &map)
+{
+	// $FF60-$FFDF
+	map(0x00, 0x7f).rw(FUNC(coco12_state::ff60_read), FUNC(coco12_state::ff60_write));
 }
 
 
@@ -103,13 +138,13 @@ INPUT_PORTS_END
 
 INPUT_PORTS_START( coco_joystick )
 	PORT_START(JOYSTICK_RX_TAG)
-	PORT_BIT( 0xff, 0x80,  IPT_AD_STICK_X) PORT_NAME("Right Joystick X") PORT_SENSITIVITY(JOYSTICK_SENSITIVITY) PORT_KEYDELTA(JOYSTICK_DELTA) PORT_MINMAX(0x00,0xFF) PORT_CODE_DEC(KEYCODE_4_PAD) PORT_CODE_INC(KEYCODE_6_PAD) PORT_CODE_DEC(JOYCODE_X_LEFT_SWITCH) PORT_CODE_INC(JOYCODE_X_RIGHT_SWITCH) PORT_PLAYER(1) PORT_CONDITION(CTRL_SEL_TAG, 0x0f, EQUALS, 0x01)
+	PORT_BIT( 0x3ff, 0x140,  IPT_AD_STICK_X) PORT_NAME("Right Joystick X") PORT_SENSITIVITY(JOYSTICK_SENSITIVITY) PORT_KEYDELTA(JOYSTICK_DELTA) PORT_MINMAX(0x00,0x280) PORT_CODE_DEC(KEYCODE_4_PAD) PORT_CODE_INC(KEYCODE_6_PAD) PORT_CODE_DEC(JOYCODE_X_LEFT_SWITCH) PORT_CODE_INC(JOYCODE_X_RIGHT_SWITCH) PORT_PLAYER(1) PORT_CONDITION(CTRL_SEL_TAG, 0x0f, EQUALS, 0x01)
 	PORT_START(JOYSTICK_RY_TAG)
-	PORT_BIT( 0xff, 0x80,  IPT_AD_STICK_Y) PORT_NAME("Right Joystick Y") PORT_SENSITIVITY(JOYSTICK_SENSITIVITY) PORT_KEYDELTA(JOYSTICK_DELTA) PORT_MINMAX(0x00,0xFF) PORT_CODE_DEC(KEYCODE_8_PAD) PORT_CODE_INC(KEYCODE_2_PAD) PORT_CODE_DEC(JOYCODE_Y_UP_SWITCH)   PORT_CODE_INC(JOYCODE_Y_DOWN_SWITCH)  PORT_PLAYER(1) PORT_CONDITION(CTRL_SEL_TAG, 0x0f, EQUALS, 0x01)
+	PORT_BIT( 0x3ff, 0x140,  IPT_AD_STICK_Y) PORT_NAME("Right Joystick Y") PORT_SENSITIVITY(JOYSTICK_SENSITIVITY) PORT_KEYDELTA(JOYSTICK_DELTA) PORT_MINMAX(0x00,0x280) PORT_CODE_DEC(KEYCODE_8_PAD) PORT_CODE_INC(KEYCODE_2_PAD) PORT_CODE_DEC(JOYCODE_Y_UP_SWITCH)   PORT_CODE_INC(JOYCODE_Y_DOWN_SWITCH)  PORT_PLAYER(1) PORT_CONDITION(CTRL_SEL_TAG, 0x0f, EQUALS, 0x01)
 	PORT_START(JOYSTICK_LX_TAG)
-	PORT_BIT( 0xff, 0x80,  IPT_AD_STICK_X) PORT_NAME("Left Joystick X") PORT_SENSITIVITY(JOYSTICK_SENSITIVITY) PORT_KEYDELTA(JOYSTICK_DELTA) PORT_MINMAX(0x00,0xFF) PORT_CODE_DEC(KEYCODE_4_PAD) PORT_CODE_INC(KEYCODE_6_PAD) PORT_CODE_DEC(JOYCODE_X_LEFT_SWITCH) PORT_CODE_INC(JOYCODE_X_RIGHT_SWITCH) PORT_PLAYER(2) PORT_CONDITION(CTRL_SEL_TAG, 0xf0, EQUALS, 0x10)
+	PORT_BIT( 0x3ff, 0x140,  IPT_AD_STICK_X) PORT_NAME("Left Joystick X") PORT_SENSITIVITY(JOYSTICK_SENSITIVITY) PORT_KEYDELTA(JOYSTICK_DELTA) PORT_MINMAX(0x00,0x280) PORT_CODE_DEC(KEYCODE_4_PAD) PORT_CODE_INC(KEYCODE_6_PAD) PORT_CODE_DEC(JOYCODE_X_LEFT_SWITCH) PORT_CODE_INC(JOYCODE_X_RIGHT_SWITCH) PORT_PLAYER(2) PORT_CONDITION(CTRL_SEL_TAG, 0xf0, EQUALS, 0x10)
 	PORT_START(JOYSTICK_LY_TAG)
-	PORT_BIT( 0xff, 0x80,  IPT_AD_STICK_Y) PORT_NAME("Left Joystick Y") PORT_SENSITIVITY(JOYSTICK_SENSITIVITY) PORT_KEYDELTA(JOYSTICK_DELTA) PORT_MINMAX(0x00,0xFF) PORT_CODE_DEC(KEYCODE_8_PAD) PORT_CODE_INC(KEYCODE_2_PAD) PORT_CODE_DEC(JOYCODE_Y_UP_SWITCH)   PORT_CODE_INC(JOYCODE_Y_DOWN_SWITCH)  PORT_PLAYER(2) PORT_CONDITION(CTRL_SEL_TAG, 0xf0, EQUALS, 0x10)
+	PORT_BIT( 0x3ff, 0x140,  IPT_AD_STICK_Y) PORT_NAME("Left Joystick Y") PORT_SENSITIVITY(JOYSTICK_SENSITIVITY) PORT_KEYDELTA(JOYSTICK_DELTA) PORT_MINMAX(0x00,0x280) PORT_CODE_DEC(KEYCODE_8_PAD) PORT_CODE_INC(KEYCODE_2_PAD) PORT_CODE_DEC(JOYCODE_Y_UP_SWITCH)   PORT_CODE_INC(JOYCODE_Y_DOWN_SWITCH)  PORT_PLAYER(2) PORT_CONDITION(CTRL_SEL_TAG, 0xf0, EQUALS, 0x10)
 	PORT_START(JOYSTICK_BUTTONS_TAG)
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_NAME("Right Button") PORT_CHANGED_MEMBER(DEVICE_SELF, coco12_state, coco_state::keyboard_changed, 0) PORT_CODE(KEYCODE_0_PAD) PORT_CODE(JOYCODE_BUTTON1) PORT_CODE(MOUSECODE_BUTTON1) PORT_PLAYER(1) PORT_CONDITION(CTRL_SEL_TAG, 0x0f, EQUALS, 0x01)
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_NAME("Left Button")  PORT_CHANGED_MEMBER(DEVICE_SELF, coco12_state, coco_state::keyboard_changed, 0) PORT_CODE(KEYCODE_0_PAD) PORT_CODE(JOYCODE_BUTTON1) PORT_CODE(MOUSECODE_BUTTON1) PORT_PLAYER(2) PORT_CONDITION(CTRL_SEL_TAG, 0xf0, EQUALS, 0x10)
@@ -122,6 +157,13 @@ INPUT_PORTS_END
 //-------------------------------------------------
 
 INPUT_PORTS_START( coco_beckerport )
+	PORT_START(BECKERPORT_TAG)
+	PORT_CONFNAME( 0x01, 0x00, "Becker Port" )
+	PORT_CONFSETTING(    0x00, DEF_STR( Off ))
+	PORT_CONFSETTING(    0x01, DEF_STR( On ))
+INPUT_PORTS_END
+
+INPUT_PORTS_START( coco_beckerport_dw )
 	PORT_START(BECKERPORT_TAG)
 	PORT_CONFNAME( 0x01, 0x01, "Becker Port" )
 	PORT_CONFSETTING(    0x00, DEF_STR( Off ))
@@ -348,27 +390,16 @@ INPUT_PORTS_END
 //**************************************************************************
 
 //-------------------------------------------------
-//  SLOT_INTERFACE_START(coco_cart)
+//  coco_cart
 //-------------------------------------------------
 
 void coco_cart(device_slot_interface &device)
 {
-	device.option_add("fdc", COCO_FDC);
-	device.option_add("fdcv11", COCO_FDC_V11);
-	device.option_add("cc2hdb1", COCO2_HDB1);
-	device.option_add("cc3hdb1", COCO3_HDB1);
-	device.option_add("cp450_fdc", CP450_FDC);
-	device.option_add("cd6809_fdc", CD6809_FDC);
-	device.option_add("rs232", COCO_RS232);
-	device.option_add("dcmodem", COCO_DCMODEM);
-	device.option_add("orch90", COCO_ORCH90);
-	device.option_add("ssc", COCO_SSC);
-	device.option_add("games_master", COCO_PAK_GMC);
-	device.option_add("banked_16k", COCO_PAK_BANKED);
-	device.option_add("pak", COCO_PAK);
-	device.option_add("multi", COCO_MULTIPAK);
-	device.option_add("ccpsg", COCO_PSG);
+	coco_cart_add_basic_devices(device);
+	coco_cart_add_fdcs(device);
+	coco_cart_add_multi_pak(device);
 }
+
 
 //-------------------------------------------------
 //  SLOT_INTERFACE_START(t4426_cart)
@@ -389,12 +420,9 @@ void coco_state::coco_sound(machine_config &config)
 
 	// 6-bit D/A: R10-15 = 10K, 20K, 40.2K, 80.6K, 162K, 324K (according to parts list); output also controls joysticks
 	DAC_6BIT_BINARY_WEIGHTED(config, m_dac, 0).add_route(ALL_OUTPUTS, "speaker", 0.125);
-	voltage_regulator_device &vref(VOLTAGE_REGULATOR(config, "vref"));
-	vref.add_route(0, "dac", 1.0, DAC_VREF_POS_INPUT); vref.add_route(0, "dac", -1.0, DAC_VREF_NEG_INPUT);
-	vref.add_route(0, "sbs", 1.0, DAC_VREF_POS_INPUT); vref.add_route(0, "sbs", -1.0, DAC_VREF_NEG_INPUT);
 
 	// Single-bit sound: R22 = 10K
-	DAC_1BIT(config, "sbs", 0).add_route(ALL_OUTPUTS, "speaker", 0.125);
+	DAC_1BIT(config, "sbs", 0).set_output_range(-1, 1).add_route(ALL_OUTPUTS, "speaker", 0.125);
 }
 
 
@@ -418,9 +446,8 @@ void coco_state::coco_floating(machine_config &config)
 //  DEVICE_INPUT_DEFAULTS_START( printer )
 //-------------------------------------------------
 
-static DEVICE_INPUT_DEFAULTS_START( printer )
+static DEVICE_INPUT_DEFAULTS_START( rs_printer )
 	DEVICE_INPUT_DEFAULTS( "RS232_RXBAUD", 0xff, RS232_BAUD_600 )
-	DEVICE_INPUT_DEFAULTS( "RS232_STARTBITS", 0xff, RS232_STARTBITS_1 )
 	DEVICE_INPUT_DEFAULTS( "RS232_DATABITS", 0xff, RS232_DATABITS_8 )
 	DEVICE_INPUT_DEFAULTS( "RS232_PARITY", 0xff, RS232_PARITY_NONE )
 	DEVICE_INPUT_DEFAULTS( "RS232_STOPBITS", 0xff, RS232_STOPBITS_1 )
@@ -440,13 +467,17 @@ void coco12_state::coco(machine_config &config)
 	m_maincpu->set_dasm_override(FUNC(coco_state::dasm_override));
 
 	// devices
+	INPUT_MERGER_ANY_HIGH(config, m_irqs).output_handler().set_inputline(m_maincpu, M6809_IRQ_LINE);
+	INPUT_MERGER_ANY_HIGH(config, m_firqs).output_handler().set_inputline(m_maincpu, M6809_FIRQ_LINE);
+
 	pia6821_device &pia0(PIA6821(config, PIA0_TAG, 0));
 	pia0.writepa_handler().set(FUNC(coco_state::pia0_pa_w));
 	pia0.writepb_handler().set(FUNC(coco_state::pia0_pb_w));
+	pia0.tspb_handler().set_constant(0xff);
 	pia0.ca2_handler().set(FUNC(coco_state::pia0_ca2_w));
 	pia0.cb2_handler().set(FUNC(coco_state::pia0_cb2_w));
-	pia0.irqa_handler().set(FUNC(coco_state::pia0_irq_a));
-	pia0.irqb_handler().set(FUNC(coco_state::pia0_irq_b));
+	pia0.irqa_handler().set(m_irqs, FUNC(input_merger_device::in_w<0>));
+	pia0.irqb_handler().set(m_irqs, FUNC(input_merger_device::in_w<1>));
 
 	pia6821_device &pia1(PIA6821(config, PIA1_TAG, 0));
 	pia1.readpa_handler().set(FUNC(coco_state::pia1_pa_r));
@@ -455,11 +486,18 @@ void coco12_state::coco(machine_config &config)
 	pia1.writepb_handler().set(FUNC(coco_state::pia1_pb_w));
 	pia1.ca2_handler().set(FUNC(coco_state::pia1_ca2_w));
 	pia1.cb2_handler().set(FUNC(coco_state::pia1_cb2_w));
-	pia1.irqa_handler().set(FUNC(coco_state::pia1_firq_a));
-	pia1.irqb_handler().set(FUNC(coco_state::pia1_firq_b));
+	pia1.irqa_handler().set(m_firqs, FUNC(input_merger_device::in_w<0>));
+	pia1.irqb_handler().set(m_firqs, FUNC(input_merger_device::in_w<1>));
 
 	SAM6883(config, m_sam, XTAL(14'318'181), m_maincpu);
-	m_sam->res_rd_callback().set(FUNC(coco12_state::sam_read));
+	m_sam->set_addrmap(0, &coco12_state::coco_ram);
+	m_sam->set_addrmap(1, &coco12_state::coco_rom0);
+	m_sam->set_addrmap(2, &coco12_state::coco_rom1);
+	m_sam->set_addrmap(3, &coco12_state::coco_rom2);
+	m_sam->set_addrmap(4, &coco12_state::coco_io0);
+	m_sam->set_addrmap(5, &coco12_state::coco_io1);
+	m_sam->set_addrmap(6, &coco12_state::coco_io2);
+	m_sam->set_addrmap(7, &coco12_state::coco_ff60);
 
 	// Becker Port device
 	COCO_DWSOCK(config, DWSOCK_TAG, 0);
@@ -471,9 +509,9 @@ void coco12_state::coco(machine_config &config)
 	m_cassette->set_formats(coco_cassette_formats);
 	m_cassette->set_default_state(CASSETTE_PLAY | CASSETTE_MOTOR_DISABLED | CASSETTE_SPEAKER_ENABLED);
 
-	rs232_port_device &rs232(RS232_PORT(config, RS232_TAG, default_rs232_devices, "printer"));
+	rs232_port_device &rs232(RS232_PORT(config, RS232_TAG, default_rs232_devices, "rs_printer"));
 	rs232.dcd_handler().set(PIA1_TAG, FUNC(pia6821_device::ca1_w));
-	rs232.set_option_device_input_defaults("printer", DEVICE_INPUT_DEFAULTS_NAME(printer));
+	rs232.set_option_device_input_defaults("rs_printer", DEVICE_INPUT_DEFAULTS_NAME(rs_printer));
 
 	cococart_slot_device &cartslot(COCOCART_SLOT(config, CARTRIDGE_TAG, DERIVED_CLOCK(1, 1), coco_cart, "pak"));
 	cartslot.cart_callback().set([this] (int state) { cart_w(state != 0); }); // lambda because name is overloaded
@@ -487,7 +525,7 @@ void coco12_state::coco(machine_config &config)
 	m_vdg->set_screen("screen");
 	m_vdg->hsync_wr_callback().set(FUNC(coco12_state::horizontal_sync));
 	m_vdg->fsync_wr_callback().set(FUNC(coco12_state::field_sync));
-	m_vdg->input_callback().set(m_sam, FUNC(sam6883_device::display_read));
+	m_vdg->input_callback().set(FUNC(coco12_state::sam_read));
 
 	// internal ram
 	RAM(config, m_ram).set_default_size("64K").set_extra_options("4K,16K,32K");
@@ -554,7 +592,7 @@ void coco12_state::coco2b(machine_config &config)
 	m_vdg->set_screen(SCREEN_TAG);
 	m_vdg->hsync_wr_callback().set(FUNC(coco12_state::horizontal_sync));
 	m_vdg->fsync_wr_callback().set(FUNC(coco12_state::field_sync));
-	m_vdg->input_callback().set(m_sam, FUNC(sam6883_device::display_read));
+	m_vdg->input_callback().set(FUNC(coco12_state::sam_read));
 }
 
 void coco12_state::coco2bh(machine_config &config)

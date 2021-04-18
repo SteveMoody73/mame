@@ -85,7 +85,7 @@ void sega_315_5649_device::device_reset()
 //  INTERFACE
 //**************************************************************************
 
-READ8_MEMBER( sega_315_5649_device::read )
+uint8_t sega_315_5649_device::read(offs_t offset)
 {
 	uint8_t data = 0xff;
 
@@ -100,6 +100,7 @@ READ8_MEMBER( sega_315_5649_device::read )
 				m_port_value[6] = (m_port_value[6] & 0xf8) | ((m_port_value[6] + 1) & 7);
 			break;
 		}
+		[[fallthrough]];
 	case 0x00:
 	case 0x01:
 	case 0x02:
@@ -142,7 +143,7 @@ READ8_MEMBER( sega_315_5649_device::read )
 	return data;
 }
 
-WRITE8_MEMBER( sega_315_5649_device::write )
+void sega_315_5649_device::write(offs_t offset, uint8_t data)
 {
 	LOG("WR %02x = %02x\n", offset, data);
 

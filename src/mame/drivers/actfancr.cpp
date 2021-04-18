@@ -21,21 +21,21 @@
 #include "includes/actfancr.h"
 
 #include "cpu/m6502/m6502.h"
-#include "sound/2203intf.h"
-#include "sound/3812intf.h"
 #include "sound/okim6295.h"
+#include "sound/ym2203.h"
+#include "sound/ym3812.h"
 #include "emupal.h"
 #include "screen.h"
 #include "speaker.h"
 
 /******************************************************************************/
 
-WRITE8_MEMBER(actfancr_state::triothep_control_select_w)
+void actfancr_state::triothep_control_select_w(uint8_t data)
 {
 	m_trio_control_select = data;
 }
 
-READ8_MEMBER(actfancr_state::triothep_control_r)
+uint8_t actfancr_state::triothep_control_r()
 {
 	switch (m_trio_control_select)
 	{
@@ -51,7 +51,7 @@ READ8_MEMBER(actfancr_state::triothep_control_r)
 
 /******************************************************************************/
 
-WRITE8_MEMBER(actfancr_state::buffer_spriteram_w)
+void actfancr_state::buffer_spriteram_w(uint8_t data)
 {
 	uint8_t *src = reinterpret_cast<uint8_t *>(memshare("spriteram")->ptr());
 	// copy to a 16-bit region for our sprite draw code too

@@ -83,7 +83,7 @@
 //  read -
 //-------------------------------------------------
 
-READ8_MEMBER( mm1_state::read )
+uint8_t mm1_state::read(offs_t offset)
 {
 	uint8_t data = 0;
 	uint8_t mmu = m_mmu_rom->base()[(m_a8 << 8) | (offset >> 8)];
@@ -117,7 +117,7 @@ READ8_MEMBER( mm1_state::read )
 //  write -
 //-------------------------------------------------
 
-WRITE8_MEMBER( mm1_state::write )
+void mm1_state::write(offs_t offset, uint8_t data)
 {
 	uint8_t mmu = m_mmu_rom->base()[(m_a8 << 8) | (offset >> 8)];
 
@@ -154,7 +154,7 @@ WRITE_LINE_MEMBER( mm1_state::recall_w )
 {
 	LOG("RECALL %u\n", state);
 	m_recall = state;
-	if (state) m_fdc->soft_reset();
+	m_fdc->reset_w(state);
 }
 
 
@@ -295,7 +295,7 @@ WRITE_LINE_MEMBER( mm1_state::dma_hrq_w )
 	m_dmac->hack_w(state);
 }
 
-READ8_MEMBER( mm1_state::mpsc_dack_r )
+uint8_t mm1_state::mpsc_dack_r()
 {
 	// clear data request
 	m_dmac->dreq2_w(CLEAR_LINE);
@@ -303,7 +303,7 @@ READ8_MEMBER( mm1_state::mpsc_dack_r )
 	return 1;//m_mpsc->dtra_r();
 }
 
-WRITE8_MEMBER( mm1_state::mpsc_dack_w )
+void mm1_state::mpsc_dack_w(uint8_t data)
 {
 	//m_mpsc->hai_w(data);
 
@@ -377,13 +377,15 @@ READ_LINE_MEMBER( mm1_state::dsra_r )
 //  upd765_interface fdc_intf
 //-------------------------------------------------
 
-FLOPPY_FORMATS_MEMBER( mm1_state::floppy_formats )
-	FLOPPY_MM1_FORMAT
-FLOPPY_FORMATS_END
+void mm1_state::floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_MM1_FORMAT);
+}
 /*
-FLOPPY_FORMATS_MEMBER( mm2_state::floppy_formats )
+void mm2_state::floppy_formats(format_registration &fr)
     FLOPPY_MM2_FORMAT
-FLOPPY_FORMATS_END
+}
 */
 static void mm1_floppies(device_slot_interface &device)
 {

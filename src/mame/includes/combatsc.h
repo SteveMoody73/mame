@@ -14,6 +14,7 @@
 #include "sound/upd7759.h"
 #include "sound/msm5205.h"
 #include "video/k007121.h"
+#include "machine/k007452.h"
 #include "emupal.h"
 #include "screen.h"
 #include "tilemap.h"
@@ -27,6 +28,7 @@ public:
 		m_audiocpu(*this, "audiocpu"),
 		m_k007121_1(*this, "k007121_1"),
 		m_k007121_2(*this, "k007121_2"),
+		m_k007452(*this, "k007452"),
 		m_upd7759(*this, "upd"),
 		m_msm(*this, "msm"),
 		m_screen(*this, "screen"),
@@ -59,7 +61,6 @@ public:
 	/* misc */
 	uint8_t m_pos[4];
 	uint8_t m_sign[4];
-	int m_prot[2];
 	int m_boost;
 	emu_timer *m_interleave_timer;
 
@@ -69,6 +70,7 @@ public:
 	required_device<cpu_device> m_audiocpu;
 	optional_device<k007121_device> m_k007121_1;
 	optional_device<k007121_device> m_k007121_2;
+	optional_device<k007452_device> m_k007452;
 	optional_device<upd7759_device> m_upd7759;
 	optional_device<msm5205_device> m_msm;
 	required_device<screen_device> m_screen;
@@ -78,30 +80,27 @@ public:
 
 	optional_ioport_array<4> m_track_ports;
 
-	DECLARE_WRITE8_MEMBER(combatsc_vreg_w);
-	DECLARE_READ8_MEMBER(combatscb_io_r);
-	DECLARE_WRITE8_MEMBER(combatscb_priority_w);
-	DECLARE_WRITE8_MEMBER(combatsc_bankselect_w);
-	DECLARE_WRITE8_MEMBER(combatscb_io_w);
-	DECLARE_WRITE8_MEMBER(combatscb_bankselect_w);
-	DECLARE_WRITE8_MEMBER(combatsc_coin_counter_w);
-	DECLARE_READ8_MEMBER(trackball_r);
-	DECLARE_WRITE8_MEMBER(protection_w);
-	DECLARE_READ8_MEMBER(protection_r);
-	DECLARE_READ8_MEMBER(unk_r);
-	DECLARE_WRITE8_MEMBER(protection_clock_w);
-	DECLARE_WRITE8_MEMBER(combatsc_sh_irqtrigger_w);
-	DECLARE_READ8_MEMBER(combatsc_video_r);
-	DECLARE_WRITE8_MEMBER(combatsc_video_w);
-	DECLARE_WRITE8_MEMBER(combatsc_pf_control_w);
-	DECLARE_READ8_MEMBER(combatsc_scrollram_r);
-	DECLARE_WRITE8_MEMBER(combatsc_scrollram_w);
-	DECLARE_READ8_MEMBER(combatsc_busy_r);
-	DECLARE_WRITE8_MEMBER(combatsc_play_w);
-	DECLARE_WRITE8_MEMBER(combatsc_voice_reset_w);
-	DECLARE_WRITE8_MEMBER(combatsc_portA_w);
-	DECLARE_WRITE8_MEMBER(combatscb_msm_w);
-	DECLARE_WRITE8_MEMBER(combatscb_sound_irq_ack);
+	void combatsc_vreg_w(uint8_t data);
+	uint8_t combatscb_io_r(offs_t offset);
+	void combatscb_priority_w(uint8_t data);
+	void combatsc_bankselect_w(uint8_t data);
+	void combatscb_io_w(offs_t offset, uint8_t data);
+	void combatscb_bankselect_w(address_space &space, uint8_t data);
+	void combatsc_coin_counter_w(uint8_t data);
+	uint8_t trackball_r(offs_t offset);
+	uint8_t unk_r();
+	void combatsc_sh_irqtrigger_w(uint8_t data);
+	uint8_t combatsc_video_r(offs_t offset);
+	void combatsc_video_w(offs_t offset, uint8_t data);
+	void combatsc_pf_control_w(offs_t offset, uint8_t data);
+	uint8_t combatsc_scrollram_r(offs_t offset);
+	void combatsc_scrollram_w(offs_t offset, uint8_t data);
+	uint8_t combatsc_busy_r();
+	void combatsc_play_w(uint8_t data);
+	void combatsc_voice_reset_w(uint8_t data);
+	void combatsc_portA_w(uint8_t data);
+	void combatscb_msm_w(uint8_t data);
+	void combatscb_sound_irq_ack(uint8_t data);
 	void init_combatsc();
 	TILE_GET_INFO_MEMBER(get_tile_info0);
 	TILE_GET_INFO_MEMBER(get_tile_info1);

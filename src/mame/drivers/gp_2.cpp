@@ -66,9 +66,9 @@ public:
 	void init_gp_2();
 
 private:
-	DECLARE_WRITE8_MEMBER(porta_w);
-	DECLARE_WRITE8_MEMBER(portc_w);
-	DECLARE_READ8_MEMBER(portb_r);
+	void porta_w(uint8_t data);
+	void portc_w(uint8_t data);
+	uint8_t portb_r();
 	TIMER_DEVICE_CALLBACK_MEMBER(zero_timer);
 	void gp_2_io(address_map &map);
 	void gp_2_map(address_map &map);
@@ -467,7 +467,7 @@ static INPUT_PORTS_START( gp_2 )
 	PORT_BIT( 0xff, IP_ACTIVE_HIGH, IPT_UNUSED )
 INPUT_PORTS_END
 
-READ8_MEMBER( gp_2_state::portb_r )
+uint8_t gp_2_state::portb_r()
 {
 	switch (m_u14)
 	{
@@ -493,7 +493,7 @@ READ8_MEMBER( gp_2_state::portb_r )
 	return 0;
 }
 
-WRITE8_MEMBER( gp_2_state::porta_w )
+void gp_2_state::porta_w(uint8_t data)
 {
 	m_u14 = data >> 4;
 	if ((data > 0x0f) && (data < 0x30))
@@ -557,7 +557,7 @@ WRITE8_MEMBER( gp_2_state::porta_w )
 	}
 }
 
-WRITE8_MEMBER( gp_2_state::portc_w )
+void gp_2_state::portc_w(uint8_t data)
 {
 	output().set_value("led0", !BIT(data, 3));
 	m_digit = data & 7;
@@ -833,11 +833,11 @@ ROM_START(suprnova)
 ROM_END
 
 // GP1 dips
-GAME( 1979, sshootep,  0,        gp_2, gp_1, gp_2_state, empty_init, ROT0, "Game Plan", "Sharpshooter",      MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND )
-GAME( 1979, coneyis,   0,        gp_2, gp_1, gp_2_state, empty_init, ROT0, "Game Plan", "Old Coney Island!", MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND )
-GAME( 1980, lizard,    0,        gp_2, gp_1, gp_2_state, empty_init, ROT0, "Game Plan", "Pinball Lizard",    MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND )
-GAME( 1982, suprnova,  0,        gp_2, gp_1, gp_2_state, empty_init, ROT0, "Game Plan", "Super Nova",        MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND )
-GAME( 1983, sshootr2,  0,        gp_2, gp_1, gp_2_state, empty_init, ROT0, "Game Plan", "Sharp Shooter II",  MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND )
+GAME( 1979, sshootep,  0,        gp_2, gp_1, gp_2_state, empty_init, ROT0, "Game Plan", "Sharpshooter (Game Plan)", MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND )
+GAME( 1979, coneyis,   0,        gp_2, gp_1, gp_2_state, empty_init, ROT0, "Game Plan", "Old Coney Island!",        MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND )
+GAME( 1980, lizard,    0,        gp_2, gp_1, gp_2_state, empty_init, ROT0, "Game Plan", "Pinball Lizard",           MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND )
+GAME( 1982, suprnova,  0,        gp_2, gp_1, gp_2_state, empty_init, ROT0, "Game Plan", "Super Nova (Game Plan)",   MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND )
+GAME( 1983, sshootr2,  0,        gp_2, gp_1, gp_2_state, empty_init, ROT0, "Game Plan", "Sharp Shooter II",         MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND )
 
 // GP2 dips
 GAME( 1981, gwarfare,  0,        gp_2, gp_2, gp_2_state, empty_init, ROT0, "Game Plan", "Global Warfare", MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND )

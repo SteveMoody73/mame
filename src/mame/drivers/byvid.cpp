@@ -45,9 +45,11 @@ ToDo (granny):
 #include "machine/timer.h"
 #include "sound/beep.h"
 #include "sound/dac.h"
-#include "sound/volt_reg.h"
 #include "video/tms9928a.h"
 #include "speaker.h"
+
+
+namespace {
 
 class by133_state : public driver_device
 {
@@ -76,42 +78,17 @@ public:
 		, m_io_x4(*this, "X4")
 	{ }
 
-	DECLARE_READ8_MEMBER(sound_data_r);
-	DECLARE_WRITE8_MEMBER(sound_data_w);
-	DECLARE_READ8_MEMBER(m6803_port2_r);
-	DECLARE_WRITE8_MEMBER(m6803_port2_w);
 	DECLARE_INPUT_CHANGED_MEMBER(video_test);
 	DECLARE_INPUT_CHANGED_MEMBER(sound_test);
 	DECLARE_INPUT_CHANGED_MEMBER(activity_test);
 	DECLARE_INPUT_CHANGED_MEMBER(self_test);
-	DECLARE_READ8_MEMBER(u7_a_r);
-	DECLARE_WRITE8_MEMBER(u7_a_w);
-	DECLARE_READ8_MEMBER(u7_b_r);
-	DECLARE_WRITE8_MEMBER(u7_b_w);
-	DECLARE_READ8_MEMBER(u10_a_r);
-	DECLARE_WRITE8_MEMBER(u10_a_w);
-	DECLARE_READ8_MEMBER(u10_b_r);
-	DECLARE_WRITE8_MEMBER(u10_b_w);
-	DECLARE_READ8_MEMBER(u11_a_r);
-	DECLARE_WRITE8_MEMBER(u11_a_w);
-	DECLARE_READ8_MEMBER(u11_b_r);
-	DECLARE_WRITE8_MEMBER(u11_b_w);
-	DECLARE_WRITE_LINE_MEMBER(u7_ca2_w);
-	DECLARE_WRITE_LINE_MEMBER(u10_ca2_w);
-	DECLARE_WRITE_LINE_MEMBER(u11_ca2_w);
-	DECLARE_WRITE_LINE_MEMBER(u7_cb2_w);
-	DECLARE_WRITE_LINE_MEMBER(u10_cb2_w);
-	DECLARE_WRITE_LINE_MEMBER(u11_cb2_w);
-	TIMER_DEVICE_CALLBACK_MEMBER(u10_timer);
-	TIMER_DEVICE_CALLBACK_MEMBER(u11_timer);
-	DECLARE_WRITE8_MEMBER(granny_crtc_w);
-	uint32_t screen_update_granny(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
+
 	void babypac(machine_config &config);
 	void granny(machine_config &config);
-	void granny_map(address_map &map);
-	void main_map(address_map &map);
-	void sound_map(address_map &map);
-	void video_map(address_map &map);
+
+protected:
+	virtual void machine_reset() override;
+
 private:
 	uint8_t m_mpu_to_vid;
 	uint8_t m_vid_to_mpu;
@@ -124,7 +101,6 @@ private:
 	uint8_t m_u11_b;
 	bool m_u10_timer;
 	bool m_u11_timer;
-	virtual void machine_reset() override;
 	required_device<m6800_cpu_device> m_maincpu;
 	required_device<mc6809_device> m_videocpu;
 	required_device<m6803_cpu_device> m_audiocpu;
@@ -145,6 +121,37 @@ private:
 	required_ioport m_io_x2;
 	required_ioport m_io_x3;
 	required_ioport m_io_x4; // Granny
+
+	uint8_t sound_data_r();
+	void sound_data_w(uint8_t data);
+	uint8_t m6803_port2_r();
+	void m6803_port2_w(uint8_t data);
+	uint8_t u7_a_r();
+	void u7_a_w(uint8_t data);
+	uint8_t u7_b_r();
+	void u7_b_w(uint8_t data);
+	uint8_t u10_a_r();
+	void u10_a_w(uint8_t data);
+	uint8_t u10_b_r();
+	void u10_b_w(uint8_t data);
+	uint8_t u11_a_r();
+	void u11_a_w(uint8_t data);
+	uint8_t u11_b_r();
+	void u11_b_w(uint8_t data);
+	DECLARE_WRITE_LINE_MEMBER(u7_ca2_w);
+	DECLARE_WRITE_LINE_MEMBER(u10_ca2_w);
+	DECLARE_WRITE_LINE_MEMBER(u11_ca2_w);
+	DECLARE_WRITE_LINE_MEMBER(u7_cb2_w);
+	DECLARE_WRITE_LINE_MEMBER(u10_cb2_w);
+	DECLARE_WRITE_LINE_MEMBER(u11_cb2_w);
+	TIMER_DEVICE_CALLBACK_MEMBER(u10_timer);
+	TIMER_DEVICE_CALLBACK_MEMBER(u11_timer);
+	void granny_crtc_w(offs_t offset, uint8_t data);
+	uint32_t screen_update_granny(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
+	void granny_map(address_map &map);
+	void main_map(address_map &map);
+	void sound_map(address_map &map);
+	void video_map(address_map &map);
 };
 
 
@@ -531,29 +538,29 @@ static INPUT_PORTS_START( granny )
 INPUT_PORTS_END
 
 
-WRITE8_MEMBER( by133_state::granny_crtc_w )
+void by133_state::granny_crtc_w(offs_t offset, uint8_t data)
 {
 	m_crtc->write(offset, data);
 	m_crtc2->write(offset, data);
 }
 
-READ8_MEMBER( by133_state::sound_data_r )
+uint8_t by133_state::sound_data_r()
 {
 	return m_mpu_to_vid;
 }
 
-WRITE8_MEMBER( by133_state::sound_data_w )
+void by133_state::sound_data_w(uint8_t data)
 {
 	m_vid_to_mpu = data;
 }
 
-READ8_MEMBER( by133_state::m6803_port2_r )
+uint8_t by133_state::m6803_port2_r()
 {
 	//machine().scheduler().synchronize();
 	return (m_u7_b << 1) | 0;
 }
 
-WRITE8_MEMBER( by133_state::m6803_port2_w )
+void by133_state::m6803_port2_w(uint8_t data)
 {
 	//m_u7_b = data >> 1;
 	m_beep->set_clock(600);
@@ -593,17 +600,17 @@ WRITE_LINE_MEMBER( by133_state::u11_cb2_w )
 	// solenoid-sound selector
 }
 
-READ8_MEMBER( by133_state::u7_a_r )
+uint8_t by133_state::u7_a_r()
 {
 	return m_u7_a;
 }
 
-WRITE8_MEMBER( by133_state::u7_a_w )
+void by133_state::u7_a_w(uint8_t data)
 {
 	m_u7_a = data;
 }
 
-READ8_MEMBER( by133_state::u7_b_r )
+uint8_t by133_state::u7_b_r()
 {
 	if (BIT(m_u7_a, 7)) // bits 6 and 7 work; pinmame uses 7
 		m_u7_b |= m_io_joy->read();
@@ -614,25 +621,25 @@ READ8_MEMBER( by133_state::u7_b_r )
 	return m_u7_b;
 }
 
-WRITE8_MEMBER( by133_state::u7_b_w )
+void by133_state::u7_b_w(uint8_t data)
 {
 	//machine().scheduler().synchronize();
 	m_u7_b = data;
 }
 
-READ8_MEMBER( by133_state::u10_a_r )
+uint8_t by133_state::u10_a_r()
 {
 	return m_u10_a;
 }
 
-WRITE8_MEMBER( by133_state::u10_a_w )
+void by133_state::u10_a_w(uint8_t data)
 {
 	m_u10_a = data;
 	if (BIT(m_u11_a, 2) == 0)
 		m_mpu_to_vid = data ^ 0x0f;
 }
 
-READ8_MEMBER( by133_state::u10_b_r )
+uint8_t by133_state::u10_b_r()
 {
 	if (BIT(m_u11_a, 3) == 0)
 		return ~m_u7_a & 0x03;
@@ -672,29 +679,29 @@ READ8_MEMBER( by133_state::u10_b_r )
 	return data;
 }
 
-WRITE8_MEMBER( by133_state::u10_b_w )
+void by133_state::u10_b_w(uint8_t data)
 {
 	m_u10_b = data;
 }
 
-READ8_MEMBER( by133_state::u11_a_r )
+uint8_t by133_state::u11_a_r()
 {
 	return m_u11_a;
 }
 
-WRITE8_MEMBER( by133_state::u11_a_w )
+void by133_state::u11_a_w(uint8_t data)
 {
 	m_u11_a = data;
 	m_pia_u7->ca1_w(BIT(data, 1));
 	m_pia_u7->ca2_w(BIT(data, 2));
 }
 
-READ8_MEMBER( by133_state::u11_b_r )
+uint8_t by133_state::u11_b_r()
 {
 	return m_u11_b;
 }
 
-WRITE8_MEMBER( by133_state::u11_b_w )
+void by133_state::u11_b_w(uint8_t data)
 {
 	m_u11_b = data;
 }
@@ -725,6 +732,8 @@ void by133_state::machine_reset()
 	m_mpu_to_vid = 0;
 	m_vid_to_mpu = 0;
 	m_beep->set_state(0);
+	m_u10_timer = false;
+	m_u11_timer = false;
 }
 
 uint32_t by133_state::screen_update_granny(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
@@ -793,9 +802,6 @@ void by133_state::babypac(machine_config &config)
 	/* sound hardware */
 	SPEAKER(config, "speaker").front_center();
 	ZN429E(config, "dac", 0).add_route(ALL_OUTPUTS, "speaker", 0.25); // U32 (Vidiot) or U6 (Cheap Squeak)
-	voltage_regulator_device &vref(VOLTAGE_REGULATOR(config, "vref"));
-	vref.add_route(0, "dac", 1.0, DAC_VREF_POS_INPUT);
-	vref.add_route(0, "dac", -1.0, DAC_VREF_NEG_INPUT);
 
 	SPEAKER(config, "beee").front_center();
 	BEEP(config, m_beep, 600).add_route(ALL_OUTPUTS, "beee", 0.10);
@@ -868,6 +874,8 @@ ROM_START(granny)
 	ROM_REGION(0x10000, "audiocpu", 0)
 	ROM_LOAD( "cs_u3.764", 0xe000, 0x2000, CRC(0a39a51d) SHA1(98342ba38e48578ce9870f2ee85b553d46c0e35f))
 ROM_END
+
+} // Anonymous namespace
 
 
 GAME( 1982, babypac,  0,       babypac, babypac, by133_state, empty_init, ROT90, "Dave Nutting Associates / Bally", "Baby Pac-Man (set 1)",  MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )

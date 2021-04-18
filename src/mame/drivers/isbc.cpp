@@ -55,6 +55,7 @@ public:
 	void isbc8605(machine_config &config);
 	void isbc286(machine_config &config);
 	void isbc8630(machine_config &config);
+	void sm1810(machine_config &config);
 
 private:
 	DECLARE_WRITE_LINE_MEMBER(write_centronics_ack);
@@ -62,14 +63,14 @@ private:
 	DECLARE_WRITE_LINE_MEMBER(isbc86_tmr2_w);
 	DECLARE_WRITE_LINE_MEMBER(isbc286_tmr2_w);
 //  DECLARE_WRITE_LINE_MEMBER(isbc_uart8274_irq);
-	DECLARE_READ8_MEMBER(get_slave_ack);
-	DECLARE_WRITE8_MEMBER(ppi_c_w);
-	DECLARE_WRITE8_MEMBER(upperen_w);
-	DECLARE_READ16_MEMBER(bioslo_r);
-	DECLARE_WRITE16_MEMBER(bioslo_w);
+	uint8_t get_slave_ack(offs_t offset);
+	void ppi_c_w(uint8_t data);
+	void upperen_w(uint8_t data);
+	uint16_t bioslo_r(offs_t offset);
+	void bioslo_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
 
-	DECLARE_WRITE8_MEMBER(edge_intr_clear_w);
-	DECLARE_WRITE8_MEMBER(status_register_w);
+	void edge_intr_clear_w(uint8_t data);
+	void status_register_w(uint8_t data);
 	DECLARE_WRITE_LINE_MEMBER(nmi_mask_w);
 	DECLARE_WRITE_LINE_MEMBER(bus_intr_out1_w);
 	DECLARE_WRITE_LINE_MEMBER(bus_intr_out2_w);
@@ -82,8 +83,12 @@ private:
 	void isbc_io(address_map &map);
 	void rpc86_io(address_map &map);
 	void rpc86_mem(address_map &map);
+	void sm1810_mem(address_map &map);
+	void sm1810_io(address_map &map);
 
 	virtual void machine_reset() override;
+
+	static void cfg_fdc_qd(device_t *device);
 
 	required_device<cpu_device> m_maincpu;
 	optional_device<i8251_device> m_uart8251;
@@ -154,6 +159,22 @@ void isbc_state::isbc8630_io(address_map &map)
 	map(0x0100, 0x0100).w("isbc_215g", FUNC(isbc_215g_device::write));
 }
 
+void isbc_state::sm1810_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000, 0xeffff).ram();
+	map(0xf8000, 0xfffff).rom().region("bios", 0);
+}
+
+void isbc_state::sm1810_io(address_map &map)
+{
+	rpc86_io(map);
+	map(0x00c0, 0x00c7).w(FUNC(isbc_state::edge_intr_clear_w)).umask16(0xff00);
+	map(0x00c8, 0x00df).w(FUNC(isbc_state::status_register_w)).umask16(0xff00);
+	map(0x00ca, 0x00cb).lr8(NAME([]() { return 0x40; })).umask16(0x00ff); // it reads this without configuring the ppi
+	map(0xefe0, 0xefe0).w("isbc_215g", FUNC(isbc_215g_device::write));
+}
+
 void isbc_state::isbc86_mem(address_map &map)
 {
 	map.unmap_value_high();
@@ -216,7 +237,6 @@ INPUT_PORTS_END
 static DEVICE_INPUT_DEFAULTS_START( isbc86_terminal )
 	DEVICE_INPUT_DEFAULTS( "RS232_TXBAUD", 0xff, RS232_BAUD_300 )
 	DEVICE_INPUT_DEFAULTS( "RS232_RXBAUD", 0xff, RS232_BAUD_300 )
-	DEVICE_INPUT_DEFAULTS( "RS232_STARTBITS", 0xff, RS232_STARTBITS_1 )
 	DEVICE_INPUT_DEFAULTS( "RS232_DATABITS", 0xff, RS232_DATABITS_8 )
 	DEVICE_INPUT_DEFAULTS( "RS232_PARITY", 0xff, RS232_PARITY_NONE )
 	DEVICE_INPUT_DEFAULTS( "RS232_STOPBITS", 0xff, RS232_STOPBITS_2 )
@@ -225,7 +245,6 @@ DEVICE_INPUT_DEFAULTS_END
 static DEVICE_INPUT_DEFAULTS_START( isbc286_terminal )
 	DEVICE_INPUT_DEFAULTS( "RS232_TXBAUD", 0xff, RS232_BAUD_9600 )
 	DEVICE_INPUT_DEFAULTS( "RS232_RXBAUD", 0xff, RS232_BAUD_9600 )
-	DEVICE_INPUT_DEFAULTS( "RS232_STARTBITS", 0xff, RS232_STARTBITS_1 )
 	DEVICE_INPUT_DEFAULTS( "RS232_DATABITS", 0xff, RS232_DATABITS_7 )
 	DEVICE_INPUT_DEFAULTS( "RS232_PARITY", 0xff, RS232_PARITY_EVEN )
 	DEVICE_INPUT_DEFAULTS( "RS232_STOPBITS", 0xff, RS232_STOPBITS_1 )
@@ -237,7 +256,7 @@ WRITE_LINE_MEMBER( isbc_state::isbc86_tmr2_w )
 	m_uart8251->write_txc(state);
 }
 
-READ8_MEMBER( isbc_state::get_slave_ack )
+uint8_t isbc_state::get_slave_ack(offs_t offset)
 {
 	if (offset == 7)
 		return m_pic_1->acknowledge();
@@ -259,7 +278,7 @@ WRITE_LINE_MEMBER( isbc_state::write_centronics_ack )
 		m_pic_1->ir7_w(1);
 }
 
-WRITE8_MEMBER( isbc_state::ppi_c_w )
+void isbc_state::ppi_c_w(uint8_t data)
 {
 	m_centronics->write_strobe(data & 1);
 
@@ -267,12 +286,12 @@ WRITE8_MEMBER( isbc_state::ppi_c_w )
 		m_pic_1->ir7_w(0);
 }
 
-WRITE8_MEMBER(isbc_state::upperen_w)
+void isbc_state::upperen_w(uint8_t data)
 {
 	m_upperen = true;
 }
 
-READ16_MEMBER(isbc_state::bioslo_r)
+uint16_t isbc_state::bioslo_r(offs_t offset)
 {
 	if(m_upperen)
 		return m_biosram[offset];
@@ -281,7 +300,7 @@ READ16_MEMBER(isbc_state::bioslo_r)
 	return 0xffff;
 }
 
-WRITE16_MEMBER(isbc_state::bioslo_w)
+void isbc_state::bioslo_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	if(m_upperen)
 		COMBINE_DATA(&m_biosram[offset]);
@@ -295,12 +314,12 @@ WRITE_LINE_MEMBER(isbc_state::isbc_uart8274_irq)
 }
 #endif
 
-WRITE8_MEMBER(isbc_state::edge_intr_clear_w)
+void isbc_state::edge_intr_clear_w(uint8_t data)
 {
 	// reset U32 flipflop
 }
 
-WRITE8_MEMBER(isbc_state::status_register_w)
+void isbc_state::status_register_w(uint8_t data)
 {
 	m_megabyte_page = (data & 0xf0) << 16;
 	m_statuslatch->write_bit(data & 0x07, BIT(data, 3));
@@ -320,6 +339,11 @@ WRITE_LINE_MEMBER(isbc_state::bus_intr_out1_w)
 WRITE_LINE_MEMBER(isbc_state::bus_intr_out2_w)
 {
 	// Multibus interrupt request (active high)
+}
+
+void isbc_state::cfg_fdc_qd(device_t *device)
+{
+	dynamic_cast<device_slot_interface &>(*device->subdevice("u14:0")).set_default_option("525qd");
 }
 
 void isbc_state::isbc86(machine_config &config)
@@ -515,6 +539,30 @@ void isbc_state::isbc2861(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &isbc_state::isbc2861_mem);
 }
 
+void isbc_state::sm1810(machine_config &config)
+{
+	rpc86(config);
+	m_maincpu->set_clock(XTAL(4'000'000)); // calibrated clock to pass self test
+	m_maincpu->set_addrmap(AS_PROGRAM, &isbc_state::sm1810_mem);
+	m_maincpu->set_addrmap(AS_IO, &isbc_state::sm1810_io);
+
+	m_uart8251->dtr_handler().set(m_uart8251, FUNC(i8251_device::write_dsr));
+	isbc_215g_device &isbc215(ISBC_215G(config, "isbc_215g", 0, 0xefe0, m_maincpu));
+	isbc215.irq_callback().set(m_pic_0, FUNC(pic8259_device::ir5_w));
+	isbc215.subdevice<isbx_slot_device>("sbx2")->set_option_machine_config("fdc_218a", cfg_fdc_qd);
+
+	LS259(config, m_statuslatch); // U14
+//  m_statuslatch->q_out_cb<0>().set("pit", FUNC(pit8253_device::write_gate0));
+//  m_statuslatch->q_out_cb<1>().set("pit", FUNC(pit8253_device::write_gate1));
+	m_statuslatch->q_out_cb<2>().set(FUNC(isbc_state::nmi_mask_w));
+	m_statuslatch->q_out_cb<3>().set([this] (int state) { m_override = state; }); // 1 = access onboard dual-port RAM
+	m_statuslatch->q_out_cb<4>().set(FUNC(isbc_state::bus_intr_out1_w));
+	m_statuslatch->q_out_cb<5>().set(FUNC(isbc_state::bus_intr_out2_w));
+	m_statuslatch->q_out_cb<5>().append_output("led0").invert(); // ds1
+	m_statuslatch->q_out_cb<6>().set_output("led1").invert(); // ds3
+	m_statuslatch->q_out_cb<7>().set([this] (int state) { m_megabyte_enable = !state; });
+}
+
 /* ROM definition */
 ROM_START( isbc86 )
 	ROM_REGION16_LE( 0x4000, "bios", ROMREGION_ERASEFF )
@@ -648,6 +696,15 @@ ROM_START( rpc86 )
 	ROM_LOAD16_BYTE( "145070-001.bin", 0x4000, 0x1000, CRC(8c8303ef) SHA1(60f94daa76ab9dea6e309ac580152eb212b847a0))
 	ROM_LOAD16_BYTE( "145071-001.bin", 0x6000, 0x1000, CRC(a49681d8) SHA1(e81f8b092cfa2d1737854b1fa270a4ce07d61a9f))
 ROM_END
+
+ROM_START( sm1810 )
+	ROM_REGION16_LE( 0x8000, "bios", ROMREGION_ERASEFF )
+	ROM_LOAD16_BYTE( "sm1810.42-1.06-1.bin", 0x0000, 0x2000, CRC(de8b42e7) SHA1(bb93335b4ef79638f88c38adedfb7dd9ed9d1e31))
+	ROM_LOAD16_BYTE( "sm1810.42-1.06-0.bin", 0x0001, 0x2000, CRC(352bb060) SHA1(2112fcbf9903ad8af29a5a8d4b57eaeb5cd74739))
+	ROM_LOAD16_BYTE( "sm1810.42-1.06-2.bin", 0x4000, 0x2000, CRC(ae015240) SHA1(2c345a9e0832a0f26493bda394b2c4ad7ada7aad))
+	ROM_LOAD16_BYTE( "sm1810.42-1.06-3.bin", 0x4001, 0x2000, CRC(9741a51a) SHA1(c9d3a6a5c51fe9814986517b0f4cbeae8200babc))
+ROM_END
+
 /* Driver */
 
 /*    YEAR  NAME       PARENT  COMPAT  MACHINE   INPUT  CLASS       INIT        COMPANY  FULLNAME       FLAGS */
@@ -658,3 +715,4 @@ COMP( 1981, isbc8630,  0,      0,      isbc8630, isbc,  isbc_state, empty_init, 
 COMP( 19??, isbc286,   0,      0,      isbc286,  isbc,  isbc_state, empty_init, "Intel", "iSBC 286",    MACHINE_NOT_WORKING | MACHINE_NO_SOUND_HW)
 COMP( 1983, isbc2861,  0,      0,      isbc2861, isbc,  isbc_state, empty_init, "Intel", "iSBC 286/10", MACHINE_NO_SOUND_HW)
 COMP( 1983, isbc28612, 0,      0,      isbc2861, isbc,  isbc_state, empty_init, "Intel", "iSBC 286/12", MACHINE_NO_SOUND_HW)
+COMP( 19??, sm1810,    0,      0,      sm1810,   isbc,  isbc_state, empty_init, "<unknown>", "SM1810",  MACHINE_NOT_WORKING | MACHINE_NO_SOUND_HW)

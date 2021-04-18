@@ -7,7 +7,6 @@
 
  ***********************************************************************************************************/
 
-
 #include "emu.h"
 #include "slot.h"
 
@@ -124,7 +123,7 @@ static int chanf_get_pcb_id(const char *slot)
 {
 	for (auto & elem : slot_list)
 	{
-		if (!core_stricmp(elem.slot_option, slot))
+		if (!strcmp(elem.slot_option, slot))
 			return elem.pcb_id;
 	}
 
@@ -219,10 +218,10 @@ std::string channelf_cart_slot_device::get_default_card_software(get_default_car
  read
  -------------------------------------------------*/
 
-READ8_MEMBER(channelf_cart_slot_device::read_rom)
+uint8_t channelf_cart_slot_device::read_rom(offs_t offset)
 {
 	if (m_cart)
-		return m_cart->read_rom(space, offset);
+		return m_cart->read_rom(offset);
 	else
 		return 0xff;
 }
@@ -231,10 +230,10 @@ READ8_MEMBER(channelf_cart_slot_device::read_rom)
  read
  -------------------------------------------------*/
 
-READ8_MEMBER(channelf_cart_slot_device::read_ram)
+uint8_t channelf_cart_slot_device::read_ram(offs_t offset)
 {
 	if (m_cart)
-		return m_cart->read_ram(space, offset);
+		return m_cart->read_ram(offset);
 	else
 		return 0xff;
 }
@@ -243,18 +242,18 @@ READ8_MEMBER(channelf_cart_slot_device::read_ram)
  write
  -------------------------------------------------*/
 
-WRITE8_MEMBER(channelf_cart_slot_device::write_ram)
+void channelf_cart_slot_device::write_ram(offs_t offset, uint8_t data)
 {
 	if (m_cart)
-		m_cart->write_ram(space, offset, data);
+		m_cart->write_ram(offset, data);
 }
 
 /*-------------------------------------------------
  write
  -------------------------------------------------*/
 
-WRITE8_MEMBER(channelf_cart_slot_device::write_bank)
+void channelf_cart_slot_device::write_bank(uint8_t data)
 {
 	if (m_cart)
-		m_cart->write_bank(space, offset, data);
+		m_cart->write_bank(data);
 }

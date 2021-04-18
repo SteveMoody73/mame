@@ -42,24 +42,28 @@
  **************************************************************************** */
 
 #include "emu.h"
-#include "emuopts.h"
-#include "rendutil.h"
 #include "vector.h"
+
+#include "emuopts.h"
+#include "render.h"
 
 
 #define VECTOR_WIDTH_DENOM 512
 
-#define MAX_POINTS 10000
+// 20000 is needed for mhavoc (see MT 06668) 10000 is enough for other games
+#define MAX_POINTS 20000
 
 float vector_options::s_flicker = 0.0f;
 float vector_options::s_beam_width_min = 0.0f;
 float vector_options::s_beam_width_max = 0.0f;
+float vector_options::s_beam_dot_size = 0.0f;
 float vector_options::s_beam_intensity_weight = 0.0f;
 
 void vector_options::init(emu_options& options)
 {
 	s_beam_width_min = options.beam_width_min();
 	s_beam_width_max = options.beam_width_max();
+	s_beam_dot_size = options.beam_dot_size();
 	s_beam_intensity_weight = options.beam_intensity_weight();
 	s_flicker = options.flicker();
 }
@@ -83,7 +87,7 @@ void vector_device::device_start()
 	m_vector_index = 0;
 
 	/* allocate memory for tables */
-	m_vector_list = make_unique_clear<point[]>(MAX_POINTS);
+	m_vector_list = std::make_unique<point[]>(MAX_POINTS);
 }
 
 /*
@@ -175,6 +179,10 @@ uint32_t vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitma
 
 		// normalize width
 		beam_width *= 1.0f / (float)VECTOR_WIDTH_DENOM;
+
+		// apply point scale for points
+		if (lastx == curpoint->x && lasty == curpoint->y)
+			beam_width *= vector_options::s_beam_dot_size;
 
 		coords.x0 = ((float)lastx - xoffs) * xscale;
 		coords.y0 = ((float)lasty - yoffs) * yscale;

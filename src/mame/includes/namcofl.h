@@ -32,11 +32,15 @@ public:
 		m_brake(*this, "BRAKE"),
 		m_wheel(*this, "WHEEL"),
 		m_workram(*this, "workram"),
-		m_shareram(*this, "shareram", 32) { }
+		m_shareram(*this, "shareram") { }
 
 	void namcofl(machine_config &config);
 
 	void driver_init() override;
+
+protected:
+	virtual void machine_start() override;
+	virtual void machine_reset() override;
 
 private:
 	required_device<cpu_device> m_maincpu;
@@ -58,7 +62,7 @@ private:
 	emu_timer *m_vblank_interrupt_timer;
 	emu_timer *m_network_interrupt_timer;
 	required_shared_ptr<uint32_t> m_workram;
-	required_shared_ptr<uint16_t> m_shareram;
+	required_shared_ptr<uint32_t> m_shareram;
 	uint8_t m_mcu_port6;
 	uint32_t m_sprbank;
 
@@ -69,27 +73,25 @@ private:
 		m_mainbank[1]->set_bank(bank ^ 1); // RAM, ROM
 	}
 
-	DECLARE_READ32_MEMBER(unk1_r);
-	DECLARE_READ32_MEMBER(network_r);
-	DECLARE_READ32_MEMBER(sysreg_r);
-	DECLARE_WRITE32_MEMBER(sysreg_w);
-	DECLARE_WRITE8_MEMBER(c116_w);
-	DECLARE_WRITE16_MEMBER(mcu_shared_w);
-	DECLARE_READ8_MEMBER(port6_r);
-	DECLARE_WRITE8_MEMBER(port6_w);
-	DECLARE_READ8_MEMBER(port7_r);
-	DECLARE_READ8_MEMBER(dac7_r);
-	DECLARE_READ8_MEMBER(dac6_r);
-	DECLARE_READ8_MEMBER(dac5_r);
-	DECLARE_READ8_MEMBER(dac4_r);
-	DECLARE_READ8_MEMBER(dac3_r);
-	DECLARE_READ8_MEMBER(dac2_r);
-	DECLARE_READ8_MEMBER(dac1_r);
-	DECLARE_READ8_MEMBER(dac0_r);
-	DECLARE_WRITE32_MEMBER(spritebank_w);
-	DECLARE_MACHINE_START(namcofl);
-	DECLARE_MACHINE_RESET(namcofl);
-	DECLARE_VIDEO_START(namcofl);
+	uint32_t unk1_r();
+	uint32_t network_r();
+	uint32_t sysreg_r();
+	void sysreg_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
+	void c116_w(offs_t offset, uint8_t data);
+	uint16_t mcu_shared_r(offs_t offset);
+	void mcu_shared_w(offs_t offset, uint16_t data, uint16_t mem_mask);
+	uint8_t port6_r();
+	void port6_w(uint8_t data);
+	uint8_t port7_r();
+	uint8_t dac7_r();
+	uint8_t dac6_r();
+	uint8_t dac5_r();
+	uint8_t dac4_r();
+	uint8_t dac3_r();
+	uint8_t dac2_r();
+	uint8_t dac1_r();
+	uint8_t dac0_r();
+	void spritebank_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	TIMER_CALLBACK_MEMBER(network_interrupt_callback);
 	TIMER_CALLBACK_MEMBER(vblank_interrupt_callback);

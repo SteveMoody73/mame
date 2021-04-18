@@ -48,13 +48,13 @@ inline void zn_state::psxwriteword( uint32_t *p_n_psxram, uint32_t n_address, ui
 	*( (uint16_t *)( (uint8_t *)p_n_psxram + WORD_XOR_LE( n_address ) ) ) = n_data;
 }
 
-READ8_MEMBER(zn_state::znsecsel_r)
+uint8_t zn_state::znsecsel_r(offs_t offset, uint8_t mem_mask)
 {
 	verboselog(2, "znsecsel_r( %08x, %08x )\n", offset, mem_mask );
 	return m_n_znsecsel;
 }
 
-WRITE8_MEMBER(zn_state::znsecsel_w)
+void zn_state::znsecsel_w(offs_t offset, uint8_t data, uint8_t mem_mask)
 {
 	verboselog(2, "znsecsel_w( %08x, %08x, %08x )\n", offset, data, mem_mask );
 
@@ -66,7 +66,7 @@ WRITE8_MEMBER(zn_state::znsecsel_w)
 	m_n_znsecsel = data;
 }
 
-READ8_MEMBER(zn_state::boardconfig_r)
+uint8_t zn_state::boardconfig_r()
 {
 	/*
 	------00 mem=4M
@@ -112,13 +112,13 @@ READ8_MEMBER(zn_state::boardconfig_r)
 	return boardconfig;
 }
 
-READ16_MEMBER(zn_state::unknown_r)
+uint16_t zn_state::unknown_r(offs_t offset, uint16_t mem_mask)
 {
 	verboselog(0, "unknown_r( %08x, %08x )\n", offset, mem_mask );
 	return 0xffff;
 }
 
-WRITE8_MEMBER(zn_state::coin_w)
+void zn_state::coin_w(uint8_t data)
 {
 	/* 0x01=counter
 	   0x02=coin lock 1
@@ -187,9 +187,9 @@ void zn_state::zn_1mb_vram(machine_config &config)
 	SPEAKER(config, "lspeaker").front_left();
 	SPEAKER(config, "rspeaker").front_right();
 
-	spu_device &spu(SPU(config, "spu", XTAL(67'737'600)/2, subdevice<psxcpu_device>("maincpu")));
-	spu.add_route(0, "lspeaker", 0.35);
-	spu.add_route(1, "rspeaker", 0.35);
+	SPU(config, m_spu, XTAL(67'737'600)/2, subdevice<psxcpu_device>("maincpu"));
+	m_spu->add_route(0, "lspeaker", 0.35);
+	m_spu->add_route(1, "rspeaker", 0.35);
 
 	AT28C16(config, "at28c16", 0);
 }
@@ -232,9 +232,9 @@ void zn_state::zn2(machine_config &config)
 	SPEAKER(config, "lspeaker").front_left();
 	SPEAKER(config, "rspeaker").front_right();
 
-	spu_device &spu(SPU(config, "spu", XTAL(67'737'600)/2, subdevice<psxcpu_device>("maincpu")));
-	spu.add_route(0, "lspeaker", 0.35);
-	spu.add_route(1, "rspeaker", 0.35);
+	SPU(config, m_spu, XTAL(67'737'600)/2, subdevice<psxcpu_device>("maincpu"));
+	m_spu->add_route(0, "lspeaker", 0.35);
+	m_spu->add_route(1, "rspeaker", 0.35);
 
 	AT28C16(config, "at28c16", 0);
 }
@@ -363,19 +363,19 @@ Notes:
       Unpopulated sockets - 1.3B, 2.2E, 3.3E, 8.2K, 9.3K, 10.4K, 11.5K, 12.6K & 13.7K
 */
 
-READ16_MEMBER(capcom_zn_state::kickharness_r)
+uint16_t capcom_zn_state::kickharness_r(offs_t offset, uint16_t mem_mask)
 {
 	/* required for buttons 4,5&6 */
 	verboselog(2, "capcom_kickharness_r( %08x, %08x )\n", offset, mem_mask );
 	return 0xffff;
 }
 
-WRITE8_MEMBER(capcom_zn_state::bank_w)
+void capcom_zn_state::bank_w(uint8_t data)
 {
 	m_rombank->set_entry( data & 0x0f);
 }
 
-WRITE8_MEMBER(capcom_zn_state::qsound_bankswitch_w)
+void capcom_zn_state::qsound_bankswitch_w(uint8_t data)
 {
 	m_soundbank->set_entry( data & 0x0f );
 }
@@ -831,7 +831,7 @@ Notes:
       FM1208S        - RAMTRON 4096bit Nonvolatile Ferroelectric RAM (512w x 8b)
 */
 
-WRITE8_MEMBER(taito_fx_state::bank_w)
+void taito_fx_state::bank_w(offs_t offset, uint8_t data, uint8_t mem_mask)
 {
 	verboselog(1, "bank_w( %08x, %08x, %08x )\n", offset, data, mem_mask );
 
@@ -840,7 +840,7 @@ WRITE8_MEMBER(taito_fx_state::bank_w)
 	m_rombank->set_entry( data & 3 );
 }
 
-WRITE8_MEMBER(taito_fx1a_state::sound_bankswitch_w)
+void taito_fx1a_state::sound_bankswitch_w(uint8_t data)
 {
 	m_soundbank->set_entry( data & 0x07 );
 }
@@ -919,12 +919,12 @@ void taito_fx1a_state::coh1000ta(machine_config &config)
 	tc0140syt.set_slave_tag(m_audiocpu);
 }
 
-WRITE8_MEMBER(taito_fx1b_state::fram_w)
+void taito_fx1b_state::fram_w(offs_t offset, uint8_t data)
 {
 	m_fram[offset] = data;
 }
 
-READ8_MEMBER(taito_fx1b_state::fram_r)
+uint8_t taito_fx1b_state::fram_r(offs_t offset)
 {
 	return m_fram[offset];
 }
@@ -1127,13 +1127,13 @@ void primrag2_state::dma_write( uint32_t *p_n_psxram, uint32_t n_address, int32_
 	logerror("DMA write from %08x for %d bytes\n", n_address, n_size<<2);
 }
 
-READ16_MEMBER(primrag2_state::vt83c461_16_r)
+uint16_t primrag2_state::vt83c461_16_r(offs_t offset, uint16_t mem_mask)
 {
 	int shift = (16 * (offset & 1));
 
 	if( offset >= 0x30 / 2 && offset < 0x40 / 2 )
 	{
-		return m_vt83c461->read_config( ( offset / 2 ) & 3 ) >> shift;
+		return m_vt83c461->config_r( ( offset / 2 ) & 3 ) >> shift;
 	}
 	else if( offset >= 0x1f0 / 2 && offset < 0x1f8 / 2 )
 	{
@@ -1150,13 +1150,13 @@ READ16_MEMBER(primrag2_state::vt83c461_16_r)
 	}
 }
 
-WRITE16_MEMBER(primrag2_state::vt83c461_16_w)
+void primrag2_state::vt83c461_16_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	int shift = (16 * (offset & 1));
 
 	if( offset >= 0x30 / 2 && offset < 0x40 / 2 )
 	{
-		m_vt83c461->write_config( ( offset / 2 ) & 3, data << shift );
+		m_vt83c461->config_w( ( offset / 2 ) & 3, data << shift );
 	}
 	else if( offset >= 0x1f0 / 2 && offset < 0x1f8 / 2 )
 	{
@@ -1172,7 +1172,7 @@ WRITE16_MEMBER(primrag2_state::vt83c461_16_w)
 	}
 }
 
-READ16_MEMBER(primrag2_state::vt83c461_32_r)
+uint16_t primrag2_state::vt83c461_32_r(offs_t offset, uint16_t mem_mask)
 {
 	if( offset == 0x1f0/2 )
 	{
@@ -1191,7 +1191,7 @@ READ16_MEMBER(primrag2_state::vt83c461_32_r)
 	}
 }
 
-WRITE16_MEMBER(primrag2_state::vt83c461_32_w)
+void primrag2_state::vt83c461_32_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	logerror( "unhandled 32 bit write %04x %04x %04x\n", offset, data, mem_mask );
 }
@@ -1375,14 +1375,14 @@ Notes:
 
 */
 
-WRITE8_MEMBER(raizing_zn_state::bank_w)
+void raizing_zn_state::bank_w(offs_t offset, uint8_t data, uint8_t mem_mask)
 {
-	znsecsel_w( space, offset, data, mem_mask );
+	znsecsel_w( offset, data, mem_mask );
 
 	m_rombank->set_entry( data & 3 );
 }
 
-WRITE8_MEMBER(raizing_zn_state::sound_irq_w)
+void raizing_zn_state::sound_irq_w(uint8_t data)
 {
 	m_audiocpu->set_input_line(2, HOLD_LINE); // irq 2 on the 68k
 }
@@ -1530,7 +1530,7 @@ MTR-BAM* - DIP42 32MBit maskROMs
 */
 
 
-WRITE16_MEMBER(bam2_state::mcu_w)
+void bam2_state::mcu_w(offs_t offset, uint16_t data)
 {
 	switch( offset )
 	{
@@ -1545,7 +1545,7 @@ WRITE16_MEMBER(bam2_state::mcu_w)
 	}
 }
 
-READ16_MEMBER(bam2_state::mcu_r)
+uint16_t bam2_state::mcu_r(offs_t offset, uint16_t mem_mask)
 {
 	switch (offset)
 	{
@@ -1569,7 +1569,7 @@ READ16_MEMBER(bam2_state::mcu_r)
 	return 0;
 }
 
-READ16_MEMBER(bam2_state::unk_r)
+uint16_t bam2_state::unk_r()
 {
 	return 0;
 }
@@ -1808,12 +1808,12 @@ WRITE_LINE_MEMBER(jdredd_state::vblank)
 	}
 }
 
-WRITE16_MEMBER(acclaim_zn_state::acpsx_00_w)
+void acclaim_zn_state::acpsx_00_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	verboselog(0, "acpsx_00_w( %08x, %08x, %08x )\n", offset, data, mem_mask );
 }
 
-WRITE16_MEMBER(nbajamex_state::bank_w)
+void nbajamex_state::bank_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	verboselog(0, "bank_w( %08x, %08x, %08x )\n", offset, data, mem_mask );
 
@@ -1850,31 +1850,31 @@ WRITE16_MEMBER(nbajamex_state::bank_w)
 	}
 }
 
-WRITE16_MEMBER(acclaim_zn_state::acpsx_10_w)
+void acclaim_zn_state::acpsx_10_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	verboselog(0, "acpsx_10_w( %08x, %08x, %08x )\n", offset, data, mem_mask );
 }
 
 // all 16 bits goes to the external soundboard's latch (see sound test menu)
-WRITE16_MEMBER(nbajamex_state::sound_80_w)
+void nbajamex_state::sound_80_w(uint16_t data)
 {
-	m_rax->data_w(space, 0, data, 0xffff);
+	m_rax->data_w(data);
 }
 
-READ16_MEMBER(nbajamex_state::sound_08_r)
+uint16_t nbajamex_state::sound_08_r(offs_t offset, uint16_t mem_mask)
 {
 	// Sound related
 	verboselog(0, "nbajamex_08_r( %08x, %08x, %08x )\n", offset, 0, mem_mask );
 	return 0x400;
 }
 
-READ16_MEMBER(nbajamex_state::sound_80_r)
+uint16_t nbajamex_state::sound_80_r(offs_t offset, uint16_t mem_mask)
 {
 	verboselog(0, "nbajamex_80_r( %08x, %08x, %08x )\n", offset, 0, mem_mask );
 	return 0xffff;
 }
 
-WRITE8_MEMBER(nbajamex_state::backup_w)
+void nbajamex_state::backup_w(offs_t offset, uint8_t data)
 {
 	m_sram[offset] = data;
 }
@@ -2097,13 +2097,13 @@ Notes:
       VSync        - 60Hz
 */
 
-WRITE16_MEMBER(atlus_zn_state::sound_unk_w)
+void atlus_zn_state::sound_unk_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	// irq ack maybe?
 	logerror("coh1001l_sound_unk_w: %04x %04x\n", data, mem_mask);
 }
 
-WRITE8_MEMBER(atlus_zn_state::bank_w)
+void atlus_zn_state::bank_w(uint8_t data)
 {
 	m_rombank->set_entry( data & 3 );
 }
@@ -2149,6 +2149,10 @@ void atlus_zn_state::coh1001l(machine_config &config)
 	GENERIC_LATCH_16(config, m_soundlatch16);
 	m_soundlatch16->data_pending_callback().set_inputline(m_audiocpu, 3);
 
+	m_spu->reset_routes();
+	m_spu->add_route(0, "lspeaker", 0.175);
+	m_spu->add_route(1, "rspeaker", 0.175);
+
 	ymz280b_device &ymz(YMZ280B(config, "ymz", XTAL(16'934'400)));
 	ymz.irq_handler().set_inputline(m_audiocpu, 2);
 	ymz.add_route(0, "lspeaker", 0.35);
@@ -2168,7 +2172,7 @@ Key:    Mother    KN01
 
 */
 
-WRITE8_MEMBER(visco_zn_state::bank_w)
+void visco_zn_state::bank_w(uint8_t data)
 {
 	m_rombank->set_entry( data );
 }
@@ -2358,7 +2362,7 @@ Notes:
       for 11 more 32MBit smt SOP44 mask ROMs.
 */
 
-WRITE8_MEMBER(tecmo_zn_state::bank_w)
+void tecmo_zn_state::bank_w(offs_t offset, uint8_t data, uint8_t mem_mask)
 {
 	verboselog(1, "bank_w( %08x, %08x, %08x )\n", offset, data, mem_mask );
 	m_rombank->set_entry( data );
@@ -2409,7 +2413,7 @@ void tecmo_zn_state::coh1002ml(machine_config &config)
 	link.set_addrmap(AS_IO, &tecmo_zn_state::link_port_map);
 }
 
-READ8_MEMBER(cbaj_state::sound_main_status_r)
+uint8_t cbaj_state::sound_main_status_r()
 {
 	// d1: fifo empty flag, other bits: unused(?)
 	return m_fifo[1]->ef_r() << 1;
@@ -2423,7 +2427,7 @@ void cbaj_state::main_map(address_map &map)
 	map(0x1fb00003, 0x1fb00003).r(FUNC(cbaj_state::sound_main_status_r));
 }
 
-READ8_MEMBER(cbaj_state::sound_z80_status_r)
+uint8_t cbaj_state::sound_z80_status_r()
 {
 	// d1: fifo empty flag, other bits: unused
 	return m_fifo[0]->ef_r() << 1;
@@ -2563,34 +2567,6 @@ static INPUT_PORTS_START( nbajamex )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_BUTTON4 ) PORT_PLAYER(4)
 INPUT_PORTS_END
 
-static INPUT_PORTS_START( zn4w )
-	PORT_INCLUDE( zn )
-
-	PORT_MODIFY("P1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_4WAY PORT_PLAYER(1)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN ) PORT_4WAY PORT_PLAYER(1)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_4WAY PORT_PLAYER(1)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_4WAY PORT_PLAYER(1)
-
-	PORT_MODIFY("P2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_4WAY PORT_PLAYER(2)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN ) PORT_4WAY PORT_PLAYER(2)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_4WAY PORT_PLAYER(2)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_4WAY PORT_PLAYER(2)
-
-	PORT_MODIFY("P3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_4WAY PORT_PLAYER(3)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN ) PORT_4WAY PORT_PLAYER(3)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_4WAY PORT_PLAYER(3)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_4WAY PORT_PLAYER(3)
-
-	PORT_MODIFY("P4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_4WAY PORT_PLAYER(4)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN ) PORT_4WAY PORT_PLAYER(4)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_4WAY PORT_PLAYER(4)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_4WAY PORT_PLAYER(4)
-INPUT_PORTS_END
-
 static INPUT_PORTS_START( zn6b )
 	PORT_INCLUDE( zn )
 
@@ -2608,6 +2584,40 @@ static INPUT_PORTS_START( zn6b )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON4 ) PORT_PLAYER(2)
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON5 ) PORT_PLAYER(2)
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_BUTTON6 ) PORT_PLAYER(2)
+INPUT_PORTS_END
+
+static INPUT_PORTS_START( tgm )
+	PORT_INCLUDE( zn6b )
+
+	PORT_MODIFY("P1")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_4WAY PORT_PLAYER(1)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN ) PORT_4WAY PORT_PLAYER(1)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_4WAY PORT_PLAYER(1)
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_4WAY PORT_PLAYER(1)
+
+	PORT_MODIFY("P2")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_4WAY PORT_PLAYER(2)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN ) PORT_4WAY PORT_PLAYER(2)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_4WAY PORT_PLAYER(2)
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_4WAY PORT_PLAYER(2)
+
+	/* Tetris: The Grand Master uses 6-button kick harness for debug inputs */
+	PORT_START("DEBUG")
+	PORT_CONFNAME( 0x01, 0x00, "Enable Debug Inputs" )
+	PORT_CONFSETTING(    0x00, DEF_STR( No ) )
+	PORT_CONFSETTING(    0x01, DEF_STR( Yes ) )
+
+	PORT_MODIFY("P3")
+	PORT_BIT( 0x70, IP_ACTIVE_LOW, IPT_UNUSED ) PORT_CONDITION("DEBUG", 0x01, EQUALS, 0x00)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON4 ) PORT_CONDITION("DEBUG", 0x01, EQUALS, 0x01)
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON5 ) PORT_CONDITION("DEBUG", 0x01, EQUALS, 0x01)
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_BUTTON6 ) PORT_CONDITION("DEBUG", 0x01, EQUALS, 0x01)
+
+	PORT_MODIFY("P4")
+	PORT_BIT( 0x70, IP_ACTIVE_LOW, IPT_UNUSED ) PORT_CONDITION("DEBUG", 0x01, EQUALS, 0x00)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON4 ) PORT_PLAYER(2) PORT_CONDITION("DEBUG", 0x01, EQUALS, 0x01)
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON5 ) PORT_PLAYER(2) PORT_CONDITION("DEBUG", 0x01, EQUALS, 0x01)
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_BUTTON6 ) PORT_PLAYER(2) PORT_CONDITION("DEBUG", 0x01, EQUALS, 0x01)
 INPUT_PORTS_END
 
 static INPUT_PORTS_START( jdredd )
@@ -3998,6 +4008,23 @@ ROM_START( doapp )
 	ROM_LOAD( "mg05", 0x000000, 0x000008, CRC(5748a4ca) SHA1(c88d73f6a646a9ddefdfd84cba70d591759c069f) )
 ROM_END
 
+ROM_START( doappk )
+	TPS_BIOS
+
+	ROM_REGION32_LE( 0x02800000, "bankedroms", 0 )
+	ROM_LOAD16_BYTE( "doapp_u0119.119", 0x0000001, 0x100000, CRC(9084704e) SHA1(616b3e65a32768767209ae77c48ad34d11b31754) )
+	ROM_LOAD16_BYTE( "doapp_u0120.120", 0x0000000, 0x100000, CRC(720a6983) SHA1(d38783110440ffa00036b86f97bff5edb6a5673f) )
+	ROM_LOAD( "doapp-0.216",         0x0400000, 0x400000, CRC(acc6c539) SHA1(a744567a3d75634098b1749103307981be9acbdd) )
+	ROM_LOAD( "doapp-1.217",         0x0800000, 0x400000, CRC(14b961c4) SHA1(3fae1fcb4665ba8bad391881b26c2d087718d42f) )
+	ROM_LOAD( "doapp-2.218",         0x0c00000, 0x400000, CRC(134f698f) SHA1(6422972cf5d30a0f09f0c20f042691d5969207b4) )
+	ROM_LOAD( "doapp-3.219",         0x1000000, 0x400000, CRC(1c6540f3) SHA1(8631fde93a1da6325d7b31c7edf12c964f0ac4fc) )
+	ROM_LOAD( "doapp-4.220",         0x1400000, 0x400000, CRC(f83bacf7) SHA1(5bd66da993f0db966581dde80dd7e5b377754412) )
+	ROM_LOAD( "doapp-5.221",         0x1800000, 0x400000, CRC(e11e8b71) SHA1(b1d1b9532b5f074ce216a603436d5674d136865d) )
+
+	ROM_REGION( 0x8, "cat702_2", 0 )
+	ROM_LOAD( "mg05", 0x000000, 0x000008, CRC(5748a4ca) SHA1(c88d73f6a646a9ddefdfd84cba70d591759c069f) )
+ROM_END
+
 ROM_START( tondemo )
 	TPS_BIOS
 
@@ -4269,7 +4296,7 @@ ROM_START( coh1000t )
 
 	ROM_REGION32_LE( 0x01000000, "bankedroms", ROMREGION_ERASE00 )
 	ROM_REGION( 0x080000, "audiocpu", ROMREGION_ERASE00 )
-	ROM_REGION( 0x200000, "ymsnd", ROMREGION_ERASE00 )
+	ROM_REGION( 0x200000, "ymsnd:adpcma", ROMREGION_ERASE00 )
 	ROM_REGION( 0x8, "cat702_2", 0 ) ROM_COPY( "cat702_1", 0x0, 0x0, 0x8 )
 ROM_END
 
@@ -4361,8 +4388,8 @@ ROM_START( gdarius )
 	TAITOFX1_BIOS
 
 	ROM_REGION32_LE( 0x01000000, "bankedroms", 0 )
-	ROM_LOAD16_BYTE( "e39-06.4",     0x0000001, 0x100000, CRC(2980c30d) SHA1(597321642125c3ae37581c2d9abc2723c7909996) )
-	ROM_LOAD16_BYTE( "e39-05.3",     0x0000000, 0x100000, CRC(750e5b13) SHA1(68fe9cbd7d506cfd587dccc40b6ae0b0b6ee7c29) )
+	ROM_LOAD16_BYTE( "e39-09.ic4",   0x0000001, 0x100000, CRC(f457794d) SHA1(43571770b239298e3442d3da8aa4f4507380d639) )
+	ROM_LOAD16_BYTE( "e39-10.ic3",   0x0000000, 0x100000, CRC(6ba4d941) SHA1(75f2d8c920d29102c09e041fc3198e32ad57dbaf) )
 	ROM_LOAD( "e39-01.1",            0x0400000, 0x400000, CRC(bdaaa251) SHA1(a42daa706ee859c2b66be179e08c0ad7990f919e) )
 	ROM_LOAD( "e39-02.2",            0x0800000, 0x400000, CRC(a47aab5d) SHA1(64b58e47035ad9d8d6dcaf475cbcc3ad85f4d82f) )
 	ROM_LOAD( "e39-03.12",           0x0c00000, 0x400000, CRC(a883b6a5) SHA1(b8d00d944c90f8cd9c2b076688f4c68b2e6d557a) )
@@ -4377,12 +4404,32 @@ ROM_START( gdarius )
 	ROM_LOAD( "tt07", 0x000000, 0x000008, CRC(ccf2f332) SHA1(6eb07cd5fab29f5536fd94aa88a2b09f28cc3494) )
 ROM_END
 
-ROM_START( gdariusb )
+ROM_START( gdariusu )
 	TAITOFX1_BIOS
 
 	ROM_REGION32_LE( 0x01000000, "bankedroms", 0 )
 	ROM_LOAD16_BYTE( "e39-08.ic4",   0x0000001, 0x100000, CRC(835049db) SHA1(2b230c8fd6c6ea4e30740fda28f631344b018b79) )
 	ROM_LOAD16_BYTE( "e39-10.ic3",   0x0000000, 0x100000, CRC(6ba4d941) SHA1(75f2d8c920d29102c09e041fc3198e32ad57dbaf) )
+	ROM_LOAD( "e39-01.1",            0x0400000, 0x400000, CRC(bdaaa251) SHA1(a42daa706ee859c2b66be179e08c0ad7990f919e) )
+	ROM_LOAD( "e39-02.2",            0x0800000, 0x400000, CRC(a47aab5d) SHA1(64b58e47035ad9d8d6dcaf475cbcc3ad85f4d82f) )
+	ROM_LOAD( "e39-03.12",           0x0c00000, 0x400000, CRC(a883b6a5) SHA1(b8d00d944c90f8cd9c2b076688f4c68b2e6d557a) )
+
+	ROM_REGION( 0x080000, ":taito_zoom:mn10200", 0 )
+	ROM_LOAD( "e39-07.14",    0x0000000, 0x080000, CRC(2252c7c1) SHA1(92b9908e0d87cad6587f1acc0eef69eaae8c6a98) )
+
+	ROM_REGION32_LE( 0x400000, ":taito_zoom:zsg2", 0 )
+	ROM_LOAD( "e39-04.27",    0x0000000, 0x400000, CRC(6ee35e68) SHA1(fdfe63203d8cecf84cb869039fb893d5b63cdd67) )
+
+	ROM_REGION( 0x8, "cat702_2", 0 )
+	ROM_LOAD( "tt07", 0x000000, 0x000008, CRC(ccf2f332) SHA1(6eb07cd5fab29f5536fd94aa88a2b09f28cc3494) )
+ROM_END
+
+ROM_START( gdariusj )
+	TAITOFX1_BIOS
+
+	ROM_REGION32_LE( 0x01000000, "bankedroms", 0 )
+	ROM_LOAD16_BYTE( "e39-06.4",     0x0000001, 0x100000, CRC(2980c30d) SHA1(597321642125c3ae37581c2d9abc2723c7909996) )
+	ROM_LOAD16_BYTE( "e39-05.3",     0x0000000, 0x100000, CRC(750e5b13) SHA1(68fe9cbd7d506cfd587dccc40b6ae0b0b6ee7c29) )
 	ROM_LOAD( "e39-01.1",            0x0400000, 0x400000, CRC(bdaaa251) SHA1(a42daa706ee859c2b66be179e08c0ad7990f919e) )
 	ROM_LOAD( "e39-02.2",            0x0800000, 0x400000, CRC(a47aab5d) SHA1(64b58e47035ad9d8d6dcaf475cbcc3ad85f4d82f) )
 	ROM_LOAD( "e39-03.12",           0x0c00000, 0x400000, CRC(a883b6a5) SHA1(b8d00d944c90f8cd9c2b076688f4c68b2e6d557a) )
@@ -4430,7 +4477,7 @@ ROM_START( mgcldate )
 	ROM_REGION( 0x24000, "audiocpu", ROMREGION_ERASE00 )     /* 64k for Z80 code */
 	ROM_LOAD( "e32-07.22",           0x0000000, 0x020000, CRC(adf3feb5) SHA1(bae5bc3fad99a92a3492be1b775dab861007eb3b) ) // 0x4000 - 0x20000 banked
 
-	ROM_REGION( 0x400000, "ymsnd", 0 )
+	ROM_REGION( 0x400000, "ymsnd:adpcma", 0 )
 	ROM_LOAD( "e32-04.15",           0x0000000, 0x400000, CRC(c72f9eea) SHA1(7ab8b412a8ed00a42016acb7d13d3b074155780a) )
 
 	ROM_REGION( 0x8, "cat702_2", 0 )
@@ -4450,7 +4497,7 @@ ROM_START( mgcldtex )
 	ROM_REGION( 0x24000, "audiocpu", ROMREGION_ERASE00 )     /* 64k for Z80 code */
 	ROM_LOAD( "e32-10.22",           0x0000000, 0x020000, CRC(adf3feb5) SHA1(bae5bc3fad99a92a3492be1b775dab861007eb3b) ) // 0x4000 - 0x20000 banked
 
-	ROM_REGION( 0x400000, "ymsnd", 0 )
+	ROM_REGION( 0x400000, "ymsnd:adpcma", 0 )
 	ROM_LOAD( "e32-04.15",           0x0000000, 0x400000, CRC(c72f9eea) SHA1(7ab8b412a8ed00a42016acb7d13d3b074155780a) )
 
 	ROM_REGION( 0x8, "cat702_2", 0 )
@@ -4471,7 +4518,7 @@ ROM_START( psyforce )
 	ROM_REGION( 0x24000, "audiocpu", ROMREGION_ERASE00 )     /* 64k for Z80 code */
 	ROM_LOAD( "e22-07.22",           0x0000000, 0x020000, CRC(739af589) SHA1(dbb4d1c6d824a99ccf27168e2c21644e19811523) )// 0x4000 - 0x20000 banked
 
-	ROM_REGION( 0x200000, "ymsnd", 0 )
+	ROM_REGION( 0x200000, "ymsnd:adpcma", 0 )
 	ROM_LOAD( "e22-01.15",           0x000000,  0x200000, CRC(808b8340) SHA1(d8bde850dd9b5b71e94ea707d2d728754f907977) )
 
 	ROM_REGION( 0x8, "cat702_2", 0 )
@@ -4491,7 +4538,7 @@ ROM_START( psyforcej )
 	ROM_REGION( 0x24000, "audiocpu", ROMREGION_ERASE00 )     /* 64k for Z80 code */
 	ROM_LOAD( "e22-07.22",           0x0000000, 0x020000, CRC(739af589) SHA1(dbb4d1c6d824a99ccf27168e2c21644e19811523) )// 0x4000 - 0x20000 banked
 
-	ROM_REGION( 0x200000, "ymsnd", 0 )
+	ROM_REGION( 0x200000, "ymsnd:adpcma", 0 )
 	ROM_LOAD( "e22-01.15",           0x000000,  0x200000, CRC(808b8340) SHA1(d8bde850dd9b5b71e94ea707d2d728754f907977) )
 
 	ROM_REGION( 0x8, "cat702_2", 0 )
@@ -4511,7 +4558,7 @@ ROM_START( psyforcex )
 	ROM_REGION( 0x24000, "audiocpu", ROMREGION_ERASE00 )     /* 64k for Z80 code */
 	ROM_LOAD( "e22-07.22",           0x0000000, 0x020000, CRC(739af589) SHA1(dbb4d1c6d824a99ccf27168e2c21644e19811523) )// 0x4000 - 0x20000 banked
 
-	ROM_REGION( 0x200000, "ymsnd", 0 )
+	ROM_REGION( 0x200000, "ymsnd:adpcma", 0 )
 	ROM_LOAD( "e22-01.15",           0x000000,  0x200000, CRC(808b8340) SHA1(d8bde850dd9b5b71e94ea707d2d728754f907977) )
 
 	ROM_REGION( 0x8, "cat702_2", 0 )
@@ -4608,7 +4655,7 @@ ROM_START( sfchamp )
 	ROM_REGION( 0x24000, "audiocpu", ROMREGION_ERASE00 )     /* 64k for Z80 code */
 	ROM_LOAD( "e18-09.22",           0x0000000, 0x020000, CRC(bb5a5319) SHA1(0bb700cafc157d3af663cc9bebb8167487ff2852) ) // 0x4000 - 0x20000 banked
 
-	ROM_REGION( 0x200000, "ymsnd", 0 )
+	ROM_REGION( 0x200000, "ymsnd:adpcma", 0 )
 	ROM_LOAD( "e18-01.15",           0x0000000, 0x200000, CRC(dbd1408c) SHA1(ef81064f2f95e5ae25eb1f10d1e78f27f9e294f5) )
 
 	ROM_REGION( 0x8, "cat702_2", 0 )
@@ -4629,7 +4676,7 @@ ROM_START( sfchampo )
 	ROM_REGION( 0x24000, "audiocpu", ROMREGION_ERASE00 )     /* 64k for Z80 code */
 	ROM_LOAD( "e18-09.22",           0x0000000, 0x020000, CRC(bb5a5319) SHA1(0bb700cafc157d3af663cc9bebb8167487ff2852) ) // 0x4000 - 0x20000 banked
 
-	ROM_REGION( 0x200000, "ymsnd", 0 )
+	ROM_REGION( 0x200000, "ymsnd:adpcma", 0 )
 	ROM_LOAD( "e18-01.15",           0x0000000, 0x200000, CRC(dbd1408c) SHA1(ef81064f2f95e5ae25eb1f10d1e78f27f9e294f5) )
 
 	ROM_REGION( 0x8, "cat702_2", 0 )
@@ -4650,7 +4697,7 @@ ROM_START( sfchampu )
 	ROM_REGION( 0x24000, "audiocpu", ROMREGION_ERASE00 )     /* 64k for Z80 code */
 	ROM_LOAD( "e18-09.22",           0x0000000, 0x020000, CRC(bb5a5319) SHA1(0bb700cafc157d3af663cc9bebb8167487ff2852) ) // 0x4000 - 0x20000 banked
 
-	ROM_REGION( 0x200000, "ymsnd", 0 )
+	ROM_REGION( 0x200000, "ymsnd:adpcma", 0 )
 	ROM_LOAD( "e18-01.15",           0x0000000, 0x200000, CRC(dbd1408c) SHA1(ef81064f2f95e5ae25eb1f10d1e78f27f9e294f5) )
 
 	ROM_REGION( 0x8, "cat702_2", 0 )
@@ -4671,7 +4718,7 @@ ROM_START( sfchampj )
 	ROM_REGION( 0x24000, "audiocpu", ROMREGION_ERASE00 )     /* 64k for Z80 code */
 	ROM_LOAD( "e18-09.22",           0x0000000, 0x020000, CRC(bb5a5319) SHA1(0bb700cafc157d3af663cc9bebb8167487ff2852) ) // 0x4000 - 0x20000 banked
 
-	ROM_REGION( 0x200000, "ymsnd", 0 )
+	ROM_REGION( 0x200000, "ymsnd:adpcma", 0 )
 	ROM_LOAD( "e18-01.15",           0x0000000, 0x200000, CRC(dbd1408c) SHA1(ef81064f2f95e5ae25eb1f10d1e78f27f9e294f5) )
 
 	ROM_REGION( 0x8, "cat702_2", 0 )
@@ -5080,7 +5127,7 @@ ROM_START( nbajamex )
 	ROM_LOAD16_BYTE( "nba6o.u5",    0x1a00001, 0x200000, CRC(b1dfb42e) SHA1(fb9627e228bf2a744842eb44afbca4a6232cadb2) )
 	ROM_LOAD16_BYTE( "nba6e.u19",   0x1a00000, 0x200000, CRC(6f17d8c1) SHA1(22cf263efb64cf62030e02b641c485debe75944d) )
 
-	ROM_REGION16_LE( 0x800000, "rax", 0 )
+	ROM_REGION( 0x800000, "rax", 0 )
 	ROM_LOAD( "360snda1.u52", 0x000000, 0x080000, CRC(36d8a628) SHA1(944a01c9128f5e90c7dba3557a3ecb2c5ca90831) )
 	ROM_LOAD( "sound0.u48",   0x400000, 0x200000, CRC(38873b67) SHA1(b2f8d32270ae604c099a1b9b71d2e06468c7d4a9) )
 	ROM_LOAD( "sound1.u49",   0x600000, 0x200000, CRC(57014589) SHA1(d360ff1c52424bd91a5a8d1a2a9c10bf7abb0602) )
@@ -5117,7 +5164,7 @@ ROM_START( nbajamexa )
 	ROM_REGION( 0x8, "cat702_2", 0 )
 	ROM_LOAD( "ac02", 0x000000, 0x000008, CRC(1412d475) SHA1(c2f62232a261870f58353d09dc0d6ce2ad17a729) )
 
-	ROM_REGION16_LE( 0x800000, "rax", 0 )
+	ROM_REGION( 0x800000, "rax", 0 )
 	ROM_LOAD( "360snda1.u52", 0x000000, 0x080000, CRC(36d8a628) SHA1(944a01c9128f5e90c7dba3557a3ecb2c5ca90831) )
 	ROM_LOAD( "sound0.u48",   0x400000, 0x200000, CRC(38873b67) SHA1(b2f8d32270ae604c099a1b9b71d2e06468c7d4a9) )
 	ROM_LOAD( "sound1.u49",   0x600000, 0x200000, CRC(57014589) SHA1(d360ff1c52424bd91a5a8d1a2a9c10bf7abb0602) )
@@ -5227,7 +5274,7 @@ GAME( 1998, sfex2j,    sfex2,    coh3002c,    zn6b,     zn2_state, empty_init, R
 GAME( 1998, plsmaswd,  coh3002c, coh3002c,    zn6b,     zn2_state, empty_init, ROT0, "Capcom",         "Plasma Sword: Nightmare of Bilstein (USA 980316)",         MACHINE_IMPERFECT_SOUND )
 GAME( 1998, plsmaswda, plsmaswd, coh3002c,    zn6b,     zn2_state, empty_init, ROT0, "Capcom",         "Plasma Sword: Nightmare of Bilstein (Asia 980316)",        MACHINE_IMPERFECT_SOUND )
 GAME( 1998, stargld2,  plsmaswd, coh3002c,    zn6b,     zn2_state, empty_init, ROT0, "Capcom",         "Star Gladiator 2: Nightmare of Bilstein (Japan 980316)",   MACHINE_IMPERFECT_SOUND )
-GAME( 1998, tgmj,      coh3002c, coh3002c,    zn4w,     zn2_state, empty_init, ROT0, "Arika / Capcom", "Tetris: The Grand Master (Japan 980710)",                  MACHINE_IMPERFECT_SOUND )
+GAME( 1998, tgmj,      coh3002c, coh3002c,    tgm,      zn2_state, empty_init, ROT0, "Arika / Capcom", "Tetris: The Grand Master (Japan 980710)",                  MACHINE_IMPERFECT_SOUND )
 GAME( 1998, techromn,  coh3002c, coh3002c,    zn6b,     zn2_state, empty_init, ROT0, "Capcom",         "Tech Romancer (Euro 980914)",                              MACHINE_IMPERFECT_SOUND )
 GAME( 1998, techromnu, techromn, coh3002c,    zn6b,     zn2_state, empty_init, ROT0, "Capcom",         "Tech Romancer (USA 980914)",                               MACHINE_IMPERFECT_SOUND )
 GAME( 1998, kikaioh,   techromn, coh3002c,    zn6b,     zn2_state, empty_init, ROT0, "Capcom",         "Choukou Senki Kikaioh (Japan 980914)",                     MACHINE_IMPERFECT_SOUND )
@@ -5258,6 +5305,7 @@ GAME( 1997, glpracr2,  coh1002m, coh1002m,    zn,       tecmo_zn_state, empty_in
 GAME( 1997, glpracr2j, glpracr2, coh1002m,    zn,       tecmo_zn_state, empty_init, ROT0, "Tecmo",                  "Gallop Racer 2 (Japan)",             MACHINE_IMPERFECT_SOUND )
 GAME( 1997, glpracr2l, glpracr2, coh1002ml,   zn,       tecmo_zn_state, empty_init, ROT0, "Tecmo",                  "Gallop Racer 2 Link HW (Japan)",     MACHINE_IMPERFECT_SOUND )
 GAME( 1998, doapp,     coh1002m, coh1002m,    zn,       tecmo_zn_state, empty_init, ROT0, "Tecmo",                  "Dead Or Alive ++ (Japan)",           MACHINE_IMPERFECT_SOUND )
+GAME( 1998, doappk,    doapp,    coh1002m,    zn,       tecmo_zn_state, empty_init, ROT0, "Tecmo",                  "Dead Or Alive ++ (Korea)",           MACHINE_IMPERFECT_SOUND )
 GAME( 1998, cbaj,      coh1002m, cbaj,        zn,       cbaj_state,     empty_init, ROT0, "UEP Systems",            "Cool Boarders Arcade Jam",           MACHINE_IMPERFECT_SOUND )
 GAME( 1998, shngmtkb,  coh1002m, coh1002m,    zn,       tecmo_zn_state, empty_init, ROT0, "Sunsoft / Activision",   "Shanghai Matekibuyuu",               MACHINE_IMPERFECT_SOUND )
 GAME( 1999, tondemo,   coh1002m, coh1002m,    zn,       tecmo_zn_state, empty_init, ROT0, "Tecmo",                  "Tondemo Crisis (Japan)",             MACHINE_IMPERFECT_SOUND )
@@ -5297,8 +5345,9 @@ GAME( 1996, ftimpact,  ftimpcta, coh1000tb,   znt,      taito_fx1b_state, empty_
 GAME( 1996, ftimpactu, ftimpcta, coh1000tb,   znt,      taito_fx1b_state, empty_init, ROT0, "Taito", "Fighters' Impact (Ver 2.02A)",   MACHINE_IMPERFECT_SOUND )
 GAME( 1996, ftimpactj, ftimpcta, coh1000tb,   znt,      taito_fx1b_state, empty_init, ROT0, "Taito", "Fighters' Impact (Ver 2.02J)",   MACHINE_IMPERFECT_SOUND )
 GAME( 1997, ftimpcta,  coh1000t, coh1000tb,   znt,      taito_fx1b_state, empty_init, ROT0, "Taito", "Fighters' Impact A (Ver 2.00J)", MACHINE_IMPERFECT_SOUND )
-GAME( 1997, gdarius,   gdarius2, coh1002tb,   znt,      gdarius_state,    empty_init, ROT0, "Taito", "G-Darius (Ver 2.01J)",           MACHINE_IMPERFECT_SOUND )
-GAME( 1997, gdariusb,  gdarius2, coh1002tb,   znt,      gdarius_state,    empty_init, ROT0, "Taito", "G-Darius (Ver 2.02A)",           MACHINE_IMPERFECT_SOUND )
+GAME( 1997, gdarius,   gdarius2, coh1002tb,   znt,      gdarius_state,    empty_init, ROT0, "Taito", "G-Darius (Ver 2.02O)",           MACHINE_IMPERFECT_SOUND )
+GAME( 1997, gdariusu,  gdarius2, coh1002tb,   znt,      gdarius_state,    empty_init, ROT0, "Taito", "G-Darius (Ver 2.02A)",           MACHINE_IMPERFECT_SOUND )
+GAME( 1997, gdariusj,  gdarius2, coh1002tb,   znt,      gdarius_state,    empty_init, ROT0, "Taito", "G-Darius (Ver 2.01J)",           MACHINE_IMPERFECT_SOUND )
 GAME( 1997, gdarius2,  coh1000t, coh1002tb,   znt,      gdarius_state,    empty_init, ROT0, "Taito", "G-Darius Ver.2 (Ver 2.03J)",     MACHINE_IMPERFECT_SOUND )
 
 /* Eighting / Raizing */

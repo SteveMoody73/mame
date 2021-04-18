@@ -29,6 +29,8 @@ ToDo:
 #include "jp.lh"
 
 
+namespace {
+
 class jp_state : public genpin_class
 {
 public:
@@ -47,22 +49,23 @@ public:
 	void jp(machine_config &config);
 	void jps(machine_config &config);
 
+protected:
+	virtual void machine_start() override;
+	virtual void machine_reset() override;
+
 private:
-	DECLARE_READ8_MEMBER(porta_r);
-	DECLARE_READ8_MEMBER(portb_r);
-	DECLARE_WRITE8_MEMBER(out1_w);
-	DECLARE_WRITE8_MEMBER(out2_w);
+	uint8_t porta_r();
+	uint8_t portb_r();
+	void out1_w(offs_t offset, uint8_t data);
+	void out2_w(offs_t offset, uint8_t data);
 	DECLARE_WRITE_LINE_MEMBER(disp_data_w);
 	DECLARE_WRITE_LINE_MEMBER(disp_clock_w);
 	DECLARE_WRITE_LINE_MEMBER(disp_strobe_w);
 	DECLARE_WRITE_LINE_MEMBER(row_w);
-	DECLARE_WRITE8_MEMBER(sample_bank_w);
-	DECLARE_WRITE8_MEMBER(adpcm_reset_w);
+	void sample_bank_w(uint8_t data);
+	void adpcm_reset_w(uint8_t data);
 	DECLARE_WRITE_LINE_MEMBER(vck_w);
 	IRQ_CALLBACK_MEMBER(sound_int_cb);
-
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
 
 	void jp_map(address_map &map);
 	void jp_sound_map(address_map &map);
@@ -223,13 +226,13 @@ static INPUT_PORTS_START( jp )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_OTHER ) PORT_CODE(KEYCODE_COLON)
 INPUT_PORTS_END
 
-WRITE8_MEMBER(jp_state::out1_w)
+void jp_state::out1_w(offs_t offset, uint8_t data)
 {
 	for (int i = 0; i < 8; i++)
 		m_latch[i]->write_bit(offset, BIT(data, i));
 }
 
-WRITE8_MEMBER(jp_state::out2_w)
+void jp_state::out2_w(offs_t offset, uint8_t data)
 {
 	for (int i = 0; i < 2; i++)
 		m_latch[8 + i]->write_bit(offset, BIT(data, i));
@@ -283,7 +286,7 @@ void jp_state::update_display()
 	}
 }
 
-READ8_MEMBER(jp_state::porta_r)
+uint8_t jp_state::porta_r()
 {
 	uint8_t result = 0xff;
 	if (m_latch[3]->q1_r() == 0)
@@ -295,7 +298,7 @@ READ8_MEMBER(jp_state::porta_r)
 	return result;
 }
 
-READ8_MEMBER(jp_state::portb_r)
+uint8_t jp_state::portb_r()
 {
 	uint8_t result = 0xff;
 	if (m_latch[3]->q1_r() == 0)
@@ -319,6 +322,12 @@ void jp_state::machine_start()
 
 	if (m_adpcm_bank.found())
 		m_adpcm_bank->configure_entries(0, 16, memregion("sound1")->base(), 0x8000);
+
+	m_disp_data = 0;
+	m_adpcm_ff = false;
+
+	save_item(NAME(m_disp_data));
+	save_item(NAME(m_adpcm_ff));
 }
 
 void jp_state::machine_reset()
@@ -382,12 +391,12 @@ void jp_state::jp(machine_config &config)
 	ay.add_route(ALL_OUTPUTS, "ayvol", 0.9);
 }
 
-WRITE8_MEMBER(jp_state::sample_bank_w)
+void jp_state::sample_bank_w(uint8_t data)
 {
 	m_adpcm_bank->set_entry(data & 15);
 }
 
-WRITE8_MEMBER(jp_state::adpcm_reset_w)
+void jp_state::adpcm_reset_w(uint8_t data)
 {
 	m_msm->reset_w(BIT(data, 0));
 }
@@ -618,6 +627,9 @@ ROM_START(petaco2)
 	ROM_LOAD("jpsonid7.dat", 0x30000, 0x8000, CRC(ff430b1b) SHA1(423592a40eba174108dfc6817e549c643bb3c80f))
 ROM_END
 
+} // Anonymous namespace
+
+
 // different hardware
 GAME(1984,  petaco,   0,      jp,  jp, jp_state, empty_init, ROT0, "Juegos Populares", "Petaco",                               MACHINE_IS_SKELETON_MECHANICAL)
 
@@ -630,6 +642,6 @@ GAME(1986,  halley,   0,      jps, jp, jp_state, empty_init, ROT0, "Juegos Popul
 GAME(1986,  halleya,  halley, jps, jp, jp_state, empty_init, ROT0, "Juegos Populares", "Halley Comet (alternate version)",     MACHINE_MECHANICAL | MACHINE_NOT_WORKING )
 GAME(1986,  aqualand, 0,      jps, jp, jp_state, empty_init, ROT0, "Juegos Populares", "Aqualand",                             MACHINE_MECHANICAL | MACHINE_NOT_WORKING )
 GAME(1986,  america,  0,      jps, jp, jp_state, empty_init, ROT0, "Juegos Populares", "America 1492",                         MACHINE_MECHANICAL | MACHINE_NOT_WORKING )
-GAME(1986,  olympus,  0,      jps, jp, jp_state, empty_init, ROT0, "Juegos Populares", "Olympus",                              MACHINE_MECHANICAL | MACHINE_NOT_WORKING )
+GAME(1986,  olympus,  0,      jps, jp, jp_state, empty_init, ROT0, "Juegos Populares", "Olympus (Juegos Populares)",           MACHINE_MECHANICAL | MACHINE_NOT_WORKING )
 GAME(1987,  lortium,  0,      jp,  jp, jp_state, empty_init, ROT0, "Juegos Populares", "Lortium",                              MACHINE_IS_SKELETON_MECHANICAL)
 GAME(19??,  pimbal,   0,      jp,  jp, jp_state, empty_init, ROT0, "Juegos Populares", "Pimbal (Pinball 3000)",                MACHINE_IS_SKELETON_MECHANICAL)

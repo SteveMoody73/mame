@@ -95,15 +95,15 @@ Notes:
 #include "cpu/m68000/m68000.h"
 #include "machine/decocrpt.h"
 #include "machine/gen_latch.h"
-#include "sound/ym2151.h"
 #include "sound/okim6295.h"
+#include "sound/ym2151.h"
 #include "emupal.h"
 #include "screen.h"
 #include "speaker.h"
 
 /******************************************************************************/
 
-READ16_MEMBER( funkyjet_state::funkyjet_protection_region_0_146_r )
+uint16_t funkyjet_state::funkyjet_protection_region_0_146_r(offs_t offset)
 {
 //  uint16_t realdat = deco16_146_funkyjet_prot_r(space,offset&0x3ff,mem_mask);
 
@@ -118,7 +118,7 @@ READ16_MEMBER( funkyjet_state::funkyjet_protection_region_0_146_r )
 	return data;
 }
 
-WRITE16_MEMBER( funkyjet_state::funkyjet_protection_region_0_146_w )
+void funkyjet_state::funkyjet_protection_region_0_146_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 //  deco16_146_funkyjet_prot_w(space,offset&0x3ff,data,mem_mask);
 

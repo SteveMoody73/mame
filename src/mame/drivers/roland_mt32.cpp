@@ -210,14 +210,14 @@ private:
 
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
-	DECLARE_WRITE8_MEMBER(bank_w);
-	DECLARE_WRITE8_MEMBER(so_w);
-	DECLARE_WRITE16_MEMBER(midi_w);
+	void bank_w(uint8_t data);
+	void so_w(uint8_t data);
+	void midi_w(uint16_t data);
 
-	DECLARE_READ8_MEMBER(lcd_ctrl_r);
-	DECLARE_WRITE8_MEMBER(lcd_ctrl_w);
-	DECLARE_WRITE8_MEMBER(lcd_data_w);
-	DECLARE_READ16_MEMBER(port0_r);
+	uint8_t lcd_ctrl_r();
+	void lcd_ctrl_w(uint8_t data);
+	void lcd_data_w(uint8_t data);
+	uint16_t port0_r();
 
 	TIMER_DEVICE_CALLBACK_MEMBER(midi_timer_cb);
 	TIMER_DEVICE_CALLBACK_MEMBER(samples_timer_cb);
@@ -249,7 +249,7 @@ uint32_t mt32_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, 
 		for(int y=0; y<8; y++) {
 			uint8_t v = data[c*8+y];
 			for(int x=0; x<5; x++)
-				bitmap.pix16(y == 7 ? 8 : y, c*6+x) = v & (0x10 >> x) ? 1 : 0;
+				bitmap.pix(y == 7 ? 8 : y, c*6+x) = v & (0x10 >> x) ? 1 : 0;
 		}
 	return 0;
 }
@@ -270,7 +270,7 @@ void mt32_state::machine_reset()
 	port0 = 0;
 }
 
-WRITE8_MEMBER(mt32_state::lcd_ctrl_w)
+void mt32_state::lcd_ctrl_w(uint8_t data)
 {
 	lcd->control_w(data);
 	for(int i=0; i != lcd_data_buffer_pos; i++)
@@ -278,22 +278,22 @@ WRITE8_MEMBER(mt32_state::lcd_ctrl_w)
 	lcd_data_buffer_pos = 0;
 }
 
-READ8_MEMBER(mt32_state::lcd_ctrl_r)
+uint8_t mt32_state::lcd_ctrl_r()
 {
 	return lcd->control_r();
 }
 
-WRITE8_MEMBER(mt32_state::lcd_data_w)
+void mt32_state::lcd_data_w(uint8_t data)
 {
 	lcd_data_buffer[lcd_data_buffer_pos++] = data;
 }
 
-WRITE8_MEMBER(mt32_state::bank_w)
+void mt32_state::bank_w(uint8_t data)
 {
 	membank("bank")->set_entry(data);
 }
 
-WRITE16_MEMBER(mt32_state::midi_w)
+void mt32_state::midi_w(uint16_t data)
 {
 	logerror("midi_out %02x\n", data);
 	midi = data;
@@ -309,7 +309,7 @@ TIMER_DEVICE_CALLBACK_MEMBER(mt32_state::midi_timer_cb)
 		midi_timer->adjust(attotime::from_hz(1250));
 }
 
-READ16_MEMBER(mt32_state::port0_r)
+uint16_t mt32_state::port0_r()
 {
 	return port0;
 }
@@ -319,7 +319,7 @@ TIMER_DEVICE_CALLBACK_MEMBER(mt32_state::samples_timer_cb)
 	port0 ^= 0x10;
 }
 
-WRITE8_MEMBER(mt32_state::so_w)
+void mt32_state::so_w(uint8_t data)
 {
 	// bit 0   = led
 	// bit 1-2 = reverb program a13/a14
@@ -403,6 +403,11 @@ ROM_START( mt32 )
 	ROM_SYSTEM_BIOS( 5, "m9", "M9 enhanced firmware" )
 	ROMX_LOAD(       "a__m-9.27c256.ic27.bin",       0,   0x8000, CRC(c078ab00) SHA1(381e4208c0211a9a24a3a1b06a36760a1940ea6b), ROM_BIOS(5) | ROM_SKIP(1) )
 	ROMX_LOAD(       "b__m-9.27c256.ic26.bin",       1,   0x8000, CRC(e9c439c4) SHA1(36fece02eddd84230a7cf32f931c94dd14adbf2c), ROM_BIOS(5) | ROM_SKIP(1) )
+
+	// Dumped from "new" board revision single 128K x 8 ROM
+	ROM_SYSTEM_BIOS( 6, "204", "Firmware 2.0.4" )
+	ROMX_LOAD(       "mt32_2.0.4.ic28",              0,   0x10000, CRC(59a49d5c) SHA1(2c16432b6c73dd2a3947cba950a0f4c19d6180eb), ROM_BIOS(6) )
+	ROM_IGNORE(0x10000)  // banking needs to be implemented
 
 // We need a bios-like selection for these too
 	ROM_REGION( 0x80000, "la32", 0 )

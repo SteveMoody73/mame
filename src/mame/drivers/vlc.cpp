@@ -138,6 +138,8 @@ nevada TYPE2 :  64       45      51       06       32      02        31     31  
 #include "tilemap.h"
 
 
+namespace {
+
 #define MASTER_CLOCK    XTAL(16'000'000)
 #define MASTER_CPU      ((MASTER_CLOCK)/2)    // 8mhz
 #define SOUND_CLOCK     ((MASTER_CLOCK) /8)   // 2mhz
@@ -174,6 +176,7 @@ public:
 	void init_nevada();
 
 protected:
+	virtual void machine_start() override;
 	virtual void video_start() override;
 
 private:
@@ -204,14 +207,12 @@ private:
 	template<int N> void duart_w(offs_t offset, uint8_t data);
 	uint8_t rtc_r(offs_t offset);
 	void rtc_w(offs_t offset, uint8_t data);
-	DECLARE_READ16_MEMBER(io_board_r);
-	DECLARE_WRITE16_MEMBER(io_board_w);
-	DECLARE_WRITE16_MEMBER (io_board_x);
-	DECLARE_READ16_MEMBER( nevada_sec_r );
-	DECLARE_WRITE16_MEMBER( nevada_sec_w );
-	DECLARE_WRITE16_MEMBER( vram_w );
-
-	DECLARE_MACHINE_START(nevada);
+	uint16_t io_board_r();
+	void io_board_w(uint16_t data);
+	void io_board_x(uint16_t data);
+	uint16_t nevada_sec_r();
+	void nevada_sec_w(uint16_t data);
+	void vram_w(offs_t offset, uint16_t data);
 
 	TILE_GET_INFO_MEMBER(get_bg_tile_info);
 
@@ -268,7 +269,7 @@ static const gfx_layout charlayout =
 
 /***************************************************************************/
 
-WRITE16_MEMBER( nevada_state::vram_w )
+void nevada_state::vram_w(offs_t offset, uint16_t data)
 {
 // Todo, Just for sample
 
@@ -373,24 +374,24 @@ void nevada_state::rtc_w(offs_t offset, uint8_t data)
 
 
 /***************************************************************************/
-READ16_MEMBER(nevada_state::io_board_r)
+uint16_t nevada_state::io_board_r()
 {
 	// IO board Serial communication 0xA00000
 	return 1;
 }
 /***************************************************************************/
-WRITE16_MEMBER(nevada_state::io_board_w)
+void nevada_state::io_board_w(uint16_t data)
 {
 	// IO board Serial communication 0xA00000 on bit0
 }
 /***************************************************************************/
-WRITE16_MEMBER(nevada_state::io_board_x)
+void nevada_state::io_board_x(uint16_t data)
 {
 	// IO board Serial communication 0xA80000  on bit15
 }
 
 /***************************************************************************/
-READ16_MEMBER(nevada_state::nevada_sec_r )
+uint16_t nevada_state::nevada_sec_r()
 {
 //  D3..D0 = DOOR OPEN or Track STATE of PAL35
 	uint16_t res;
@@ -403,7 +404,7 @@ READ16_MEMBER(nevada_state::nevada_sec_r )
 	return res;
 }
 /***************************************************************************/
-WRITE16_MEMBER(nevada_state::nevada_sec_w )
+void nevada_state::nevada_sec_w(uint16_t data)
 {
 	// 74LS173 $bits Register used LOWER bits D3..D0 for DOOR LOGIC SWITCH
 	m_datA40000 = data | 0x00f0;     // since D7..D4 are not used and are connected to PULLUP
@@ -560,7 +561,7 @@ INPUT_PORTS_END
 *     Machine start      *
 *************************/
 
-MACHINE_START_MEMBER(nevada_state, nevada)
+void nevada_state::machine_start()
 {
 	m_nvram->set_base(m_ram62256, 0x1000);
 }
@@ -578,8 +579,6 @@ void nevada_state::nevada(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &nevada_state::nevada_map);
 
 	WATCHDOG_TIMER(config, "watchdog").set_time(attotime::from_msec(150));   /* 150ms Ds1232 TD to Ground */
-
-	MCFG_MACHINE_START_OVERRIDE(nevada_state, nevada)
 
 	NVRAM(config, "nvram").set_custom_handler(FUNC(nevada_state::nvram_init));
 
@@ -672,6 +671,9 @@ void nevada_state::init_nevada()
 
 }
 /***************************************************************************/
+
+} // Anonymous namespace
+
 
 /*************************
 *      Game Drivers      *

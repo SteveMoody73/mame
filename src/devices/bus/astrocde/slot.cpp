@@ -7,7 +7,6 @@
 
  ***********************************************************************************************************/
 
-
 #include "emu.h"
 #include "slot.h"
 
@@ -112,7 +111,7 @@ static int astrocade_get_pcb_id(const char *slot)
 {
 	for (auto & elem : slot_list)
 	{
-		if (!core_stricmp(elem.slot_option, slot))
+		if (!strcmp(elem.slot_option, slot))
 			return elem.pcb_id;
 	}
 
@@ -203,10 +202,10 @@ std::string astrocade_cart_slot_device::get_default_card_software(get_default_ca
  read
  -------------------------------------------------*/
 
-READ8_MEMBER(astrocade_cart_slot_device::read_rom)
+uint8_t astrocade_cart_slot_device::read_rom(offs_t offset)
 {
 	if (m_cart)
-		return m_cart->read_rom(space, offset);
+		return m_cart->read_rom(offset);
 	else
 		return 0xff;
 }

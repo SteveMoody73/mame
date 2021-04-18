@@ -47,8 +47,8 @@ public:
 
 private:
 	DECLARE_READ_LINE_MEMBER(clear_r);
-	DECLARE_WRITE8_MEMBER(ram_w);
-	DECLARE_READ8_MEMBER(ram_r);
+	void ram_w(offs_t offset, uint8_t data);
+	uint8_t ram_r(offs_t offset);
 
 	void microkit_io(address_map &map);
 	void microkit_mem(address_map &map);
@@ -119,7 +119,7 @@ READ_LINE_MEMBER( microkit_state::clear_r )
 	return 1;
 }
 
-READ8_MEMBER( microkit_state::ram_r )
+uint8_t microkit_state::ram_r(offs_t offset)
 {
 	if (m_a15)
 		return m_rom->base()[offset];
@@ -127,7 +127,7 @@ READ8_MEMBER( microkit_state::ram_r )
 		return m_ram[offset];
 }
 
-WRITE8_MEMBER( microkit_state::ram_w )
+void microkit_state::ram_w(offs_t offset, uint8_t data)
 {
 	m_ram[offset] = data;
 }
@@ -150,7 +150,6 @@ void microkit_state::machine_start()
 static DEVICE_INPUT_DEFAULTS_START( serial_keyb )
 	DEVICE_INPUT_DEFAULTS( "RS232_TXBAUD", 0xff, RS232_BAUD_300 )
 	DEVICE_INPUT_DEFAULTS( "RS232_RXBAUD", 0xff, RS232_BAUD_300 )
-	DEVICE_INPUT_DEFAULTS( "RS232_STARTBITS", 0xff, RS232_STARTBITS_1 )
 	DEVICE_INPUT_DEFAULTS( "RS232_DATABITS", 0xff, RS232_DATABITS_7 )
 	DEVICE_INPUT_DEFAULTS( "RS232_PARITY", 0xff, RS232_PARITY_MARK )
 	DEVICE_INPUT_DEFAULTS( "RS232_STOPBITS", 0xff, RS232_STOPBITS_2 )

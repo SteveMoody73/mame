@@ -111,8 +111,8 @@ void namco_c355spr_device::zdrawgfxzoom(
 				{ /* skip if inner loop doesn't draw anything */
 					for (int y = sy; y < ey; y++)
 					{
-						const u8 *source = source_base + (y_index>>16) * gfx->rowbytes();
-						u16 *dest = &dest_bmp.pix16(y);
+						u8 const *const source = source_base + (y_index>>16) * gfx->rowbytes();
+						u16 *const dest = &dest_bmp.pix(y);
 						int x_index = x_index_base;
 						for (int x = sx; x < ex; x++)
 						{
@@ -133,15 +133,12 @@ void namco_c355spr_device::zdrawgfxzoom(
 
 void namco_c355spr_device::copybitmap(bitmap_ind16 &dest_bmp, const rectangle &clip, u8 pri)
 {
-	device_palette_interface &palette = gfx(0)->palette();
-	const int shadow_offset = (palette.shadows_enabled()) ? palette.entries() : 0;
-	const pen_t black = palette.black_pen();
 	if (m_palxor)
 	{
 		for (int y = clip.min_y; y <= clip.max_y; y++)
 		{
-			u16 *src = &m_tempbitmap.pix16(y);
-			u16 *dest = &dest_bmp.pix16(y);
+			u16 *const src = &m_tempbitmap.pix(y);
+			u16 *const dest = &dest_bmp.pix(y);
 			for (int x = clip.min_x; x <= clip.max_x; x++)
 			{
 				if (src[x] != 0xffff)
@@ -174,8 +171,8 @@ void namco_c355spr_device::copybitmap(bitmap_ind16 &dest_bmp, const rectangle &c
 	{
 		for (int y = clip.min_y; y <= clip.max_y; y++)
 		{
-			u16 *src = &m_tempbitmap.pix16(y);
-			u16 *dest = &dest_bmp.pix16(y);
+			u16 *const src = &m_tempbitmap.pix(y);
+			u16 *const dest = &dest_bmp.pix(y);
 			for (int x = clip.min_x; x <= clip.max_x; x++)
 			{
 				if (src[x] != 0xffff)
@@ -186,10 +183,9 @@ void namco_c355spr_device::copybitmap(bitmap_ind16 &dest_bmp, const rectangle &c
 					{
 						if ((c & 0xff) != 0xff)
 						{
-							if (c == 0xffe && shadow_offset)
+							if (c == 0xffe)
 							{
-								if (dest[x] != black)
-									dest[x] |= shadow_offset;
+								dest[x] |= 0x800;
 							}
 							else
 							{
@@ -206,16 +202,14 @@ void namco_c355spr_device::copybitmap(bitmap_ind16 &dest_bmp, const rectangle &c
 void namco_c355spr_device::copybitmap(bitmap_rgb32 &dest_bmp, const rectangle &clip, u8 pri)
 {
 	device_palette_interface &palette = gfx(0)->palette();
-	const int shadow_offset = (palette.shadows_enabled()) ? palette.entries() : 0;
-	const pen_t black = palette.black_pen();
 	const pen_t *pal = &palette.pen(gfx(0)->colorbase());
 	if (m_palxor)
 	{
 		for (int y = clip.min_y; y <= clip.max_y; y++)
 		{
-			u16 *src = &m_tempbitmap.pix16(y);
-			u16 *srcrender = &m_screenbitmap.pix16(y);
-			u32 *dest = &dest_bmp.pix32(y);
+			u16 *const src = &m_tempbitmap.pix(y);
+			u16 *const srcrender = &m_screenbitmap.pix(y);
+			u32 *const dest = &dest_bmp.pix(y);
 			for (int x = clip.min_x; x <= clip.max_x; x++)
 			{
 				if (src[x] != 0xffff)
@@ -251,9 +245,9 @@ void namco_c355spr_device::copybitmap(bitmap_rgb32 &dest_bmp, const rectangle &c
 	{
 		for (int y = clip.min_y; y <= clip.max_y; y++)
 		{
-			u16 *src = &m_tempbitmap.pix16(y);
-			u16 *srcrender = &m_screenbitmap.pix16(y);
-			u32 *dest = &dest_bmp.pix32(y);
+			u16 *const src = &m_tempbitmap.pix(y);
+			u16 *const srcrender = &m_screenbitmap.pix(y);
+			u32 *const dest = &dest_bmp.pix(y);
 			for (int x = clip.min_x; x <= clip.max_x; x++)
 			{
 				if (src[x] != 0xffff)
@@ -264,10 +258,9 @@ void namco_c355spr_device::copybitmap(bitmap_rgb32 &dest_bmp, const rectangle &c
 					{
 						if ((c & 0xff) != 0xff)
 						{
-							if (c == 0xffe && shadow_offset)
+							if (c == 0xffe)
 							{
-								if (srcrender[x] != black)
-									srcrender[x] |= shadow_offset;
+								srcrender[x] |= 0x800;
 							}
 							else
 							{

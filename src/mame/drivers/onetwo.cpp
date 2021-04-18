@@ -45,8 +45,8 @@ Note: this is quite clearly a 'Korean bootleg' of Shisensho - Joshiryo-Hen / Mat
 #include "cpu/z80/z80.h"
 #include "machine/gen_latch.h"
 #include "machine/watchdog.h"
-#include "sound/3812intf.h"
 #include "sound/okim6295.h"
+#include "sound/ym3812.h"
 #include "emupal.h"
 #include "screen.h"
 #include "speaker.h"
@@ -89,9 +89,9 @@ private:
 	required_device<palette_device> m_palette;
 	required_device<generic_latch_8_device> m_soundlatch;
 
-	DECLARE_WRITE8_MEMBER(fgram_w);
-	DECLARE_WRITE8_MEMBER(cpubank_w);
-	DECLARE_WRITE8_MEMBER(coin_counters_w);
+	void fgram_w(offs_t offset, uint8_t data);
+	void cpubank_w(uint8_t data);
+	void coin_counters_w(uint8_t data);
 	TILE_GET_INFO_MEMBER(get_fg_tile_info);
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	static rgb_t BBBGGGGGxBBRRRRR(uint32_t raw);
@@ -136,18 +136,18 @@ uint32_t onetwo_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap
  *
  *************************************/
 
-WRITE8_MEMBER(onetwo_state::fgram_w)
+void onetwo_state::fgram_w(offs_t offset, uint8_t data)
 {
 	m_fgram[offset] = data;
 	m_fg_tilemap->mark_tile_dirty(offset / 2);
 }
 
-WRITE8_MEMBER(onetwo_state::cpubank_w)
+void onetwo_state::cpubank_w(uint8_t data)
 {
 	m_mainbank->set_entry(data);
 }
 
-WRITE8_MEMBER(onetwo_state::coin_counters_w)
+void onetwo_state::coin_counters_w(uint8_t data)
 {
 	m_watchdog->watchdog_reset();
 	machine().bookkeeping().coin_counter_w(0, BIT(data, 1));
@@ -198,8 +198,8 @@ void onetwo_state::sound_cpu(address_map &map)
 void onetwo_state::sound_cpu_io(address_map &map)
 {
 	map.global_mask(0xff);
-	map(0x00, 0x00).rw("ymsnd", FUNC(ym3812_device::status_port_r), FUNC(ym3812_device::control_port_w));
-	map(0x20, 0x20).w("ymsnd", FUNC(ym3812_device::write_port_w));
+	map(0x00, 0x00).rw("ymsnd", FUNC(ym3812_device::status_r), FUNC(ym3812_device::address_w));
+	map(0x20, 0x20).w("ymsnd", FUNC(ym3812_device::data_w));
 	map(0x40, 0x40).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
 	map(0xc0, 0xc0).w(m_soundlatch, FUNC(generic_latch_8_device::acknowledge_w));
 }

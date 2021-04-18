@@ -34,6 +34,9 @@ public:
 	/* validates a parameter as a cpu and retrieves the given address space */
 	bool validate_cpu_space_parameter(const char *param, int spacenum, address_space *&result);
 
+	/* validates a parameter as a memory region name and retrieves the given region */
+	bool validate_memory_region_parameter(const std::string &param, memory_region *&result);
+
 private:
 	struct global_entry
 	{
@@ -84,6 +87,12 @@ private:
 	u64 execute_min(int params, const u64 *param);
 	u64 execute_max(int params, const u64 *param);
 	u64 execute_if(int params, const u64 *param);
+	u64 execute_abs(int params, const u64 *param);
+	u64 execute_bit(int params, const u64 *param);
+	u64 execute_s8(int params, const u64 *param);
+	u64 execute_s16(int params, const u64 *param);
+	u64 execute_s32(int params, const u64 *param);
+	u64 get_cpunum();
 
 	u64 global_get(global_entry *global);
 	void global_set(global_entry *global, u64 value);
@@ -98,6 +107,7 @@ private:
 	void execute_logerror(int ref, const std::vector<std::string> &params);
 	void execute_tracelog(int ref, const std::vector<std::string> &params);
 	void execute_tracesym(int ref, const std::vector<std::string> &params);
+	void execute_cls(int ref, const std::vector<std::string> &params);
 	void execute_quit(int ref, const std::vector<std::string> &params);
 	void execute_do(int ref, const std::vector<std::string> &params);
 	void execute_step(int ref, const std::vector<std::string> &params);
@@ -138,14 +148,18 @@ private:
 	void execute_stateload(int ref, const std::vector<std::string> &params);
 	void execute_rewind(int ref, const std::vector<std::string> &params);
 	void execute_save(int ref, const std::vector<std::string> &params);
+	void execute_saveregion(int ref, const std::vector<std::string> &params);
 	void execute_load(int ref, const std::vector<std::string> &params);
+	void execute_loadregion(int ref, const std::vector<std::string> &params);
 	void execute_dump(int ref, const std::vector<std::string> &params);
+	void execute_strdump(int ref, const std::vector<std::string> &params);
 	void execute_cheatinit(int ref, const std::vector<std::string> &params);
 	void execute_cheatnext(int ref, const std::vector<std::string> &params);
 	void execute_cheatlist(int ref, const std::vector<std::string> &params);
 	void execute_cheatundo(int ref, const std::vector<std::string> &params);
 	void execute_dasm(int ref, const std::vector<std::string> &params);
 	void execute_find(int ref, const std::vector<std::string> &params);
+	void execute_fill(int ref, const std::vector<std::string> &params);
 	void execute_trace(int ref, const std::vector<std::string> &params);
 	void execute_traceover(int ref, const std::vector<std::string> &params);
 	void execute_traceflush(int ref, const std::vector<std::string> &params);
@@ -167,7 +181,6 @@ private:
 	void execute_dumpkbd(int ref, const std::vector<std::string> &params);
 
 	running_machine&    m_machine;
-	debugger_cpu&       m_cpu;
 	debugger_console&   m_console;
 
 	std::unique_ptr<global_entry []> m_global_array;

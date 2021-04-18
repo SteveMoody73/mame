@@ -1,4 +1,4 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
 
 #ifndef PDYNLIB_H_
@@ -16,25 +16,30 @@ namespace plib {
 	// pdynlib: dynamic loading of libraries  ...
 	// ----------------------------------------------------------------------------------------
 
-	class dynlib_base : public nocopyassignmove
+	class dynlib_base
 	{
 	public:
 		explicit dynlib_base() : m_is_loaded(false) { }
 
-		virtual ~dynlib_base() { }
-		COPYASSIGNMOVE(dynlib_base, delete)
+		virtual ~dynlib_base() = default;
+
+		PCOPYASSIGN(dynlib_base, delete)
+		PMOVEASSIGN(dynlib_base, default)
 
 		bool isLoaded() const { return m_is_loaded; }
 
 		template <typename T>
 		T getsym(const pstring &name) const noexcept
 		{
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			return reinterpret_cast<T>(getsym_p(name));
 		}
 
 	protected:
-		bool m_is_loaded;
+		void set_loaded(bool v) noexcept { m_is_loaded = v; }
 		virtual void *getsym_p(const pstring &name) const noexcept = 0;
+	private:
+		bool m_is_loaded;
 	};
 
 	class dynlib : public dynlib_base
@@ -43,7 +48,10 @@ namespace plib {
 		explicit dynlib(const pstring &libname);
 		dynlib(const pstring &path, const pstring &libname);
 
-		~dynlib();
+		~dynlib() override;
+
+		PCOPYASSIGN(dynlib, delete)
+		PMOVEASSIGN(dynlib, default)
 
 	protected:
 		void *getsym_p(const pstring &name) const noexcept override;
@@ -65,7 +73,7 @@ namespace plib {
 		: m_syms(syms)
 		{
 			if (syms != nullptr)
-				m_is_loaded = true;
+				set_loaded(true);
 		}
 
 	protected:

@@ -7,7 +7,6 @@
 
  ***********************************************************************************************************/
 
-
 #include "emu.h"
 #include "slot.h"
 
@@ -115,7 +114,7 @@ static int crvision_get_pcb_id(const char *slot)
 {
 	for (auto & elem : slot_list)
 	{
-		if (!core_stricmp(elem.slot_option, slot))
+		if (!strcmp(elem.slot_option, slot))
 			return elem.pcb_id;
 	}
 
@@ -253,18 +252,18 @@ std::string crvision_cart_slot_device::get_default_card_software(get_default_car
  read_rom
  -------------------------------------------------*/
 
-READ8_MEMBER(crvision_cart_slot_device::read_rom40)
+uint8_t crvision_cart_slot_device::read_rom40(offs_t offset)
 {
 	if (m_cart)
-		return m_cart->read_rom40(space, offset);
+		return m_cart->read_rom40(offset);
 	else
 		return 0xff;
 }
 
-READ8_MEMBER(crvision_cart_slot_device::read_rom80)
+uint8_t crvision_cart_slot_device::read_rom80(offs_t offset)
 {
 	if (m_cart)
-		return m_cart->read_rom80(space, offset);
+		return m_cart->read_rom80(offset);
 	else
 		return 0xff;
 }

@@ -9,6 +9,7 @@
 ****************************************************************************/
 
 // the disassemblers assume they're in MAME and emu.h is a PCH, so we minimally pander to them
+#include "coretmpl.h"
 #include "disasmintf.h"
 
 using offs_t = osd::u32;
@@ -35,9 +36,11 @@ using util::BIT;
 #include "cpu/cop400/cop420ds.h"
 #include "cpu/cop400/cop424ds.h"
 #include "cpu/cop400/cop444ds.h"
+#include "cpu/cops1/cops1d.h"
 #include "cpu/cosmac/cosdasm.h"
 #include "cpu/cp1610/1610dasm.h"
 #include "cpu/cr16b/cr16bdasm.h"
+#include "cpu/cr16c/cr16cdasm.h"
 #include "cpu/cubeqcpu/cubedasm.h"
 #include "cpu/dsp16/dsp16dis.h"
 #include "cpu/dsp32/dsp32dis.h"
@@ -57,6 +60,7 @@ using util::BIT;
 #include "cpu/h8/h8hd.h"
 #include "cpu/h8/h8s2000d.h"
 #include "cpu/h8/h8s2600d.h"
+#include "cpu/h16/h16dasm.h"
 #include "cpu/h8500/h8500dasm.h"
 #include "cpu/hcd62121/hcd62121d.h"
 #include "cpu/hd61700/hd61700d.h"
@@ -72,9 +76,12 @@ using util::BIT;
 #include "cpu/ie15/ie15dasm.h"
 #include "cpu/jaguar/jagdasm.h"
 #include "cpu/ks0164/ks0164d.h"
+#include "cpu/lc57/lc57d.h"
+#include "cpu/lc58/lc58d.h"
 #include "cpu/lc8670/lc8670dsm.h"
 #include "cpu/lh5801/5801dasm.h"
 #include "cpu/lr35902/lr35902d.h"
+#include "cpu/m32c/m32cdasm.h"
 #include "cpu/m37710/m7700ds.h"
 #include "cpu/m6502/m4510d.h"
 #include "cpu/m6502/m6502d.h"
@@ -106,7 +113,10 @@ using util::BIT;
 #include "cpu/minx/minxd.h"
 #include "cpu/mips/mips3dsm.h"
 #include "cpu/mips/mips1dsm.h"
+#include "cpu/mk1/mk1dasm.h"
+#include "cpu/mn1880/mn1880d.h"
 #include "cpu/mn10200/mn102dis.h"
+#include "cpu/msm65x2/msm65x2d.h"
 #include "cpu/nanoprocessor/nanoprocessor_dasm.h"
 #include "cpu/nec/necdasm.h"
 #include "cpu/ns32000/ns32000dasm.h"
@@ -114,13 +124,15 @@ using util::BIT;
 #include "cpu/pace/pacedasm.h"
 #include "cpu/patinhofeio/patinho_feio_dasm.h"
 #include "cpu/pdp1/pdp1dasm.h"
-#include "cpu/pdp1/tx0dasm.h"
 #include "cpu/pdp8/pdp8dasm.h"
 #include "cpu/pic16/pic16d.h"
+#include "cpu/pic1670/pic1670d.h"
 #include "cpu/pic16c5x/16c5xdsm.h"
 #include "cpu/pic16c62x/16c62xdsm.h"
+#include "cpu/pic17/pic17d.h"
 #include "cpu/powerpc/ppc_dasm.h"
 #include "cpu/pps4/pps4dasm.h"
+#include "cpu/pps41/pps41d.h"
 #include "cpu/psx/psxdasm.h"
 #include "cpu/rii/riidasm.h"
 #include "cpu/romp/rompdasm.h"
@@ -159,6 +171,7 @@ using util::BIT;
 #include "cpu/tms7000/7000dasm.h"
 #include "cpu/tms9900/9900dasm.h"
 #include "cpu/tms9900/tms99com.h"
+#include "cpu/tx0/tx0dasm.h"
 #include "cpu/ucom4/ucom4d.h"
 #include "cpu/unsp/unspdasm.h"
 #include "cpu/upd177x/upd177xd.h"
@@ -170,6 +183,7 @@ using util::BIT;
 #include "cpu/upd78k/upd78k3d.h"
 #include "cpu/v60/v60d.h"
 #include "cpu/v810/v810dasm.h"
+#include "cpu/v850/v850dasm.h"
 #include "cpu/vt50/vt50dasm.h"
 #include "cpu/vt61/vt61dasm.h"
 #include "cpu/we32000/we32100d.h"
@@ -184,11 +198,23 @@ using util::BIT;
 #include "eminline.h"
 
 #include <algorithm>
-#include <cstring>
-#include <iostream>
-#include <stdexcept>
-
 #include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#include <stdio.h>
+#endif
+
 
 using u8 = util::u8;
 using u16 = util::u16;
@@ -371,11 +397,13 @@ static const dasm_table_entry dasm_table[] =
 	{ "cp1610",          be, -1, []() -> util::disasm_interface * { return new cp1610_disassembler; } },
 	{ "cr16a",           le,  0, []() -> util::disasm_interface * { return new cr16a_disassembler; } },
 	{ "cr16b",           le,  0, []() -> util::disasm_interface * { return new cr16b_disassembler; } },
+	{ "cr16c",           le,  0, []() -> util::disasm_interface * { return new cr16c_disassembler; } },
 	{ "cquestlin",       be, -3, []() -> util::disasm_interface * { return new cquestlin_disassembler; } },
 	{ "cquestrot",       be, -3, []() -> util::disasm_interface * { return new cquestrot_disassembler; } },
 	{ "cquestsnd",       be, -3, []() -> util::disasm_interface * { return new cquestsnd_disassembler; } },
 	{ "dp8344",          le, -1, []() -> util::disasm_interface * { return new dp8344_disassembler; } },
 	{ "ds5002fp",        le,  0, []() -> util::disasm_interface * { return new ds5002fp_disassembler; } },
+	{ "ds80c320",        le,  0, []() -> util::disasm_interface * { return new ds80c320_disassembler; } },
 	{ "dsp16",           le, -1, []() -> util::disasm_interface * { return new dsp16_disassembler; } },
 	{ "dsp32c",          le,  0, []() -> util::disasm_interface * { return new dsp32c_disassembler; } },
 	{ "dsp56000",        be, -2, []() -> util::disasm_interface * { return new dsp56000_disassembler; } },
@@ -395,6 +423,7 @@ static const dasm_table_entry dasm_table[] =
 	{ "h8s2000",         be,  0, []() -> util::disasm_interface * { return new h8s2000_disassembler; } },
 	{ "h8s2600",         be,  0, []() -> util::disasm_interface * { return new h8s2600_disassembler; } },
 	{ "h8500",           be,  0, []() -> util::disasm_interface * { return new h8500_disassembler; } },
+	{ "h16",             be,  0, []() -> util::disasm_interface * { return new h16_disassembler; } },
 	{ "hc11",            be,  0, []() -> util::disasm_interface * { return new hc11_disassembler; } },
 	{ "hcd62121",        le,  0, []() -> util::disasm_interface * { return new hcd62121_disassembler; } },
 	{ "hd61700",         le, -1, []() -> util::disasm_interface * { return new hd61700_disassembler; } },
@@ -428,10 +457,13 @@ static const dasm_table_entry dasm_table[] =
 	{ "jaguargpu",       be,  0, []() -> util::disasm_interface * { return new jaguar_disassembler(jaguar_disassembler::variant::GPU); } },
 	{ "konami",          be,  0, []() -> util::disasm_interface * { return new konami_disassembler; } },
 	{ "ks0164",          be,  0, []() -> util::disasm_interface * { return new ks0164_disassembler; } },
+	{ "lc57",            be,  0, []() -> util::disasm_interface * { return new lc57_disassembler; } },
+	{ "lc58",            be, -1, []() -> util::disasm_interface * { return new lc58_disassembler; } },
 	{ "lc8670",          be,  0, []() -> util::disasm_interface * { return new lc8670_disassembler; } },
 	{ "lh5801",          le,  0, []() -> util::disasm_interface * { return new lh5801_disassembler; } },
 	{ "lr35902",         le,  0, []() -> util::disasm_interface * { return new lr35902_disassembler; } },
 	{ "m146805",         be,  0, []() -> util::disasm_interface * { return new m146805_disassembler; } },
+	{ "m32c",            le,  0, []() -> util::disasm_interface * { return new m32c_disassembler; } },
 	{ "m37710",          le,  0, []() -> util::disasm_interface * { return new m7700_disassembler(&m7700_unidasm); } },
 	{ "m4510",           le,  0, []() -> util::disasm_interface * { return new m4510_disassembler; } },
 	{ "m58846",          le, -1, []() -> util::disasm_interface * { return new melps4_disassembler; } },
@@ -467,7 +499,15 @@ static const dasm_table_entry dasm_table[] =
 	{ "mips1le",         le,  0, []() -> util::disasm_interface * { return new mips1_disassembler; } },
 	{ "mips3be",         be,  0, []() -> util::disasm_interface * { return new mips3_disassembler; } },
 	{ "mips3le",         le,  0, []() -> util::disasm_interface * { return new mips3_disassembler; } },
+	{ "mk1",             le,  0, []() -> util::disasm_interface * { return new mk1_disassembler; } },
+	{ "mm5799",          le,  0, []() -> util::disasm_interface * { return new mm5799_disassembler; } },
+	{ "mm76",            le,  0, []() -> util::disasm_interface * { return new mm76_disassembler; } },
+	{ "mm78",            le,  0, []() -> util::disasm_interface * { return new mm78_disassembler; } },
 	{ "mn10200",         le,  0, []() -> util::disasm_interface * { return new mn10200_disassembler; } },
+	{ "mn1860",          be,  0, []() -> util::disasm_interface * { return new mn1860_disassembler; } },
+	{ "mn1870",          be,  0, []() -> util::disasm_interface * { return new mn1870_disassembler; } },
+	{ "mn1880",          be,  0, []() -> util::disasm_interface * { return new mn1880_disassembler; } },
+	{ "msm65x2",         le,  0, []() -> util::disasm_interface * { return new msm65x2_disassembler; } },
 	{ "nanoprocessor",   le,  0, []() -> util::disasm_interface * { return new hp_nanoprocessor_disassembler; } },
 	{ "nec",             le,  0, []() -> util::disasm_interface * { return new nec_disassembler(&nec_unidasm); } },
 	{ "ns32000",         le,  0, []() -> util::disasm_interface * { return new ns32000_disassembler; } },
@@ -475,11 +515,13 @@ static const dasm_table_entry dasm_table[] =
 	{ "nsc8105",         be,  0, []() -> util::disasm_interface * { return new m680x_disassembler(8105); } },
 	{ "pace",            le, -1, []() -> util::disasm_interface * { return new pace_disassembler; } },
 	{ "patinho_feio",    le,  0, []() -> util::disasm_interface * { return new patinho_feio_disassembler; } },
-	{ "pdp1",            be,  0, []() -> util::disasm_interface * { return new pdp1_disassembler; } },
-	{ "pdp8",            be,  0, []() -> util::disasm_interface * { return new pdp8_disassembler; } },
+	{ "pdp1",            be, -2, []() -> util::disasm_interface * { return new pdp1_disassembler; } },
+	{ "pdp8",            be, -1, []() -> util::disasm_interface * { return new pdp8_disassembler; } },
 	{ "pic16",           le, -1, []() -> util::disasm_interface * { return new pic16_disassembler; } },
 	{ "pic16c5x",        le, -1, []() -> util::disasm_interface * { return new pic16c5x_disassembler; } },
+	{ "pic1670",         le, -1, []() -> util::disasm_interface * { return new pic1670_disassembler; } },
 	{ "pic16c62x",       le, -1, []() -> util::disasm_interface * { return new pic16c62x_disassembler; } },
+	{ "pic17",           le, -1, []() -> util::disasm_interface * { return new pic17_disassembler; } },
 	{ "powerpc",         be,  0, []() -> util::disasm_interface * { return new powerpc_disassembler; } },
 	{ "pps4",            le,  0, []() -> util::disasm_interface * { return new pps4_disassembler; } },
 	{ "psxcpu",          le,  0, []() -> util::disasm_interface * { return new psxcpu_disassembler; } },
@@ -487,8 +529,11 @@ static const dasm_table_entry dasm_table[] =
 	{ "r65c19",          le,  0, []() -> util::disasm_interface * { return new r65c19_disassembler; } },
 	{ "romp",            be,  0, []() -> util::disasm_interface * { return new romp_disassembler; } },
 	{ "rsp",             le,  0, []() -> util::disasm_interface * { return new rsp_disassembler; } },
+	{ "rupi44",          le,  0, []() -> util::disasm_interface * { return new rupi44_disassembler; } },
 	{ "rx01",            le,  0, []() -> util::disasm_interface * { return new rx01_disassembler; } },
 	{ "s2650",           be,  0, []() -> util::disasm_interface * { return new s2650_disassembler(&s2650_unidasm); } },
+	{ "sab80515",        le,  0, []() -> util::disasm_interface * { return new sab80515_disassembler; } },
+	{ "sab80c515",       le,  0, []() -> util::disasm_interface * { return new sab80c515_disassembler; } },
 	{ "saturn",          le,  0, []() -> util::disasm_interface * { return new saturn_disassembler(&saturn_unidasm); } },
 	{ "sc61860",         le,  0, []() -> util::disasm_interface * { return new sc61860_disassembler; } },
 	{ "scmp",            le,  0, []() -> util::disasm_interface * { return new scmp_disassembler; } },
@@ -584,6 +629,9 @@ static const dasm_table_entry dasm_table[] =
 	{ "upi41",           le,  0, []() -> util::disasm_interface * { return new mcs48_disassembler(true, false); } },
 	{ "v60",             le,  0, []() -> util::disasm_interface * { return new v60_disassembler; } },
 	{ "v810",            le,  0, []() -> util::disasm_interface * { return new v810_disassembler; } },
+	{ "v850",            le,  0, []() -> util::disasm_interface * { return new v850_disassembler; } },
+	{ "v850es",          le,  0, []() -> util::disasm_interface * { return new v850es_disassembler; } },
+	{ "v850e2",          le,  0, []() -> util::disasm_interface * { return new v850e2_disassembler; } },
 	{ "vt50",            le,  0, []() -> util::disasm_interface * { return new vt50_disassembler; } },
 	{ "vt52",            le,  0, []() -> util::disasm_interface * { return new vt52_disassembler; } },
 	{ "vt61",            le, -1, []() -> util::disasm_interface * { return new vt61_disassembler; } },
@@ -1038,7 +1086,7 @@ static int parse_options(int argc, char *argv[], options *opts)
 		char *curarg = argv[arg];
 
 		// is it a switch?
-		if(curarg[0] == '-') {
+		if(curarg[0] == '-' && curarg[1] != '\0') {
 			if(pending_base || pending_arch || pending_mode || pending_skip || pending_count)
 				goto usage;
 
@@ -1064,11 +1112,9 @@ static int parse_options(int argc, char *argv[], options *opts)
 				opts->xchbytes = true;
 			else
 				goto usage;
-		}
 
+		} else if(pending_base) {
 		// base PC
-		else if(pending_base)
-		{
 			int result;
 			if(curarg[0] == '0' && curarg[1] == 'x')
 				result = sscanf(&curarg[2], "%x", &opts->basepc);
@@ -1079,30 +1125,26 @@ static int parse_options(int argc, char *argv[], options *opts)
 			if(result != 1)
 				goto usage;
 			pending_base = false;
-		}
 
-		// mode
-		else if(pending_mode)
-		{
+		} else if(pending_mode) {
+			// mode
 			if(sscanf(curarg, "%d", &opts->mode) != 1)
 				goto usage;
 			pending_mode = false;
-		}
 
-		// architecture
-		else if(pending_arch) {
-			int curarch;
-			for(curarch = 0; curarch < ARRAY_LENGTH(dasm_table); curarch++)
-				if(core_stricmp(curarg, dasm_table[curarch].name) == 0)
-					break;
-			if(curarch == ARRAY_LENGTH(dasm_table))
+		} else if(pending_arch) {
+			// architecture
+			auto const arch = std::find_if(
+					std::begin(dasm_table),
+					std::end(dasm_table),
+					[&curarg] (dasm_table_entry const &e) { return !core_stricmp(curarg, e.name); });
+			if (std::end(dasm_table) == arch)
 				goto usage;
-			opts->dasm = &dasm_table[curarch];
+			opts->dasm = &*arch;
 			pending_arch = false;
-		}
 
-		// skip bytes
-		else if(pending_skip) {
+		} else if(pending_skip) {
+			// skip bytes
 			int result;
 			if(curarg[0] == '0' && curarg[1] == 'x')
 				result = sscanf(&curarg[2], "%x", &opts->skip);
@@ -1111,22 +1153,21 @@ static int parse_options(int argc, char *argv[], options *opts)
 			if(result != 1)
 				goto usage;
 			pending_skip = false;
-		}
 
-		// size
-		else if(pending_count) {
+		} else if(pending_count) {
+			// size
 			if(sscanf(curarg, "%d", &opts->count) != 1)
 				goto usage;
 			pending_count = false;
-		}
 
-		// filename
-		else if(opts->filename == nullptr)
+		} else if(opts->filename == nullptr) {
+			// filename
 			opts->filename = curarg;
 
-		// fail
-		else
+		} else {
+			// fail
 			goto usage;
+		}
 	}
 
 	// if we have a dangling option, error
@@ -1136,6 +1177,7 @@ static int parse_options(int argc, char *argv[], options *opts)
 	// if no file or no architecture, fail
 	if(opts->filename == nullptr || opts->dasm == nullptr)
 		goto usage;
+
 	return 0;
 
 usage:
@@ -1146,15 +1188,14 @@ usage:
 	printf("Supported architectures:");
 	const int colwidth = 1 + std::strlen(std::max_element(std::begin(dasm_table), std::end(dasm_table), [](const dasm_table_entry &a, const dasm_table_entry &b) { return std::strlen(a.name) < std::strlen(b.name); })->name);
 	const int columns = std::max(1, 80 / colwidth);
-	const int numrows = (ARRAY_LENGTH(dasm_table) + columns - 1) / columns;
-	for(unsigned curarch = 0; curarch < numrows * columns; curarch++)
-	{
+	const int numrows = (std::size(dasm_table) + columns - 1) / columns;
+	for(unsigned curarch = 0; curarch < numrows * columns; curarch++) {
 		const int row = curarch / columns;
 		const int col = curarch % columns;
 		const int index = col * numrows + row;
 		if(col == 0)
 			printf("\n  ");
-		printf("%-*s", colwidth, (index < ARRAY_LENGTH(dasm_table)) ? dasm_table[index].name : "");
+		printf("%-*s", colwidth, (index < std::size(dasm_table)) ? dasm_table[index].name : "");
 	}
 	printf("\n");
 	return 1;
@@ -1169,13 +1210,43 @@ int main(int argc, char *argv[])
 		return 1;
 
 	// Load the file
-	void *data;
-	uint32_t length;
-	osd_file::error filerr = util::core_file::load(opts.filename, &data, length);
-	if(filerr != osd_file::error::NONE)
+	void *data = nullptr;
+	u32 length = 0;
+	if(std::strcmp(opts.filename, "-") != 0) {
+		osd_file::error filerr = util::core_file::load(opts.filename, &data, length);
+		if(filerr != osd_file::error::NONE) {
+			std::fprintf(stderr, "Error opening file '%s'\n", opts.filename);
+			return 1;
+		}
+	}
+	else
 	{
-		fprintf(stderr, "Error opening file '%s'\n", opts.filename);
-		return 1;
+#ifdef _WIN32
+		if (_setmode(_fileno(stdin), _O_BINARY) == -1) {
+#else
+		if (!std::freopen(nullptr, "rb", stdin)) {
+#endif
+			std::fprintf(stderr, "Error reopening stdin in binary mode\n");
+			return 1;
+		}
+		std::size_t allocated = 0x1000;
+		data = std::malloc(allocated);
+		while(!std::ferror(stdin) && !std::feof(stdin)) {
+			if(length == allocated) {
+				allocated <<= 1;
+				data = std::realloc(data, allocated);
+			}
+			if(!data) {
+				std::fprintf(stderr, "Error allocating buffer\n");
+				return 1;
+			}
+
+			length += std::fread((u8 *)data + length, 1, allocated - length, stdin);
+		}
+		if(!length || (std::ferror(stdin) && !std::feof(stdin))) {
+			std::fprintf(stderr, "Error reading from stdin\n");
+			return 1;
+		}
 	}
 
 	// Build the disasm object

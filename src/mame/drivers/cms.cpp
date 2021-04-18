@@ -74,8 +74,8 @@ protected:
 	virtual void machine_reset() override;
 
 private:
-	DECLARE_WRITE8_MEMBER(map_select_w);
-	DECLARE_WRITE8_MEMBER(page_select_w);
+	void map_select_w(uint8_t data);
+	void page_select_w(uint8_t data);
 	DECLARE_WRITE_LINE_MEMBER(bus_nmi_w);
 
 	required_device<cpu_device> m_maincpu;
@@ -104,13 +104,13 @@ void cms_state::cms6502_mem(address_map &map)
 }
 
 
-WRITE8_MEMBER(cms_state::map_select_w)
+void cms_state::map_select_w( uint8_t data)
 {
 	m_map_select = data & 0x03;
 	m_bank1->set_entry((m_map_select << 2) | m_page_select[m_map_select]);
 }
 
-WRITE8_MEMBER(cms_state::page_select_w)
+void cms_state::page_select_w(uint8_t data)
 {
 	/* 27513 in socket M4 (map 0) */
 	if (m_map_select == 0x00)
@@ -164,7 +164,7 @@ void cms_state::cms6502(machine_config &config)
 
 	INPUT_MERGER_ANY_HIGH(config, m_irqs).output_handler().set_inputline(m_maincpu, M6502_IRQ_LINE);
 
-	VIA6522(config, m_via, 1_MHz_XTAL);
+	MOS6522(config, m_via, 1_MHz_XTAL);
 	m_via->irq_handler().set("irqs", FUNC(input_merger_device::in_w<0>));
 
 	M3002(config, "rtc", 32.768_kHz_XTAL);

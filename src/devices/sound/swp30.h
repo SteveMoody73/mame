@@ -9,8 +9,9 @@
 #pragma once
 
 #include "meg.h"
+#include "dirom.h"
 
-class swp30_device : public device_t, public device_sound_interface, public device_rom_interface
+class swp30_device : public device_t, public device_sound_interface, public device_rom_interface<25+2, 2, 0, ENDIANNESS_LITTLE>
 {
 public:
 	swp30_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock = 33868800);
@@ -20,7 +21,7 @@ public:
 protected:
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples) override;
+	virtual void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
 	virtual void rom_bank_updated() override;
 	virtual void device_add_mconfig(machine_config &config) override;
 
@@ -48,6 +49,8 @@ private:
 	s16 m_eq_filter[0x40][6];
 	u16 m_routing[0x40][3];
 	u16 m_map[8];
+
+	u16 m_internal_adr;
 
 	u16 m_program_address;
 
@@ -86,6 +89,9 @@ private:
 	void dry_rev_w(offs_t offset, u16 data);
 	u16 cho_var_r(offs_t offset);
 	void cho_var_w(offs_t offset, u16 data);
+	u16 internal_adr_r();
+	void internal_adr_w(u16 data);
+	u16 internal_r();
 	template<int sel> u16 routing_r(offs_t offset);
 	template<int sel> void routing_w(offs_t offset, u16 data);
 

@@ -211,8 +211,8 @@ Stephh's notes (based on the games M6502 code and some tests) :
 #include "cpu/m6502/deco16.h"
 #include "cpu/m6502/m6502.h"
 #include "cpu/m6809/m6809.h"
-#include "sound/2203intf.h"
-#include "sound/3526intf.h"
+#include "sound/ym2203.h"
+#include "sound/ym3526.h"
 #include "screen.h"
 #include "speaker.h"
 
@@ -221,12 +221,12 @@ Stephh's notes (based on the games M6502 code and some tests) :
 /* Emulate DECO 291 protection (for original express raider, code is cracked on the bootleg)*/
 /*****************************************************************************************/
 
-READ8_MEMBER(exprraid_state::exprraid_prot_data_r)
+uint8_t exprraid_state::exprraid_prot_data_r()
 {
 	return m_prot_value;
 }
 
-READ8_MEMBER(exprraid_state::exprraid_prot_status_r)
+uint8_t exprraid_state::exprraid_prot_status_r()
 {
 	/*
 	    76543210
@@ -238,7 +238,7 @@ READ8_MEMBER(exprraid_state::exprraid_prot_status_r)
 	return 0x02;
 }
 
-WRITE8_MEMBER(exprraid_state::exprraid_prot_data_w)
+void exprraid_state::exprraid_prot_data_w(uint8_t data)
 {
 	switch (data)
 	{
@@ -263,12 +263,12 @@ WRITE8_MEMBER(exprraid_state::exprraid_prot_data_w)
 	}
 }
 
-WRITE8_MEMBER(exprraid_state::exprraid_int_clear_w)
+void exprraid_state::exprraid_int_clear_w(uint8_t data)
 {
 	m_maincpu->set_input_line(DECO16_IRQ_LINE, CLEAR_LINE);
 }
 
-READ8_MEMBER(exprraid_state::vblank_r)
+uint8_t exprraid_state::vblank_r()
 {
 	return ioport("IN0")->read();
 }
@@ -846,13 +846,13 @@ void exprraid_state::init_exprraid()
 
 void exprraid_state::init_wexpressb2()
 {
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x3800, 0x3800, read8_delegate(*this, FUNC(exprraid_state::vblank_r)));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x3800, 0x3800, read8smo_delegate(*this, FUNC(exprraid_state::vblank_r)));
 	exprraid_gfx_expand();
 }
 
 void exprraid_state::init_wexpressb3()
 {
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0xffc0, 0xffc0, read8_delegate(*this, FUNC(exprraid_state::vblank_r)));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0xffc0, 0xffc0, read8smo_delegate(*this, FUNC(exprraid_state::vblank_r)));
 	exprraid_gfx_expand();
 }
 

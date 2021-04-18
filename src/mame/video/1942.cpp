@@ -152,20 +152,20 @@ void _1942p_state::video_start()
 
 ***************************************************************************/
 
-WRITE8_MEMBER(_1942_state::_1942_fgvideoram_w)
+void _1942_state::_1942_fgvideoram_w(offs_t offset, uint8_t data)
 {
 	m_fg_videoram[offset] = data;
 	m_fg_tilemap->mark_tile_dirty(offset & 0x3ff);
 }
 
-WRITE8_MEMBER(_1942_state::_1942_bgvideoram_w)
+void _1942_state::_1942_bgvideoram_w(offs_t offset, uint8_t data)
 {
 	m_bg_videoram[offset] = data;
 	m_bg_tilemap->mark_tile_dirty((offset & 0x0f) | ((offset >> 1) & 0x01f0));
 }
 
 
-WRITE8_MEMBER(_1942_state::_1942_palette_bank_w)
+void _1942_state::_1942_palette_bank_w(uint8_t data)
 {
 	if (m_palette_bank != data)
 	{
@@ -174,14 +174,14 @@ WRITE8_MEMBER(_1942_state::_1942_palette_bank_w)
 	}
 }
 
-WRITE8_MEMBER(_1942_state::_1942_scroll_w)
+void _1942_state::_1942_scroll_w(offs_t offset, uint8_t data)
 {
 	m_scroll[offset] = data;
 	m_bg_tilemap->set_scrollx(0, m_scroll[0] | (m_scroll[1] << 8));
 }
 
 
-WRITE8_MEMBER(_1942_state::_1942_c804_w)
+void _1942_state::_1942_c804_w(uint8_t data)
 {
 	/* bit 7: flip screen
 	   bit 4: cpu B reset
@@ -310,31 +310,16 @@ void _1942p_state::draw_sprites(bitmap_ind16 &bitmap, const rectangle &cliprect)
 		int sx = m_spriteram[offs + 2] - 0x10 * (m_spriteram[offs + 3] & 0x10);
 		int sy = m_spriteram[offs + 1];
 
-		int dir;
 		if (flip_screen())
 		{
 			sx = 240 - sx;
-			dir = -1;
 		}
 		else
 		{
 			sy = 240 - sy;
-			dir = 1;
 		}
 
-		/* handle double / quadruple height */
-		int i = (m_spriteram[offs + 3] & 0xc0) >> 6;
-		if (i == 2)
-			i = 3;
-
-		i = 0;
-
-		do
-		{
-			m_gfxdecode->gfx(2)->transpen(bitmap, cliprect, code + i, col, flip_screen(), flip_screen(), sx, sy + 16 * i * dir, 15);
-
-			i--;
-		} while (i >= 0);
+		m_gfxdecode->gfx(2)->transpen(bitmap, cliprect, code, col, flip_screen(), flip_screen(), sx, sy, 15);
 	}
 
 }

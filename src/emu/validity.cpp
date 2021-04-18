@@ -11,9 +11,11 @@
 #include "emu.h"
 #include "validity.h"
 
+#include "corestr.h"
 #include "emuopts.h"
 #include "romload.h"
 #include "video/rgbutil.h"
+#include "unicode.h"
 
 #include <cctype>
 #include <type_traits>
@@ -82,7 +84,7 @@ void validity_checker::validate_tag(const char *tag)
 
 	// scan for invalid characters
 	static char const *const validchars = "abcdefghijklmnopqrstuvwxyz0123456789_.:^$";
-	for (const char *p = tag; *p != 0; p++)
+	for (char const *p = tag; *p; ++p)
 	{
 		// only lower-case permitted
 		if (*p != tolower(u8(*p)))
@@ -95,7 +97,7 @@ void validity_checker::validate_tag(const char *tag)
 			osd_printf_error("Tag '%s' contains spaces\n", tag);
 			break;
 		}
-		if (strchr(validchars, *p) == nullptr)
+		if (!strchr(validchars, *p))
 		{
 			osd_printf_error("Tag '%s' contains invalid character '%c'\n",  tag, *p);
 			break;
@@ -128,16 +130,16 @@ void validity_checker::validate_tag(const char *tag)
 //  validity_checker - constructor
 //-------------------------------------------------
 
-validity_checker::validity_checker(emu_options &options)
+validity_checker::validity_checker(emu_options &options, bool quick)
 	: m_drivlist(options)
 	, m_errors(0)
 	, m_warnings(0)
 	, m_print_verbose(options.verbose())
 	, m_current_driver(nullptr)
-	, m_current_config(nullptr)
 	, m_current_device(nullptr)
 	, m_current_ioport(nullptr)
-	, m_validate_all(false)
+	, m_checking_card(false)
+	, m_quick(quick)
 {
 	// pre-populate the defstr map with all the default strings
 	for (int strnum = 1; strnum < INPUT_STRING_COUNT; strnum++)
@@ -261,6 +263,7 @@ void validity_checker::validate_begin()
 	m_roms_map.clear();
 	m_defstr_map.clear();
 	m_region_map.clear();
+	m_ioport_set.clear();
 
 	// reset internal state
 	m_errors = 0;
@@ -289,14 +292,15 @@ void validity_checker::validate_one(const game_driver &driver)
 {
 	// help verbose validation detect configuration-related crashes
 	if (m_print_verbose)
-		output_via_delegate(OSD_OUTPUT_CHANNEL_ERROR, "Validating driver %s (%s)...\n", driver.name, core_filename_extract_base(driver.type.source()).c_str());
+		output_via_delegate(OSD_OUTPUT_CHANNEL_ERROR, "Validating driver %s (%s)...\n", driver.name, core_filename_extract_base(driver.type.source()));
 
 	// set the current driver
 	m_current_driver = &driver;
-	m_current_config = nullptr;
 	m_current_device = nullptr;
 	m_current_ioport = nullptr;
 	m_region_map.clear();
+	m_ioport_set.clear();
+	m_checking_card = false;
 
 	// reset error/warning state
 	int start_errors = m_errors;
@@ -305,18 +309,16 @@ void validity_checker::validate_one(const game_driver &driver)
 	m_warning_text.clear();
 	m_verbose_text.clear();
 
-	// wrap in try/except to catch fatalerrors
+	// wrap in try/catch to catch fatalerrors
 	try
 	{
 		machine_config config(driver, m_blank_options);
-		m_current_config = &config;
-		validate_driver();
-		validate_roms(m_current_config->root_device());
-		validate_inputs();
-		validate_devices();
-		m_current_config = nullptr;
+		validate_driver(config.root_device());
+		validate_roms(config.root_device());
+		validate_inputs(config.root_device());
+		validate_devices(config);
 	}
-	catch (emu_fatalerror &err)
+	catch (emu_fatalerror const &err)
 	{
 		osd_printf_error("Fatal error %s", err.what());
 	}
@@ -325,7 +327,7 @@ void validity_checker::validate_one(const game_driver &driver)
 	if (m_errors > start_errors || m_warnings > start_warnings || !m_verbose_text.empty())
 	{
 		if (!m_print_verbose)
-			output_via_delegate(OSD_OUTPUT_CHANNEL_ERROR, "Driver %s (file %s): ", driver.name, core_filename_extract_base(driver.type.source()).c_str());
+			output_via_delegate(OSD_OUTPUT_CHANNEL_ERROR, "Driver %s (file %s): ", driver.name, core_filename_extract_base(driver.type.source()));
 		output_via_delegate(OSD_OUTPUT_CHANNEL_ERROR, "%d errors, %d warnings\n", m_errors - start_errors, m_warnings - start_warnings);
 		if (m_errors > start_errors)
 			output_indented_errors(m_error_text, "Errors");
@@ -338,9 +340,11 @@ void validity_checker::validate_one(const game_driver &driver)
 
 	// reset the driver/device
 	m_current_driver = nullptr;
-	m_current_config = nullptr;
 	m_current_device = nullptr;
 	m_current_ioport = nullptr;
+	m_region_map.clear();
+	m_ioport_set.clear();
+	m_checking_card = false;
 }
 
 
@@ -472,13 +476,13 @@ void validity_checker::validate_inlines()
 	if (resultu32 != expectedu32)
 		osd_printf_error("Error testing divu_64x32 (%16X / %08X) = %08X (expected %08X)\n", u64(testu64a), u32(testu32a), resultu32, expectedu32);
 
-	resulti32 = div_64x32_rem(testi64a, testi32a, &remainder);
+	resulti32 = div_64x32_rem(testi64a, testi32a, remainder);
 	expectedi32 = testi64a / s64(testi32a);
 	expremainder = testi64a % s64(testi32a);
 	if (resulti32 != expectedi32 || remainder != expremainder)
 		osd_printf_error("Error testing div_64x32_rem (%16X / %08X) = %08X,%08X (expected %08X,%08X)\n", s64(testi64a), s32(testi32a), resulti32, remainder, expectedi32, expremainder);
 
-	resultu32 = divu_64x32_rem(testu64a, testu32a, &uremainder);
+	resultu32 = divu_64x32_rem(testu64a, testu32a, uremainder);
 	expectedu32 = testu64a / u64(testu32a);
 	expuremainder = testu64a % u64(testu32a);
 	if (resultu32 != expectedu32 || uremainder != expuremainder)
@@ -560,8 +564,6 @@ void validity_checker::validate_rgb()
 	    scale2_add_and_clamp(const rgbaint_t&, const rgbaint_t&, const rgbaint_t&)
 	    scale_add_and_clamp(const rgbaint_t&, const rgbaint_t&);
 	    scale_imm_add_and_clamp(const s32, const rgbaint_t&);
-	    static bilinear_filter(u32, u32, u32, u32, u8, u8)
-	    bilinear_filter_rgbaint(u32, u32, u32, u32, u8, u8)
 	*/
 
 	auto random_i32_nolimit = [this]
@@ -1392,6 +1394,62 @@ void validity_checker::validate_rgb()
 	rgb.set(actual_a, actual_r, actual_g, actual_b);
 	rgb.cmplt_imm_rgba(actual_a + 1, std::numeric_limits<s32>::min(), std::numeric_limits<s32>::max(), actual_b);
 	check_expected("rgbaint_t::cmplt_imm_rgba");
+
+	// test bilinear_filter and bilinear_filter_rgbaint
+	// SSE implementation carries more internal precision between the bilinear stages
+#if defined(MAME_RGB_HIGH_PRECISION)
+	const int first_shift = 1;
+#else
+	const int first_shift = 8;
+#endif
+	for (int index = 0; index < 1000; index++)
+	{
+		u8 u, v;
+		rgbaint_t rgb_point[4];
+		u32 top_row, bottom_row;
+
+		for (int i = 0; i < 4; i++)
+		{
+			rgb_point[i].set(random_u32());
+		}
+
+		switch (index)
+		{
+			case 0: u = 0; v = 0; break;
+			case 1: u = 255; v = 255; break;
+			case 2: u = 0; v = 255; break;
+			case 3: u = 255; v = 0; break;
+			case 4: u = 128; v = 128; break;
+			case 5: u = 63; v = 32; break;
+			default:
+				u = random_u32() & 0xff;
+				v = random_u32() & 0xff;
+				break;
+		}
+
+		top_row = (rgb_point[0].get_a() * (256 - u) + rgb_point[1].get_a() * u) >> first_shift;
+		bottom_row = (rgb_point[2].get_a() * (256 - u) + rgb_point[3].get_a() * u) >> first_shift;
+		expected_a = (top_row * (256 - v) + bottom_row * v) >> (16 - first_shift);
+
+		top_row = (rgb_point[0].get_r() * (256 - u) + rgb_point[1].get_r() * u) >> first_shift;
+		bottom_row = (rgb_point[2].get_r() * (256 - u) + rgb_point[3].get_r() * u) >> first_shift;
+		expected_r = (top_row * (256 - v) + bottom_row * v) >> (16 - first_shift);
+
+		top_row = (rgb_point[0].get_g() * (256 - u) + rgb_point[1].get_g() * u) >> first_shift;
+		bottom_row = (rgb_point[2].get_g() * (256 - u) + rgb_point[3].get_g() * u) >> first_shift;
+		expected_g = (top_row * (256 - v) + bottom_row * v) >> (16 - first_shift);
+
+		top_row = (rgb_point[0].get_b() * (256 - u) + rgb_point[1].get_b() * u) >> first_shift;
+		bottom_row = (rgb_point[2].get_b() * (256 - u) + rgb_point[3].get_b() * u) >> first_shift;
+		expected_b = (top_row * (256 - v) + bottom_row * v) >> (16 - first_shift);
+
+		imm = rgbaint_t::bilinear_filter(rgb_point[0].to_rgba(), rgb_point[1].to_rgba(), rgb_point[2].to_rgba(), rgb_point[3].to_rgba(), u, v);
+		rgb.set(imm);
+		check_expected("rgbaint_t::bilinear_filter");
+
+		rgb.bilinear_filter_rgbaint(rgb_point[0].to_rgba(), rgb_point[1].to_rgba(), rgb_point[2].to_rgba(), rgb_point[3].to_rgba(), u, v);
+		check_expected("rgbaint_t::bilinear_filter_rgbaint");
+	}
 }
 
 
@@ -1400,7 +1458,7 @@ void validity_checker::validate_rgb()
 //  information
 //-------------------------------------------------
 
-void validity_checker::validate_driver()
+void validity_checker::validate_driver(device_t &root)
 {
 	// check for duplicate names
 	if (!m_names_map.insert(std::make_pair(m_current_driver->name, m_current_driver)).second)
@@ -1483,7 +1541,7 @@ void validity_checker::validate_driver()
 	device_t::feature_type const imperfect(m_current_driver->type.imperfect_features());
 	if (!(m_current_driver->flags & (machine_flags::IS_BIOS_ROOT | machine_flags::NO_SOUND_HW)) && !(unemulated & device_t::feature::SOUND))
 	{
-		sound_interface_iterator iter(m_current_config->root_device());
+		sound_interface_enumerator iter(root);
 		if (!iter.first())
 			osd_printf_error("Driver is missing MACHINE_NO_SOUND or MACHINE_NO_SOUND_HW flag\n");
 	}
@@ -1507,7 +1565,7 @@ void validity_checker::validate_driver()
 void validity_checker::validate_roms(device_t &root)
 {
 	// iterate, starting with the driver's ROMs and continuing with device ROMs
-	for (device_t &device : device_iterator(root))
+	for (device_t &device : device_enumerator(root))
 	{
 		// track the current device
 		m_current_device = &device;
@@ -1550,7 +1608,7 @@ void validity_checker::validate_roms(device_t &root)
 
 				// attempt to add it to the map, reporting duplicates as errors
 				current_length = ROMREGION_GETLENGTH(romp);
-				if (!m_region_map.insert(std::make_pair(fulltag, current_length)).second)
+				if (!m_region_map.emplace(fulltag, current_length).second)
 					osd_printf_error("Multiple ROM_REGIONs with the same tag '%s' defined\n", fulltag);
 			}
 			else if (ROMENTRY_ISSYSTEM_BIOS(romp)) // If this is a system bios, make sure it is using the next available bios number
@@ -1618,6 +1676,10 @@ void validity_checker::validate_roms(device_t &root)
 					osd_printf_error("ROM '%s' extends past the defined memory region\n", last_name);
 			}
 		}
+
+		// if we haven't seen any items since the last region, print a warning
+		if (items_since_region == 0)
+			osd_printf_warning("Empty ROM region '%s' (warning)\n", last_region_name);
 
 		// check that default BIOS exists
 		if (defbios && (bios_names.find(defbios) == bios_names.end()))
@@ -1782,7 +1844,7 @@ void validity_checker::validate_dip_settings(ioport_field &field)
 	if (coin_error)
 	{
 		output_via_delegate(OSD_OUTPUT_CHANNEL_ERROR, "   Note proper coin sort order should be:\n");
-		for (int entry = 0; entry < ARRAY_LENGTH(coin_list); entry++)
+		for (int entry = 0; entry < std::size(coin_list); entry++)
 			if (coin_list[entry])
 				output_via_delegate(OSD_OUTPUT_CHANNEL_ERROR, "      %s\n", ioport_string_from_index(__input_string_coinage_start + entry));
 	}
@@ -1794,11 +1856,10 @@ void validity_checker::validate_dip_settings(ioport_field &field)
 //  stored within an ioport field or setting
 //-------------------------------------------------
 
-void validity_checker::validate_condition(ioport_condition &condition, device_t &device, std::unordered_set<std::string> &port_map)
+void validity_checker::validate_condition(ioport_condition &condition, device_t &device)
 {
-	// resolve the tag
-	// then find a matching port
-	if (port_map.find(device.subtag(condition.tag())) == port_map.end())
+	// resolve the tag, then find a matching port
+	if (m_ioport_set.find(device.subtag(condition.tag())) == m_ioport_set.end())
 		osd_printf_error("Condition referencing non-existent ioport tag '%s'\n", condition.tag());
 }
 
@@ -1807,12 +1868,10 @@ void validity_checker::validate_condition(ioport_condition &condition, device_t 
 //  validate_inputs - validate input configuration
 //-------------------------------------------------
 
-void validity_checker::validate_inputs()
+void validity_checker::validate_inputs(device_t &root)
 {
-	std::unordered_set<std::string> port_map;
-
 	// iterate over devices
-	for (device_t &device : device_iterator(m_current_config->root_device()))
+	for (device_t &device : device_enumerator(root))
 	{
 		// see if this device has ports; if not continue
 		if (device.input_ports() == nullptr)
@@ -1832,13 +1891,29 @@ void validity_checker::validate_inputs()
 
 		// do a first pass over ports to add their names and find duplicates
 		for (auto &port : portlist)
-			if (!port_map.insert(port.second->tag()).second)
+			if (!m_ioport_set.insert(port.second->tag()).second)
 				osd_printf_error("Multiple I/O ports with the same tag '%s' defined\n", port.second->tag());
 
 		// iterate over ports
 		for (auto &port : portlist)
 		{
 			m_current_ioport = port.second->tag();
+
+			// scan for invalid characters
+			static char const *const validchars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.:^$";
+			for (char const *p = m_current_ioport; *p; ++p)
+			{
+				if (*p == ' ')
+				{
+					osd_printf_error("Tag '%s' contains spaces\n", m_current_ioport);
+					break;
+				}
+				if (!strchr(validchars, *p))
+				{
+					osd_printf_error("Tag '%s' contains invalid character '%c'\n",  m_current_ioport, *p);
+					break;
+				}
+			}
 
 			// iterate through the fields on this port
 			for (ioport_field &field : port.second->fields())
@@ -1895,12 +1970,12 @@ void validity_checker::validate_inputs()
 
 				// verify conditions on the field
 				if (!field.condition().none())
-					validate_condition(field.condition(), device, port_map);
+					validate_condition(field.condition(), device);
 
 				// verify conditions on the settings
 				for (ioport_setting &setting : field.settings())
 					if (!setting.condition().none())
-						validate_condition(setting.condition(), device, port_map);
+						validate_condition(setting.condition(), device);
 
 				// verify natural keyboard codes
 				for (int which = 0; which < 1 << (UCHAR_SHIFT_END - UCHAR_SHIFT_BEGIN + 1); which++)
@@ -1911,9 +1986,9 @@ void validity_checker::validate_inputs()
 						if (!uchar_isvalid(code))
 						{
 							osd_printf_error("Field '%s' has non-character U+%04X in PORT_CHAR(%d)\n",
-								name,
-								(unsigned)code,
-								(int)code);
+									name,
+									(unsigned)code,
+									(int)code);
 						}
 					}
 				}
@@ -1934,17 +2009,17 @@ void validity_checker::validate_inputs()
 //  checks
 //-------------------------------------------------
 
-void validity_checker::validate_devices()
+void validity_checker::validate_devices(machine_config &config)
 {
 	std::unordered_set<std::string> device_map;
 
-	for (device_t &device : device_iterator(m_current_config->root_device()))
+	for (device_t &device : device_enumerator(config.root_device()))
 	{
 		// track the current device
 		m_current_device = &device;
 
 		// validate auto-finders
-		device.findit(true);
+		device.findit(this);
 
 		// validate the device tag
 		validate_tag(device.basetag());
@@ -1970,10 +2045,11 @@ void validity_checker::validate_devices()
 				if (slot->default_option() != nullptr && option.first == slot->default_option())
 					continue;
 
+				m_checking_card = true;
 				device_t *card;
 				{
-					machine_config::token const tok(m_current_config->begin_configuration(slot->device()));
-					card = m_current_config->device_add(option.second->name(), option.second->devtype(), option.second->clock());
+					machine_config::token const tok(config.begin_configuration(slot->device()));
+					card = config.device_add(option.second->name(), option.second->devtype(), option.second->clock());
 
 					const char *const def_bios = option.second->default_bios();
 					if (def_bios)
@@ -1983,7 +2059,7 @@ void validity_checker::validate_devices()
 						additions(card);
 				}
 
-				for (device_slot_interface &subslot : slot_interface_iterator(*card))
+				for (device_slot_interface &subslot : slot_interface_enumerator(*card))
 				{
 					if (subslot.fixed())
 					{
@@ -1991,8 +2067,8 @@ void validity_checker::validate_devices()
 						device_slot_interface::slot_option const *suboption = subslot.option(subslot.default_option());
 						if (suboption)
 						{
-							machine_config::token const tok(m_current_config->begin_configuration(subslot.device()));
-							device_t *const sub_card = m_current_config->device_add(suboption->name(), suboption->devtype(), suboption->clock());
+							machine_config::token const tok(config.begin_configuration(subslot.device()));
+							device_t *const sub_card = config.device_add(suboption->name(), suboption->devtype(), suboption->clock());
 							const char *const sub_bios = suboption->default_bios();
 							if (sub_bios)
 								sub_card->set_default_bios_tag(sub_bios);
@@ -2003,20 +2079,22 @@ void validity_checker::validate_devices()
 					}
 				}
 
-				for (device_t &card_dev : device_iterator(*card))
+				for (device_t &card_dev : device_enumerator(*card))
 					card_dev.config_complete();
 				validate_roms(*card);
 
-				for (device_t &card_dev : device_iterator(*card))
+				for (device_t &card_dev : device_enumerator(*card))
 				{
 					m_current_device = &card_dev;
-					card_dev.findit(true);
+					card_dev.findit(this);
+					validate_tag(card_dev.basetag());
 					card_dev.validity_check(*this);
 					m_current_device = nullptr;
 				}
 
-				machine_config::token const tok(m_current_config->begin_configuration(slot->device()));
-				m_current_config->device_remove(option.second->name());
+				machine_config::token const tok(config.begin_configuration(slot->device()));
+				config.device_remove(option.second->name());
+				m_checking_card = false;
 			}
 		}
 	}
@@ -2042,13 +2120,13 @@ void validity_checker::validate_device_types()
 	machine_config::token const tok(config.begin_configuration(config.root_device()));
 	for (device_type type : registered_device_types)
 	{
-		device_t *const dev = config.device_add("_tmp", type, 0);
+		device_t *const dev = config.device_add(type.shortname(), type, 0);
 
 		char const *name((dev->shortname() && *dev->shortname()) ? dev->shortname() : type.type().name());
-		std::string const description((dev->source() && *dev->source()) ? util::string_format("%s(%s)", core_filename_extract_base(dev->source()).c_str(), name) : name);
+		std::string const description((dev->source() && *dev->source()) ? util::string_format("%s(%s)", core_filename_extract_base(dev->source()), name) : name);
 
 		if (m_print_verbose)
-			output_via_delegate(OSD_OUTPUT_CHANNEL_ERROR, "Validating device %s...\n", description.c_str());
+			output_via_delegate(OSD_OUTPUT_CHANNEL_ERROR, "Validating device %s...\n", description);
 
 		// ensure shortname exists
 		if (!dev->shortname() || !*dev->shortname())
@@ -2130,7 +2208,18 @@ void validity_checker::validate_device_types()
 		if (unemulated & imperfect)
 			osd_printf_error("Device cannot have features that are both unemulated and imperfect (0x%08lX)\n", static_cast<unsigned long>(unemulated & imperfect));
 
-		config.device_remove("_tmp");
+		// give devices some of the same scrutiny that drivers get - necessary for cards not default for any slots
+		validate_roms(*dev);
+		validate_inputs(*dev);
+
+		// reset the device
+		m_current_device = nullptr;
+		m_current_ioport = nullptr;
+		m_region_map.clear();
+		m_ioport_set.clear();
+
+		// remove the device in preparation for re-using the machine configuration
+		config.device_remove(type.shortname());
 	}
 
 	// if we had warnings or errors, output
@@ -2240,5 +2329,5 @@ void validity_checker::output_indented_errors(std::string &text, const char *hea
 	if (text[text.size()-1] == '\n')
 		text.erase(text.size()-1, 1);
 	strreplace(text, "\n", "\n   ");
-	output_via_delegate(OSD_OUTPUT_CHANNEL_ERROR, "%s:\n   %s\n", header, text.c_str());
+	output_via_delegate(OSD_OUTPUT_CHANNEL_ERROR, "%s:\n   %s\n", header, text);
 }

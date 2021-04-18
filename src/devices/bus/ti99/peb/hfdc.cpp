@@ -76,7 +76,7 @@
 
 DEFINE_DEVICE_TYPE_NS(TI99_HFDC, bus::ti99::peb, myarc_hfdc_device, "ti99_hfdc", "Myarc Hard and Floppy Disk Controller")
 
-namespace bus { namespace ti99 { namespace peb {
+namespace bus::ti99::peb {
 
 #define BUFFER "ram"
 #define FDC_TAG "hdc9234"
@@ -111,7 +111,7 @@ myarc_hfdc_device::myarc_hfdc_device(const machine_config &mconfig, const char *
 {
 }
 
-SETADDRESS_DBIN_MEMBER( myarc_hfdc_device::setaddress_dbin )
+void myarc_hfdc_device::setaddress_dbin(offs_t offset, int state)
 {
 	// Do not allow setaddress for the debugger. It will mess up the
 	// setaddress/memory access pairs when the CPU enters wait states.
@@ -205,7 +205,7 @@ void myarc_hfdc_device::debug_write(offs_t offset, uint8_t data)
 
     HFDC manual, p. 44
 */
-READ8Z_MEMBER(myarc_hfdc_device::readz)
+void myarc_hfdc_device::readz(offs_t offset, uint8_t *value)
 {
 	if (machine().side_effects_disabled())
 	{
@@ -371,7 +371,7 @@ void myarc_hfdc_device::write(offs_t offset, uint8_t data)
     ---
     0 on all other locations
 */
-READ8Z_MEMBER(myarc_hfdc_device::crureadz)
+void myarc_hfdc_device::crureadz(offs_t offset, uint8_t *value)
 {
 	uint8_t reply;
 	if ((offset & 0xff00)==m_cru_base)
@@ -1025,10 +1025,12 @@ INPUT_PORTS_START( ti99_hfdc )
 		PORT_DIPSETTING( 0x30, "80 track HD, 2 ms")
 INPUT_PORTS_END
 
-FLOPPY_FORMATS_MEMBER(myarc_hfdc_device::floppy_formats)
-	FLOPPY_TI99_SDF_FORMAT,
-	FLOPPY_TI99_TDF_FORMAT
-FLOPPY_FORMATS_END
+void myarc_hfdc_device::floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_TI99_SDF_FORMAT);
+	fr.add(FLOPPY_TI99_TDF_FORMAT);
+}
 
 static void hfdc_floppies(device_slot_interface &device)
 {
@@ -1088,4 +1090,4 @@ ioport_constructor myarc_hfdc_device::device_input_ports() const
 	return INPUT_PORTS_NAME( ti99_hfdc );
 }
 
-} } } // end namespace bus::ti99::peb
+} // end namespace bus::ti99::peb

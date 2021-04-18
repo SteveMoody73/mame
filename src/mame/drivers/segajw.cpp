@@ -33,13 +33,15 @@ Also seem to be running on the same/similar hardware:
 #include "machine/gen_latch.h"
 #include "machine/nvram.h"
 #include "machine/315_5296.h"
-#include "sound/2612intf.h"
+#include "sound/ym2612.h"
 #include "video/hd63484.h"
 #include "video/ramdac.h"
 #include "screen.h"
 #include "speaker.h"
 
 #include "segajw.lh"
+
+namespace {
 
 class segajw_state : public driver_device
 {
@@ -59,17 +61,18 @@ public:
 	DECLARE_CUSTOM_INPUT_MEMBER(coin_sensors_r);
 	DECLARE_READ_LINE_MEMBER(hopper_sensors_r);
 
-private:
-	DECLARE_READ8_MEMBER(coin_counter_r);
-	DECLARE_WRITE8_MEMBER(coin_counter_w);
-	DECLARE_WRITE8_MEMBER(hopper_w);
-	DECLARE_WRITE8_MEMBER(lamps1_w);
-	DECLARE_WRITE8_MEMBER(lamps2_w);
-	DECLARE_WRITE8_MEMBER(coinlockout_w);
-
+protected:
 	// driver_device overrides
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
+
+private:
+	uint8_t coin_counter_r();
+	void coin_counter_w(uint8_t data);
+	void hopper_w(uint8_t data);
+	void lamps1_w(uint8_t data);
+	void lamps2_w(uint8_t data);
+	void coinlockout_w(uint8_t data);
 
 	void ramdac_map(address_map &map);
 	void segajw_audiocpu_io_map(address_map &map);
@@ -90,34 +93,34 @@ private:
 };
 
 
-READ8_MEMBER(segajw_state::coin_counter_r)
+uint8_t segajw_state::coin_counter_r()
 {
 	return m_coin_counter ^ 0xff;
 }
 
-WRITE8_MEMBER(segajw_state::coin_counter_w)
+void segajw_state::coin_counter_w(uint8_t data)
 {
 	m_coin_counter = data;
 }
 
-WRITE8_MEMBER(segajw_state::hopper_w)
+void segajw_state::hopper_w(uint8_t data)
 {
 	m_hopper_start_cycles = data & 0x02 ? 0 : m_maincpu->total_cycles();
 }
 
-WRITE8_MEMBER(segajw_state::lamps1_w)
+void segajw_state::lamps1_w(uint8_t data)
 {
 	for (int i = 0; i < 8; i++)
 		m_lamps[i] = BIT(data, i);
 }
 
-WRITE8_MEMBER(segajw_state::lamps2_w)
+void segajw_state::lamps2_w(uint8_t data)
 {
 	for (int i = 0; i < 8; i++)
 		m_lamps[8 + i] = BIT(data, i);
 }
 
-WRITE8_MEMBER(segajw_state::coinlockout_w)
+void segajw_state::coinlockout_w(uint8_t data)
 {
 	machine().bookkeeping().coin_lockout_w(0, data & 1);
 
@@ -351,6 +354,9 @@ void segajw_state::machine_start()
 	m_lamps.resolve();
 	m_towerlamps.resolve();
 
+	m_coin_start_cycles = 0;
+	m_hopper_start_cycles = 0;
+
 	save_item(NAME(m_coin_start_cycles));
 	save_item(NAME(m_hopper_start_cycles));
 	save_item(NAME(m_coin_counter));
@@ -359,8 +365,6 @@ void segajw_state::machine_start()
 
 void segajw_state::machine_reset()
 {
-	m_coin_start_cycles = 0;
-	m_hopper_start_cycles = 0;
 	m_coin_counter = 0xff;
 }
 
@@ -444,6 +448,8 @@ ROM_START( segajw )
 	ROM_REGION16_BE( 0x80000, "gfx1", 0 )
 	ROM_LOAD16_WORD_SWAP( "14586.epr",   0x00000, 0x80000, CRC(daeb0616) SHA1(17a8bb7137ad46a7c3ac07d22cbc4430e76e2f71) )
 ROM_END
+
+} // Anonymous namespace
 
 
 GAMEL( 1991, segajw, 0, segajw,  segajw, segajw_state, empty_init, ROT0, "Sega", "Joker's Wild (Rev. B)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE, layout_segajw )

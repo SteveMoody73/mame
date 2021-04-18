@@ -355,6 +355,17 @@ A few games have been listed as rumored, but they might very well be fake (pleas
 		</part>
 	</software>
 
+	<software name="agassip" cloneof="agassi">
+		<description>Andre Agassi Tennis (prototype)</description>
+		<year>1993</year>
+		<publisher>TecMagik</publisher>
+		<part name="cart" interface="gamegear_cart">
+			<dataarea name="rom" size="262144">
+				<rom name="andre agassi tennis (prototype).bin" size="262144" crc="f167028e" sha1="891407182b761957f9655f9c7d5365aa858fe49f"/>
+			</dataarea>
+		</part>
+	</software>
+
 	<software name="arcadecl">
 		<description>Arcade Classics (USA)</description>
 		<year>1996</year>
@@ -1022,7 +1033,7 @@ a certain item) -->
 		<info name="serial" value="2536, 2536-50"/>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="bonkers wax up! (usa, europe).bin" size="524288" crc="bfceba5f" sha1="b98bd9467fe8bf782989172b576c7844f3666ae9"/>
+				<rom name="bonkers wax up (usa, europe).bin" size="524288" crc="bfceba5f" sha1="b98bd9467fe8bf782989172b576c7844f3666ae9"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1033,7 +1044,7 @@ a certain item) -->
 		<publisher>Sega</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="bonkers wax up! (prototype - dec 03,  1994).bin" size="524288" crc="63429025" sha1="7e426a1db56125836dd93ea57d5ac82cff1be23f"/>
+				<rom name="bonkers wax up (prototype - dec 03,  1994).bin" size="524288" crc="63429025" sha1="7e426a1db56125836dd93ea57d5ac82cff1be23f"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1044,7 +1055,7 @@ a certain item) -->
 		<publisher>Sega</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="bonkers wax up! (prototype - dec 05,  1994).bin" size="524288" crc="c2229b6e" sha1="dcbb000cda6f303d902a308a50e08ebc4803d511"/>
+				<rom name="bonkers wax up (prototype - dec 05,  1994).bin" size="524288" crc="c2229b6e" sha1="dcbb000cda6f303d902a308a50e08ebc4803d511"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1055,7 +1066,7 @@ a certain item) -->
 		<publisher>Sega</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="bonkers wax up! (prototype - dec 07,  1994 - c).bin" size="524288" crc="edaf25e7" sha1="415fc9e0021f544cbf8fd0895d013465654fd1d5"/>
+				<rom name="bonkers wax up (prototype - dec 07,  1994 - c).bin" size="524288" crc="edaf25e7" sha1="415fc9e0021f544cbf8fd0895d013465654fd1d5"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1066,7 +1077,7 @@ a certain item) -->
 		<publisher>Sega</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="bonkers wax up! (prototype - dec 08,  1994 - b).bin" size="524288" crc="9907a738" sha1="c8844bfda83a94ce648588ef945a0d76503b84ce"/>
+				<rom name="bonkers wax up (prototype - dec 08,  1994 - b).bin" size="524288" crc="9907a738" sha1="c8844bfda83a94ce648588ef945a0d76503b84ce"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1077,7 +1088,7 @@ a certain item) -->
 		<publisher>Sega</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="bonkers wax up! (prototype - dec 08,  1994 - c).bin" size="524288" crc="91258adc" sha1="50897d1cbda11e7b20678924d7461f8acd6f0686"/>
+				<rom name="bonkers wax up (prototype - dec 08,  1994 - c).bin" size="524288" crc="91258adc" sha1="50897d1cbda11e7b20678924d7461f8acd6f0686"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1088,7 +1099,7 @@ a certain item) -->
 		<publisher>Sega</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="bonkers wax up! (prototype - dec 11,  1994).bin" size="524288" crc="9a405d0d" sha1="e797640e2363f517fb83ee42903f5d13a1ffad73"/>
+				<rom name="bonkers wax up (prototype - dec 11,  1994).bin" size="524288" crc="9a405d0d" sha1="e797640e2363f517fb83ee42903f5d13a1ffad73"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1100,7 +1111,7 @@ a certain item) -->
 	    <publisher>Sega</publisher>
 	    <part name="cart" interface="gamegear_cart">
 	        <dataarea name="rom" size="524288">
-	            <rom name="bonkers wax up! (prototype - dec 12,  1994 - b).bin" size="524288" crc="9a405d0d" sha1="e797640e2363f517fb83ee42903f5d13a1ffad73"/>
+	            <rom name="bonkers wax up (prototype - dec 12,  1994 - b).bin" size="524288" crc="9a405d0d" sha1="e797640e2363f517fb83ee42903f5d13a1ffad73"/>
 	        </dataarea>
 	    </part>
 	</software-->
@@ -1111,7 +1122,7 @@ a certain item) -->
 		<publisher>Sega</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="bonkers wax up! (prototype - dec 12,  1994 - d).bin" size="524288" crc="6d295894" sha1="368286ded1662eddfff056ad77583d62ce83f58b"/>
+				<rom name="bonkers wax up (prototype - dec 12,  1994 - d).bin" size="524288" crc="6d295894" sha1="368286ded1662eddfff056ad77583d62ce83f58b"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1122,7 +1133,7 @@ a certain item) -->
 		<publisher>Sega</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="bonkers wax up! (prototype - nov 15,  1994).bin" size="524288" crc="85510a57" sha1="6cd8fee2110bc5010a2840c6e5b3fb32270efc02"/>
+				<rom name="bonkers wax up (prototype - nov 15,  1994).bin" size="524288" crc="85510a57" sha1="6cd8fee2110bc5010a2840c6e5b3fb32270efc02"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1133,7 +1144,7 @@ a certain item) -->
 		<publisher>Sega</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="bonkers wax up! (prototype - nov 21,  1994).bin" size="524288" crc="dab43f8f" sha1="c60fbd9e191e4154e26e73f0fd1be1dc6e999e11"/>
+				<rom name="bonkers wax up (prototype - nov 21,  1994).bin" size="524288" crc="dab43f8f" sha1="c60fbd9e191e4154e26e73f0fd1be1dc6e999e11"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1144,7 +1155,7 @@ a certain item) -->
 		<publisher>Sega</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="bonkers wax up! (prototype - nov 23,  1994).bin" size="524288" crc="1b081950" sha1="ac22b149fcd6b500875c93f71e12b2a6cedea507"/>
+				<rom name="bonkers wax up (prototype - nov 23,  1994).bin" size="524288" crc="1b081950" sha1="ac22b149fcd6b500875c93f71e12b2a6cedea507"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1155,7 +1166,7 @@ a certain item) -->
 		<publisher>Sega</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="bonkers wax up! (prototype - nov 26,  1994).bin" size="524288" crc="eb3f22c2" sha1="fbdccd5ee5f38b8ce5654a0093f32e3811c8b56b"/>
+				<rom name="bonkers wax up (prototype - nov 26,  1994).bin" size="524288" crc="eb3f22c2" sha1="fbdccd5ee5f38b8ce5654a0093f32e3811c8b56b"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1166,7 +1177,7 @@ a certain item) -->
 		<publisher>Sega</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="bonkers wax up! (prototype - nov 29,  1994).bin" size="524288" crc="ad6a62fa" sha1="4ad7947a4ffee9a76d146fecc9c3c2f6c5e680b7"/>
+				<rom name="bonkers wax up (prototype - nov 29,  1994).bin" size="524288" crc="ad6a62fa" sha1="4ad7947a4ffee9a76d146fecc9c3c2f6c5e680b7"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1177,7 +1188,7 @@ a certain item) -->
 		<publisher>Sega</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="bonkers wax up! (prototype - oct 31,  1994).bin" size="524288" crc="777dfd80" sha1="160d28c7fd900ab25117247eccecf2ecdb164ce4"/>
+				<rom name="bonkers wax up (prototype - oct 31,  1994).bin" size="524288" crc="777dfd80" sha1="160d28c7fd900ab25117247eccecf2ecdb164ce4"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1213,6 +1224,17 @@ a certain item) -->
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="262144">
 				<rom name="bubble bobble (usa, europe).bin" size="262144" crc="fba338c5" sha1="c2c99d798bd0d4960021743a55e74644ad9020c6"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="bublboblp" cloneof="bublbobl">
+		<description>Bubble Bobble (prototype)</description>
+		<year>1994</year>
+		<publisher>Taito</publisher>
+		<part name="cart" interface="gamegear_cart">
+			<dataarea name="rom" size="262144">
+				<rom name="bubble bobble (prototype).bin" size="262144" crc="be2dc770" sha1="6d4b02f63d5d0c5ffead8fb8c4726fd610c245ad"/>
 			</dataarea>
 		</part>
 	</software>
@@ -1662,6 +1684,17 @@ a certain item) -->
 		</part>
 	</software>
 
+	<software name="chicagop25" cloneof="chicago">
+		<description>Empire Syndicate (Chicago Syndicate) (prototype, 19950320)</description>
+		<year>1995</year>
+		<publisher>Sega</publisher>
+		<part name="cart" interface="gamegear_cart">
+			<dataarea name="rom" size="524288">
+				<rom name="chicago syndicate (prototype - mar 20, 1995).bin" size="524288" crc="635bc4f5" sha1="0f4f83552680129d242a5f7646cf6739d3ecb70a"/>
+			</dataarea>
+		</part>
+	</software>
+
 	<software name="choplft3">
 		<description>Choplifter III (USA)</description>
 		<year>1993</year>
@@ -1732,6 +1765,18 @@ a certain item) -->
 			<feature name="slot" value="codemasters" />
 			<dataarea name="rom" size="262144">
 				<rom name="cj elephant fugitive.bin" size="262144" crc="72981057" sha1="a60815aa0c6ec2bc5ad7f817668b74a42bb64026"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="cjp" cloneof="cj">
+		<description>CJ Elephant Fugitive (prototype)</description>
+		<year>1993</year>
+		<publisher>Codemasters</publisher>
+		<part name="cart" interface="gamegear_cart">
+			<feature name="slot" value="codemasters" />
+			<dataarea name="rom" size="262144">
+				<rom name="cj elephant fugitive (prototype).bin" size="262144" crc="3ace6335" sha1="322ea1294833659a205e313ca49667b921891e85"/>
 			</dataarea>
 		</part>
 	</software>
@@ -2097,6 +2142,18 @@ a certain item) -->
 		</part>
 	</software>
 
+	<software name="dinobash">
+		<description>Dinobasher Starring Bignose the Caveman (Euro, prototype)</description>
+		<year>1993</year>
+		<publisher>Codemasters</publisher>
+		<part name="cart" interface="gamegear_cart">
+			<feature name="slot" value="codemasters" />
+			<dataarea name="rom" size="262144">
+				<rom name="dinobasher starring bignose the caveman (europe) (proto).bin" size="262144" crc="2306aaf4" sha1="46d1689c09705341f593a18d4e9cfd7805ecff88" offset="000000" />
+			</dataarea>
+		</part>
+	</software>
+
 	<!-- Developers: Aspect -->
 	<software name="donald42" cloneof="deepduck">
 		<description>Donald Duck no 4-Tsu no Hihou (Jpn)</description>
@@ -2224,6 +2281,17 @@ a certain item) -->
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="262144">
 				<rom name="dragon - the bruce lee story (usa).bin" size="262144" crc="17f588e8" sha1="60c7cbe782c3df094452835076b9425c329c82ee"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="dragonp" cloneof="dragon">
+		<description>Dragon - The Bruce Lee Story (prototype)</description>
+		<year>1993</year>
+		<publisher>Virgin Interactive</publisher>
+		<part name="cart" interface="gamegear_cart">
+			<dataarea name="rom" size="262144">
+				<rom name="dragon - the bruce lee story (prototype).bin" size="262144" crc="12e0e85b" sha1="b9a396be0e009c951f85bdd6e81ffe1a71232e44"/>
 			</dataarea>
 		</part>
 	</software>
@@ -2500,7 +2568,7 @@ a certain item) -->
 			<feature name="slot" value="codemasters" />
 			<feature name="pin_42" value="sms_mode" />
 			<dataarea name="rom" size="262144">
-				<rom name="excellent dizzy collection, the (prototype) [s][!].bin" size="262144" crc="8813514b" sha1="09a2acf3ed90101be2629384c5c702f6a5408035"/>
+				<rom name="excellent dizzy collection, the (prototype) [s].bin" size="262144" crc="8813514b" sha1="09a2acf3ed90101be2629384c5c702f6a5408035"/>
 			</dataarea>
 		</part>
 	</software>
@@ -2867,7 +2935,7 @@ a certain item) -->
 		<info name="alt_title" value="がんばれゴルビー!"/>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="131072">
-				<rom name="ganbare gorby! (japan).bin" size="131072" crc="a1f2f4a1" sha1="cd3e8910a99bf6717e63aed3aa212ead0597e5cd"/>
+				<rom name="ganbare gorby (japan).bin" size="131072" crc="a1f2f4a1" sha1="cd3e8910a99bf6717e63aed3aa212ead0597e5cd"/>
 			</dataarea>
 		</part>
 	</software>
@@ -3515,7 +3583,7 @@ a certain item) -->
 		<info name="serial" value="T-83038"/>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="262144">
-				<rom name="jeopardy! (usa).bin" size="262144" crc="d7820c21" sha1="28ef5cc2689a1f3bc3bd1b24c3e4132a423fc274"/>
+				<rom name="jeopardy (usa).bin" size="262144" crc="d7820c21" sha1="28ef5cc2689a1f3bc3bd1b24c3e4132a423fc274"/>
 			</dataarea>
 		</part>
 	</software>
@@ -3526,7 +3594,7 @@ a certain item) -->
 		<publisher>GameTek</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="262144">
-				<rom name="jeopardy! - sports edition (usa, europe).bin" size="262144" crc="2dd850b7" sha1="55cb5cb3c37e8403ebf4a47560f0ece416323c56"/>
+				<rom name="jeopardy - sports edition (usa, europe).bin" size="262144" crc="2dd850b7" sha1="55cb5cb3c37e8403ebf4a47560f0ece416323c56"/>
 			</dataarea>
 		</part>
 	</software>
@@ -3689,13 +3757,24 @@ a certain item) -->
 	</software>
 
 	<software name="kawasaki">
-		<description>Kawasaki Superbike Challenge (Euro, USA)</description>
+		<description>Kawasaki Superbike Challenge (Euro)</description>
 		<year>1995</year>
 		<publisher>Domark</publisher>
 		<info name="serial" value="T-88098, T-88118-50"/>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="262144">
-				<rom name="kawasaki superbike challenge (usa, europe).bin" size="262144" crc="23f9150a" sha1="7b0801c4ad6c15546f61decf2620f198b990425d"/>
+				<rom name="kawasaki superbike challenge (europe).bin" size="262144" crc="23f9150a" sha1="7b0801c4ad6c15546f61decf2620f198b990425d"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="kawasakius" cloneof="kawasaki">
+		<description>Kawasaki Superbike Challenge (USA)</description>
+		<year>1993</year>
+		<publisher>Domark</publisher>
+		<part name="cart" interface="gamegear_cart">
+			<dataarea name="rom" size="262144">
+				<rom name="kawaksaki superbike challenge (usa).bin" size="262144" crc="fc508318" sha1="ba5981fed892a62006b20b6c913dcac84573f345"/>
 			</dataarea>
 		</part>
 	</software>
@@ -4547,6 +4626,18 @@ a certain item) -->
 		</part>
 	</software>
 
+	<software name="micromacp" cloneof="micromac" supported="partial">
+		<description>Micro Machines (prototype)</description>
+		<year>1993</year>
+		<publisher>Codemasters</publisher>
+		<part name="cart" interface="gamegear_cart">
+			<feature name="slot" value="codemasters" />
+			<dataarea name="rom" size="262144">
+				<rom name="micro machines (prototype).bin" size="262144" crc="c21e6cd0" sha1="51cb41c00020f80d7c3c80b217b41841ad59a825"/>
+			</dataarea>
+		</part>
+	</software>
+
 	<software name="micromc2" supported="partial">
 		<description>Micro Machines 2 - Turbo Tournament (Euro)</description>
 		<year>1995</year>
@@ -5207,7 +5298,7 @@ a certain item) -->
 		<part name="cart" interface="gamegear_cart">
 			<feature name="battery" value="yes" />
 			<dataarea name="rom" size="524288">
-				<rom name="neko daisuki! (japan).bin" size="524288" crc="3679be80" sha1="c83fd440895ceb50e4da2ab9db2a29ac21555e9d"/>
+				<rom name="neko daisuki (japan).bin" size="524288" crc="3679be80" sha1="c83fd440895ceb50e4da2ab9db2a29ac21555e9d"/>
 			</dataarea>
 			<dataarea name="ram" size="8192">
 			</dataarea>
@@ -5962,7 +6053,7 @@ a certain item) -->
 		<part name="cart" interface="gamegear_cart">
 			<feature name="battery" value="yes" />
 			<dataarea name="rom" size="524288">
-				<rom name="pet club inu daisuki! (japan).bin" size="524288" crc="b42d8430" sha1="0c0bcfd06084419e7c5921f92ccb0f977058c5a3"/>
+				<rom name="pet club inu daisuki (japan).bin" size="524288" crc="b42d8430" sha1="0c0bcfd06084419e7c5921f92ccb0f977058c5a3"/>
 			</dataarea>
 			<dataarea name="ram" size="8192">
 			</dataarea>
@@ -6711,7 +6802,7 @@ a certain item) -->
 		<part name="cart" interface="gamegear_cart">
 			<feature name="slot" value="codemasters" />
 			<dataarea name="rom" size="262144">
-				<rom name="s.s. lucifer - man overboard! (europe).bin" size="262144" crc="d9a7f170" sha1="b167fda9f0e7a6a47027f782a08149e8d4f46e0c"/>
+				<rom name="s.s. lucifer - man overboard (europe).bin" size="262144" crc="d9a7f170" sha1="b167fda9f0e7a6a47027f782a08149e8d4f46e0c"/>
 			</dataarea>
 		</part>
 	</software>
@@ -7037,9 +7128,8 @@ a certain item) -->
 		</part>
 	</software>
 
-	<!-- Alt. Title: Shinobi II - The Silent Fury (Euro/USA Box?) -->
 	<software name="shinobi2">
-		<description>The GG Shinobi II (World)</description>
+		<description>The GG Shinobi II - The Silent Fury (World)</description>
 		<year>1992</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="2402, G-3315 (JPN)"/>
@@ -7841,7 +7931,7 @@ a certain item) -->
 		<publisher>Black Pearl</publisher>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="sports illustrated championship football &amp; baseball (usa, europe).bin" size="524288" crc="de25e2d8" sha1="781bc3ef9fbbbfcb5452dad99633b65c172b62fa"/>
+				<rom name="sports illustrated championship football &amp; baseball (usa, europe).bin" size="524288" crc="920ea193" sha1="c74a38e73facd557264a299e8799df480ad6d06f"/>
 			</dataarea>
 		</part>
 	</software>
@@ -8627,7 +8717,7 @@ a certain item) -->
 	</software>
 
 	<software name="suprjedi">
-		<description>Super Return of the Jedi (Euro, USA)</description>
+		<description>Super Star Wars: Return of the Jedi (Euro, USA)</description>
 		<year>1995</year>
 		<publisher>Black Pearl</publisher>
 		<info name="serial" value="T-100088, T-100088-50"/>
@@ -8672,7 +8762,7 @@ a certain item) -->
 		<part name="cart" interface="gamegear_cart">
 			<feature name="pin_42" value="sms_mode" />
 			<dataarea name="rom" size="65536">
-				<rom name="super tetris (k) [s][!].bin" size="65536" crc="bd1cc7df" sha1="3772e9dc07b15de62326ee78981ec0b6f4387590"/>
+				<rom name="super tetris (k) [s].bin" size="65536" crc="bd1cc7df" sha1="3772e9dc07b15de62326ee78981ec0b6f4387590"/>
 			</dataarea>
 		</part>
 	</software>
@@ -8928,7 +9018,7 @@ a certain item) -->
 		<info name="alt_title" value="闘え! プロ野球ツインリーグ"/>
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
-				<rom name="tatakae! pro yakyuu twin league (japan).bin" size="524288" crc="bec57602" sha1="8c629941ae7077862dd516283c656b5212920936"/>
+				<rom name="tatakae pro yakyuu twin league (japan).bin" size="524288" crc="bec57602" sha1="8c629941ae7077862dd516283c656b5212920936"/>
 			</dataarea>
 		</part>
 	</software>
@@ -9975,6 +10065,34 @@ a certain item) -->
 		<part name="cart" interface="gamegear_cart">
 			<dataarea name="rom" size="524288">
 				<rom name="x-men - mojo world (prototype - jun 29,  1996).bin" size="524288" crc="ba71da19" sha1="cc3fc3b57bcd4daea90a572c935013d286ebbb99"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="xtermin">
+		<description>X-Terminator v2.1 for Game Gear (USA, Euro)</description>
+		<year>19??</year>
+		<publisher>&lt;unknown&gt;</publisher>
+		<part name="cart" interface="gamegear_cart">
+			<feature name="slot" value="xterminator" />
+			<dataarea name="rom" size="8192">
+				<rom name="x-terminator v2.1.bin" size="8192" crc="0f448220" sha1="b6664c21a99a96392fe79237d326e96ac0bdd52a"/>
+			</dataarea>
+			<dataarea name="ram" size="8192">
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="xterminj" cloneof="xtermin">
+		<description>X-Terminator v2.1J for Game Gear (Jpn)</description>
+		<year>19??</year>
+		<publisher>&lt;unknown&gt;</publisher>
+		<part name="cart" interface="gamegear_cart">
+			<feature name="slot" value="xterminator" />
+			<dataarea name="rom" size="8192">
+				<rom name="x-terminator v2.1j.bin" size="8192" crc="e498090d" sha1="ee2123cc2addd9e48d3f4dc909334504c5b330ab"/>
+			</dataarea>
+			<dataarea name="ram" size="8192">
 			</dataarea>
 		</part>
 	</software>

@@ -40,7 +40,6 @@ private:
 
 	required_ioport m_rs232_txbaud;
 	required_ioport m_rs232_rxbaud;
-	required_ioport m_rs232_startbits;
 	required_ioport m_rs232_databits;
 	required_ioport m_rs232_parity;
 	required_ioport m_rs232_stopbits;
@@ -52,6 +51,7 @@ private:
 	emu_timer *m_timer_poll;
 	int m_rts;
 	int m_dtr;
+	int m_xoff;
 };
 
 DECLARE_DEVICE_TYPE(NULL_MODEM, null_modem_device)

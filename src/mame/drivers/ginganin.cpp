@@ -46,9 +46,13 @@ f5d6    print 7 digit BCD number: d0.l to (a1)+ color $3000
                                 To Do
                                 -----
 
-- game doesn't init paletteram / tilemaps properly, ending up with MAME
+- Game doesn't init paletteram / tilemaps properly, ending up with MAME
   palette defaults at start-up and missing text layer if you coin it up
   too soon.
+- In later levels a couple sprites lingers on top of screen;
+- Sometimes a credit sample also gets overwritten with additional spurious
+  playback of all samples;
+^ all these might be just BTANBs ...
 
 ***************************************************************************/
 
@@ -59,7 +63,7 @@ f5d6    print 7 digit BCD number: d0.l to (a1)+ color $3000
 #include "cpu/m6809/m6809.h"
 #include "machine/6840ptm.h"
 #include "sound/ay8910.h"
-#include "sound/8950intf.h"
+#include "sound/y8950.h"
 
 #include "screen.h"
 #include "speaker.h"
@@ -78,8 +82,9 @@ f5d6    print 7 digit BCD number: d0.l to (a1)+ color $3000
 
 void ginganin_state::main_map(address_map &map)
 {
-/* The ROM area: 10000-13fff is written with: 0000 0000 0000 0001, at startup only. Why? */
-	map(0x000000, 0x01ffff).rom();
+	// PC=0x408 ROM area 10000-13fff is written at POST with: 0000 0000 0000 0001,
+	// looks a debugging left-over for GFX patching (causes state garbage if hooked as RAM write mirror)
+	map(0x000000, 0x01ffff).rom().nopw();
 	map(0x020000, 0x023fff).ram();
 	map(0x030000, 0x0307ff).ram().w(FUNC(ginganin_state::txtram_w)).share("txtram");
 	map(0x040000, 0x0407ff).ram().share("spriteram");
@@ -310,7 +315,7 @@ ROM_START( ginganin )
 	ROM_REGION( 0x08000, "bgrom", 0 )    /* background tilemaps */
 	ROM_LOAD( "gn_11.bin", 0x00000, 0x08000, CRC(f0d0e605) SHA1(0c541e8e036573be1d99ecb71fdb4568ca8cc269) )
 
-	ROM_REGION( 0x20000, "ymsnd", 0 )   /* samples */
+	ROM_REGION( 0x20000, "ymsnd:adpcma", 0 )   /* samples */
 	ROM_LOAD( "gn_04.bin", 0x00000, 0x10000, CRC(0ed9133b) SHA1(77f628e8ec28016efac2d906146865ca4ec54bd5) )
 	ROM_LOAD( "gn_03.bin", 0x10000, 0x10000, CRC(f1ba222c) SHA1(780c0bd0045bac1e1bb3209576383db90504fbf3) )
 
@@ -345,7 +350,7 @@ ROM_START( ginganina )
 	ROM_REGION( 0x08000, "bgrom", 0 )    /* background tilemaps */
 	ROM_LOAD( "gn_11.bin", 0x00000, 0x08000, CRC(f0d0e605) SHA1(0c541e8e036573be1d99ecb71fdb4568ca8cc269) )
 
-	ROM_REGION( 0x20000, "ymsnd", 0 )   /* samples */
+	ROM_REGION( 0x20000, "ymsnd:adpcma", 0 )   /* samples */
 	ROM_LOAD( "gn_04.bin", 0x00000, 0x10000, CRC(0ed9133b) SHA1(77f628e8ec28016efac2d906146865ca4ec54bd5) )
 	ROM_LOAD( "gn_03.bin", 0x10000, 0x10000, CRC(f1ba222c) SHA1(780c0bd0045bac1e1bb3209576383db90504fbf3) )
 ROM_END
@@ -353,11 +358,12 @@ ROM_END
 
 void ginganin_state::init_ginganin()
 {
+	// pending full removal of this patch ...
 	/* main cpu patches */
-	u16 *rom = (u16 *)memregion("maincpu")->base();
+//  u16 *rom = (u16 *)memregion("maincpu")->base();
 	/* avoid writes to rom getting to the log */
-	rom[0x408 / 2] = 0x6000;
-	rom[0x40a / 2] = 0x001c;
+//  rom[0x408 / 2] = 0x6000;
+//  rom[0x40a / 2] = 0x001c;
 }
 
 

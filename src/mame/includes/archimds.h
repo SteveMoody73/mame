@@ -12,7 +12,7 @@
 #include "cpu/arm/arm.h"
 #include "imagedev/floppy.h"
 #include "machine/aakart.h"
-#include "machine/i2cmem.h"
+#include "machine/pcf8583.h"
 #include "machine/wd_fdc.h"
 #include "machine/acorn_vidc.h"
 
@@ -50,7 +50,7 @@ public:
 		: driver_device(mconfig, type, tag),
 		m_kart(*this, "kart"),
 		m_maincpu(*this, "maincpu"),
-		m_i2cmem(*this, "i2cmem"),
+		m_rtc(*this, "i2cmem"),
 		m_vidc(*this, "vidc"),
 		m_fdc(*this, "fdc"),
 		m_floppy0(*this, "fdc:0"),
@@ -71,13 +71,13 @@ public:
 	void archimedes_clear_irq_b(int mask);
 	void archimedes_clear_fiq(int mask);
 
-	DECLARE_READ32_MEMBER(aristmk5_drame_memc_logical_r);
-	DECLARE_READ32_MEMBER(archimedes_memc_logical_r);
-	DECLARE_WRITE32_MEMBER(archimedes_memc_logical_w);
-	DECLARE_WRITE32_MEMBER(archimedes_memc_w);
-	DECLARE_WRITE32_MEMBER(archimedes_memc_page_w);
-	DECLARE_READ32_MEMBER(archimedes_ioc_r);
-	DECLARE_WRITE32_MEMBER(archimedes_ioc_w);
+	uint32_t aristmk5_drame_memc_logical_r(offs_t offset);
+	uint32_t archimedes_memc_logical_r(offs_t offset);
+	void archimedes_memc_logical_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
+	void archimedes_memc_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
+	void archimedes_memc_page_w(uint32_t data);
+	uint32_t archimedes_ioc_r(offs_t offset, uint32_t mem_mask = ~0);
+	void archimedes_ioc_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
 	DECLARE_WRITE_LINE_MEMBER( a310_kart_rx_w );
 	DECLARE_WRITE_LINE_MEMBER( a310_kart_tx_w );
 
@@ -90,7 +90,7 @@ public:
 
 protected:
 	required_device<arm_cpu_device> m_maincpu;
-	optional_device<i2cmem_device> m_i2cmem;
+	optional_device<pcf8583_device> m_rtc;
 	required_device<acorn_vidc10_device> m_vidc;
 	optional_device<wd1772_device> m_fdc;
 	optional_device<floppy_connector> m_floppy0;
@@ -112,8 +112,8 @@ private:
 
 	void latch_timer_cnt(int tmr);
 	void a310_set_timer(int tmr);
-	DECLARE_READ32_MEMBER(ioc_ctrl_r);
-	DECLARE_WRITE32_MEMBER(ioc_ctrl_w);
+	uint32_t ioc_ctrl_r(offs_t offset);
+	void ioc_ctrl_w(offs_t offset, uint32_t data);
 
 	uint32_t *m_archimedes_memc_physmem;
 	uint32_t m_memc_pagesize;

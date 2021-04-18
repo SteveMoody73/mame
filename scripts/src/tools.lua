@@ -459,7 +459,7 @@ links {
 
 includedirs {
 	MAME_DIR .. "src/lib",
-  MAME_DIR .. "src/lib/netlist",
+	MAME_DIR .. "src/lib/netlist",
 }
 
 defines {
@@ -471,13 +471,13 @@ files {
 }
 
 configuration { "mingw*" }
-  linkoptions{
-	"-municode",
-  }
+	linkoptions{
+		"-municode",
+	}
 configuration { "vs*" }
-  flags {
-	"Unicode",
-  }
+	flags {
+		"Unicode",
+	}
 
 configuration { "mingw*" or "vs*" }
 	targetextension ".exe"
@@ -508,7 +508,7 @@ links {
 
 includedirs {
 	MAME_DIR .. "src/lib",
-  MAME_DIR .. "src/lib/netlist",
+	MAME_DIR .. "src/lib/netlist",
 }
 
 files {
@@ -516,13 +516,13 @@ files {
 }
 
 configuration { "mingw*" }
-  linkoptions{
-	"-municode",
-  }
+	linkoptions{
+		"-municode",
+	}
 configuration { "vs*" }
-  flags {
-	"Unicode",
-  }
+	flags {
+		"Unicode",
+	}
 
 configuration { "mingw*" or "vs*" }
 	targetextension ".exe"
@@ -593,7 +593,6 @@ end
 
 links {
 	"formats",
-	"emu",
 	"utils",
 	ext_lib("expat"),
 	"7z",
@@ -638,7 +637,6 @@ end
 
 links {
 	"formats",
-	"emu",
 	"utils",
 	ext_lib("expat"),
 	"7z",
@@ -683,9 +681,12 @@ files {
 	MAME_DIR .. "src/tools/imgtool/formats/vt_dsk.h",
 	MAME_DIR .. "src/tools/imgtool/formats/coco_dsk.cpp",
 	MAME_DIR .. "src/tools/imgtool/formats/coco_dsk.h",
+	MAME_DIR .. "src/tools/imgtool/formats/pc_dsk_legacy.cpp",
+	MAME_DIR .. "src/tools/imgtool/formats/pc_dsk_legacy.h",
 	MAME_DIR .. "src/tools/imgtool/modules/amiga.cpp",
 	MAME_DIR .. "src/tools/imgtool/modules/macbin.cpp",
 	MAME_DIR .. "src/tools/imgtool/modules/rsdos.cpp",
+	MAME_DIR .. "src/tools/imgtool/modules/dgndos.cpp",
 	MAME_DIR .. "src/tools/imgtool/modules/os9.cpp",
 	MAME_DIR .. "src/tools/imgtool/modules/mac.cpp",
 	MAME_DIR .. "src/tools/imgtool/modules/ti99.cpp",

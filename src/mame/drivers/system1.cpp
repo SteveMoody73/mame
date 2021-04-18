@@ -80,7 +80,6 @@ myherok     3x16k 1x8k  6x8k  4x16k  no  pio  bootleg?
 4dwarrio    3x16k 1x8k  6x8k  4x16k  no  pio  ????    ????
 
 shtngmst    3x32k 1x32k 3x32k 7x32k  yes      7102
-shtngmste   3x32k 1x32k 3x32k 7x32k  yes      7102(a) 7104
 
 choplift    3x32k 1x32k 3x32k 4x32k  yes      7126    7120
 chopliftu   3x32k 1x32k 3x32k 4x32k  yes      7154
@@ -388,6 +387,7 @@ void system1_state::machine_start()
 	m_maincpu->z80_set_cycle_tables(cc_op, cc_cb, cc_ed, cc_xy, cc_xycb, cc_ex);
 
 	m_mute_xor = 0x00;
+	m_dakkochn_mux_data = 0x00;
 
 	save_item(NAME(m_dakkochn_mux_data));
 	save_item(NAME(m_videomode_prev));
@@ -433,7 +433,7 @@ void system1_state::bank0c_custom_w(u8 data, u8 prevdata)
 }
 
 
-WRITE8_MEMBER(system1_state::videomode_w)
+void system1_state::videomode_w(u8 data)
 {
 	/* bit 6 is connected to the 8751 IRQ */
 	if (m_mcu != nullptr)
@@ -448,7 +448,7 @@ WRITE8_MEMBER(system1_state::videomode_w)
 	machine().bookkeeping().coin_counter_w(0, data & 1);
 
 	/* remaining signals are video-related */
-	common_videomode_w(space, 0, data);
+	common_videomode_w(data);
 }
 
 
@@ -489,7 +489,7 @@ void system1_state::dakkochn_custom_w(u8 data, u8 prevdata)
  *
  *************************************/
 
-READ8_MEMBER(system1_state::shtngmst_gunx_r)
+u8 system1_state::shtngmst_gunx_r()
 {
 	// x is slightly offset, and has a range of 00-fe
 	u8 x = ioport("GUNX")->read() - 0x12;
@@ -503,7 +503,7 @@ READ8_MEMBER(system1_state::shtngmst_gunx_r)
  *
  *************************************/
 
-WRITE8_MEMBER(system1_state::sound_control_w)
+void system1_state::sound_control_w(u8 data)
 {
 	/* bit 0 = MUTE (inverted sense on System 2) */
 	machine().sound().system_mute((data ^ m_mute_xor) & 1);
@@ -514,11 +514,11 @@ WRITE8_MEMBER(system1_state::sound_control_w)
 	m_soundcpu->set_input_line(INPUT_LINE_NMI, (data & 0x80) ? CLEAR_LINE : ASSERT_LINE);
 
 	/* remaining bits are used for video RAM banking */
-	videoram_bank_w(space, offset, data);
+	videoram_bank_w(data);
 }
 
 
-READ8_MEMBER(system1_state::sound_data_r)
+u8 system1_state::sound_data_r()
 {
 	/* if we have an 8255 PPI, get the data from the port and toggle the ack */
 	if (m_ppi8255 != nullptr)
@@ -541,7 +541,7 @@ READ8_MEMBER(system1_state::sound_data_r)
 }
 
 
-WRITE8_MEMBER(system1_state::soundport_w)
+void system1_state::soundport_w(u8 data)
 {
 	/* boost interleave when communicating with the sound CPU */
 	m_soundlatch->write(data);
@@ -562,7 +562,7 @@ TIMER_DEVICE_CALLBACK_MEMBER(system1_state::soundirq_gen)
  *
  *************************************/
 
-WRITE8_MEMBER(system1_state::mcu_control_w)
+void system1_state::mcu_control_w(u8 data)
 {
 	/*
 	    Bit 7 -> connects to TD62003 pins 5 & 6 @ IC151
@@ -585,7 +585,7 @@ WRITE8_MEMBER(system1_state::mcu_control_w)
 }
 
 
-WRITE8_MEMBER(system1_state::mcu_io_w)
+void system1_state::mcu_io_w(offs_t offset, u8 data)
 {
 	switch ((m_mcu_control >> 3) & 3)
 	{
@@ -605,7 +605,7 @@ WRITE8_MEMBER(system1_state::mcu_io_w)
 }
 
 
-READ8_MEMBER(system1_state::mcu_io_r)
+u8 system1_state::mcu_io_r(offs_t offset)
 {
 	switch ((m_mcu_control >> 3) & 3)
 	{
@@ -645,22 +645,22 @@ TIMER_DEVICE_CALLBACK_MEMBER(system1_state::mcu_t0_callback)
  *
  *************************************/
 
-READ8_MEMBER(system1_state::nob_mcu_latch_r)
+u8 system1_state::nob_mcu_latch_r()
 {
 	return m_nob_mcu_latch;
 }
 
-WRITE8_MEMBER(system1_state::nob_mcu_latch_w)
+void system1_state::nob_mcu_latch_w(u8 data)
 {
 	m_nob_mcu_latch = data;
 }
 
-WRITE8_MEMBER(system1_state::nob_mcu_status_w)
+void system1_state::nob_mcu_status_w(u8 data)
 {
 	m_nob_mcu_status = data;
 }
 
-WRITE8_MEMBER(system1_state::nob_mcu_control_p2_w)
+void system1_state::nob_mcu_control_p2_w(u8 data)
 {
 	/* bit 0 triggers a read from MCU port 0 */
 	if (((m_mcu_control ^ data) & 0x01) && !(data & 0x01))
@@ -684,13 +684,13 @@ WRITE8_MEMBER(system1_state::nob_mcu_control_p2_w)
 }
 
 
-READ8_MEMBER(system1_state::nob_maincpu_latch_r)
+u8 system1_state::nob_maincpu_latch_r()
 {
 	return m_nob_maincpu_latch;
 }
 
 
-WRITE8_MEMBER(system1_state::nob_maincpu_latch_w)
+void system1_state::nob_maincpu_latch_w(u8 data)
 {
 	m_nob_maincpu_latch = data;
 	m_mcu->set_input_line(MCS51_INT0_LINE, ASSERT_LINE);
@@ -698,7 +698,7 @@ WRITE8_MEMBER(system1_state::nob_maincpu_latch_w)
 }
 
 
-READ8_MEMBER(system1_state::nob_mcu_status_r)
+u8 system1_state::nob_mcu_status_r()
 {
 	return m_nob_mcu_status;
 }
@@ -710,25 +710,25 @@ READ8_MEMBER(system1_state::nob_mcu_status_r)
  *
  *************************************/
 
-READ8_MEMBER(system1_state::nobb_inport1c_r)
+u8 system1_state::nobb_inport1c_r()
 {
 //  logerror("IN  $1c : pc = %04x - data = 0x80\n",m_maincpu->pc());
 	return(0x80);   // infinite loop (at 0x0fb3) until bit 7 is set
 }
 
-READ8_MEMBER(system1_state::nobb_inport22_r)
+u8 system1_state::nobb_inport22_r()
 {
 //  logerror("IN  $22 : pc = %04x - data = %02x\n",m_maincpu->pc(),nobb_inport17_step);
 	return(0);//nobb_inport17_step);
 }
 
-READ8_MEMBER(system1_state::nobb_inport23_r)
+u8 system1_state::nobb_inport23_r()
 {
 //  logerror("IN  $23 : pc = %04x - step = %02x\n",m_maincpu->pc(),m_nobb_inport23_step);
 	return(m_nobb_inport23_step);
 }
 
-WRITE8_MEMBER(system1_state::nobb_outport24_w)
+void system1_state::nobb_outport24_w(u8 data)
 {
 //  logerror("OUT $24 : pc = %04x - data = %02x\n",m_maincpu->pc(),data);
 	m_nobb_inport23_step = data;
@@ -815,6 +815,16 @@ void system1_state::system1_pio_io_map(address_map &map)
 	map(0x18, 0x1b).rw("pio", FUNC(z80pio_device::read), FUNC(z80pio_device::write));
 }
 
+void system1_state::blockgal_pio_io_map(address_map &map)
+{
+	map.global_mask(0x1f);
+	map(0x00, 0x00).mirror(0x03).portr("P1");
+	map(0x04, 0x04).mirror(0x03).portr("P2");
+	map(0x08, 0x08).mirror(0x03).portr("SYSTEM");
+	map(0x0d, 0x0d).mirror(0x02).portr("SWA");    // DIP2
+	map(0x10, 0x10).mirror(0x03).portr("SWB");    // DIP1
+	map(0x18, 0x1b).rw("pio", FUNC(z80pio_device::read), FUNC(z80pio_device::write));
+}
 
 /*************************************
  *
@@ -1907,6 +1917,36 @@ Useful addresses:
 */
 
 static INPUT_PORTS_START( blockgal )
+	PORT_INCLUDE( system1_generic )
+
+	PORT_MODIFY("P1")
+	PORT_BIT( 0xff, 0x00, IPT_DIAL ) PORT_SENSITIVITY(60) PORT_KEYDELTA(15) PORT_REVERSE
+
+	PORT_MODIFY("P2")
+	PORT_BIT( 0xff, 0x00, IPT_DIAL ) PORT_SENSITIVITY(60) PORT_KEYDELTA(15) PORT_REVERSE PORT_COCKTAIL
+
+	PORT_MODIFY("SYSTEM")
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_BUTTON1 )
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_COCKTAIL
+
+	PORT_MODIFY("SWB")
+	PORT_DIPNAME( 0x02, 0x02, DEF_STR( Demo_Sounds ) )  PORT_DIPLOCATION("SWB:2")
+	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(    0x02, DEF_STR( On ) )
+	PORT_DIPNAME( 0x08, 0x00, DEF_STR( Lives ) )        PORT_DIPLOCATION("SWB:4")
+	PORT_DIPSETTING(    0x08, "2" )
+	PORT_DIPSETTING(    0x00, "3" )
+	PORT_DIPNAME( 0x10, 0x10, DEF_STR( Bonus_Life ) )   PORT_DIPLOCATION("SWB:5")
+	PORT_DIPSETTING(    0x10, "10k 30k 60k 100k 150k" )
+	PORT_DIPSETTING(    0x00, "30k 50k 100k 200k 300k" )
+	PORT_DIPNAME( 0x20, 0x00, DEF_STR( Allow_Continue ) )   PORT_DIPLOCATION("SWB:6")
+	PORT_DIPSETTING(    0x20, DEF_STR( No ) )
+	PORT_DIPSETTING(    0x00, DEF_STR( Yes ) )
+	PORT_SERVICE_DIPLOC( 0x80, IP_ACTIVE_LOW, "SWB:8" )
+INPUT_PORTS_END
+
+static INPUT_PORTS_START( blockgalb )
 	PORT_INCLUDE( choplift )
 
 	PORT_MODIFY("P1")
@@ -2243,6 +2283,12 @@ void system1_state::sys1pioxb(machine_config &config)
 	sys1pio(config);
 	MC8123(config.replace(), m_maincpu, MASTER_CLOCK);
 	encrypted_sys1pio_maps(config);
+}
+
+void system1_state::blockgal(machine_config &config)
+{
+	sys1pioxb(config);
+	m_maincpu->set_addrmap(AS_IO, &system1_state::blockgal_pio_io_map);
 }
 
 void system1_state::sys1ppix_315_5178(machine_config &config)
@@ -3807,18 +3853,47 @@ ROM_END
 
     Main Board        834-5719
     Light Gun Board?  834-5720
+
+
+Offically licensed and manufactured in Italy, 100% identical code:
+
+    Shooting Master (EVG)
+    Year: 1985
+    Manufacturer: E.V.G. SRL Milano made in Italy (Sega license)
+
+    CPU
+    1x Z8400AB1-Z80ACPU-Y28548 (main board)
+    1x iC8751H-88-L5310039 (main board)
+    1x AMD P8255A-8526YP (main board)
+    1x SEGA 315-5012-8605P5 (main board)
+    1x SEGA 315-5011-8549X5 (main board)
+    1x SEGA 315-5049-8551PX (main board)
+    1x SEGA 315-5139-8537-CK2605-V-J (main board)
+    1x oscillator 20.000MHz (main board)
+    1x SYS Z8400AB1-Z80ACPU-Y28535 (upper board)
+    1x NEC D8255AC-2 (upper board)
+    1x oscillator 4.9152MHz (upper board)
+
+    ROMs
+    1x HN27256G-25 (7043)(main board close to Z80)
+    2x HN27256G-25 (7101-7102)(main board close to C8751)
+    3x HN27256G-25 (7040-7041-7042)(main board close to 315-5049)
+    2x PAL16R4A (315-5137 and 315-5138)
+    1x HN27256G-25 (7100)(upper board close to oscillator)
+    7x HN27256G-25 (7104 to 7110)(upper board close to Z80 and 8255)
+
 */
 ROM_START( shtngmst )
 	ROM_REGION( 0x20000, "maincpu", 0 )
-	ROM_LOAD( "epr-7100.ic18",   0x00000, 0x8000, CRC(45e64431) SHA1(7edf818dc1f65365641e51abc197d13db7a8d4d9) ) /* This rom is located on the daughter board. */
-	ROM_LOAD( "epr-7101.ic91",   0x10000, 0x8000, CRC(ebf5ff72) SHA1(13ae06e3a81cf00b80ec939d5baf30143d61d480) ) /* These 2 roms are located on the main board. */
-	ROM_LOAD( "epr-7102.ic92",   0x18000, 0x8000, CRC(c890a4ad) SHA1(4b59d37902ace3a69b380ff40652ee37c85f0e9d) )
+	ROM_LOAD( "epr-7100.ic18", 0x00000, 0x8000, CRC(268ecb1d) SHA1(a9274c9718f7244235cc6df76331d6a0b7e4e4c8) ) /* This rom is located on the daughter board. */
+	ROM_LOAD( "epr-7101.ic91", 0x10000, 0x8000, CRC(ebf5ff72) SHA1(13ae06e3a81cf00b80ec939d5baf30143d61d480) ) /* These 2 roms are located on the main board. */
+	ROM_LOAD( "epr-7102.ic92", 0x18000, 0x8000, CRC(c890a4ad) SHA1(4b59d37902ace3a69b380ff40652ee37c85f0e9d) )
 
 	ROM_REGION( 0x10000, "soundcpu", 0 )
 	ROM_LOAD( "epr-7043.ic126",  0x0000, 0x8000, CRC(99a368ab) SHA1(a9451f39ee2613e5c3e2791d4d8d837b4a3ab666) ) /* This rom is located on the main board. */
 
 	ROM_REGION( 0x1000, "mcu", 0 )
-	ROM_LOAD( "315-5159.ic74", 0x00000, 0x1000, NO_DUMP ) /* This mcu is located on the main board. */
+	ROM_LOAD( "315-5159a.ic74", 0x00000, 0x1000, CRC(1f774912) SHA1(34d12756735514bea5a513fdf441ae93318747b2) )
 
 	ROM_REGION( 0x18000, "tiles", 0 )
 	ROM_LOAD( "epr-7040.ic4",    0x00000, 0x8000, CRC(f30769fa) SHA1(366c1fbe4e1c8943b209f6c831c9a6b7e4372105) ) /* These roms are located on the main board. */
@@ -3844,78 +3919,11 @@ ROM_START( shtngmst )
 	ROM_LOAD( "pr5317.ic37",   0x00000, 0x0100, CRC(648350b8) SHA1(c7986aa9127ef5b50b845434cb4e81dff9861cd2) ) /* N82S129AN */
 
 	/* These pld's are located on the main board. */
-	ROM_REGION( 0x0618, "plds", 0 )
-	ROM_LOAD( "315-5137.bin",   0x00000, 0x0104, CRC(6ffd9e6f) SHA1(a60a3a2ec5bc256b18bfff0fec0172ee2e4fd955) ) /* TI PAL16R4A-2CN Located at IC10 */
-	ROM_LOAD( "315-5138.bin",   0x00000, 0x0104, CRC(dd223015) SHA1(8d70f91b118e8653dda1efee3eaea287ae63809f) ) /* TI PAL16R4ACN Located at IC11 */
-	ROM_LOAD( "315-5139.bin",   0x00000, 0x0104, NO_DUMP ) /* CK2605 located at IC50 */
-	ROM_LOAD( "315-5155.bin",   0x00000, 0x0104, NO_DUMP ) /* Located at IC7 */
-	ROM_LOAD( "315-5155.bin",   0x00000, 0x0104, NO_DUMP ) /* Located at IC13 */
-	ROM_LOAD( "315-5155.bin",   0x00000, 0x0104, NO_DUMP ) /* Located at IC19 */
-ROM_END
-
-/*
-    Shooting Master (EVG)
-    Year: 1985
-    Manufacturer: E.V.G. SRL Milano made in Italy (Sega license)
-
-    CPU
-    1x Z8400AB1-Z80ACPU-Y28548 (main board)
-    1x iC8751H-88-L5310039 (main board)
-    1x AMD P8255A-8526YP (main board)
-    1x SEGA 315-5012-8605P5 (main board)
-    1x SEGA 315-5011-8549X5 (main board)
-    1x SEGA 315-5049-8551PX (main board)
-    1x SEGA 315-5139-8537-CK2605-V-J (main board)
-    1x oscillator 20.000MHz (main board)
-    1x SYS Z8400AB1-Z80ACPU-Y28535 (upper board)
-    1x NEC D8255AC-2 (upper board)
-    1x oscillator 4.9152MHz (upper board)
-
-    ROMs
-    1x HN27256G-25 (7043)(main board close to Z80)
-    2x HN27256G-25 (7101-7102)(main board close to C8751)
-    3x HN27256G-25 (7040-7041-7042)(main board close to 315-5049)
-    2x PAL16R4A (315-5137 and 315-5138)
-    1x HN27256G-25 (7100)(upper board close to oscillator)
-    7x HN27256G-25 (7104 to 7110)(upper board close to Z80 and 8255)
-*/
-ROM_START( shtngmste )
-	ROM_REGION( 0x20000, "maincpu", 0 )
-	ROM_LOAD( "epr-7100.ic18", 0x00000, 0x8000, CRC(268ecb1d) SHA1(a9274c9718f7244235cc6df76331d6a0b7e4e4c8) ) // sldh
-	ROM_LOAD( "epr-7101.ic91", 0x10000, 0x8000, CRC(ebf5ff72) SHA1(13ae06e3a81cf00b80ec939d5baf30143d61d480) )
-	ROM_LOAD( "epr-7102.ic92", 0x18000, 0x8000, CRC(c890a4ad) SHA1(4b59d37902ace3a69b380ff40652ee37c85f0e9d) )
-
-	ROM_REGION( 0x10000, "soundcpu", 0 )
-	ROM_LOAD( "epr-7043.ic126",  0x0000, 0x8000, CRC(99a368ab) SHA1(a9451f39ee2613e5c3e2791d4d8d837b4a3ab666) )
-
-	ROM_REGION( 0x1000, "mcu", 0 )
-	ROM_LOAD( "315-5159a.ic74", 0x00000, 0x1000, BAD_DUMP CRC(1f774912) SHA1(34d12756735514bea5a513fdf441ae93318747b2) )
-
-	ROM_REGION( 0x18000, "tiles", 0 )
-	ROM_LOAD( "epr-7040.ic4",    0x00000, 0x8000, CRC(f30769fa) SHA1(366c1fbe4e1c8943b209f6c831c9a6b7e4372105) )
-	ROM_LOAD( "epr-7041.ic5",    0x08000, 0x8000, CRC(f3e273f9) SHA1(b8715c528299dc1e4f0c19c50d91ca9861a423a1) )
-	ROM_LOAD( "epr-7042.ic6",    0x10000, 0x8000, CRC(6841c917) SHA1(6553843eea0131eb7b5a9aa29dddf641e41d8cc3) )
-
-	ROM_REGION( 0x40000, "sprites", ROMREGION_ERASEFF )
-	ROM_LOAD( "epr-7110.ic26",   0x00000, 0x8000, CRC(5d1a5048) SHA1(d1626ab1981080451c912df7e4ad7f76c0cb3459) )
-	ROM_LOAD( "epr-7106.ic22",   0x08000, 0x8000, CRC(ae7ab7a2) SHA1(153691e468d29d21b95f1fbffb6896a3140d7e14) )
-	ROM_LOAD( "epr-7108.ic24",   0x10000, 0x8000, CRC(816180ac) SHA1(a59670ec77d4359041ebf12dae5b74add55d82ac) )
-	ROM_LOAD( "epr-7104.ic20",   0x18000, 0x8000, CRC(84a679c5) SHA1(19a21b1b33fc215f606093bfd61d597e4bd0b3d0) )
-	ROM_LOAD( "epr-7109.ic25",   0x20000, 0x8000, CRC(097f7481) SHA1(4d93ea01b811af1cd3e136116625e4b8e06358a2) )
-	ROM_LOAD( "epr-7105.ic21",   0x28000, 0x8000, CRC(13111729) SHA1(57ca2b945db36b056d0e40a39456fd8bf9d0a3ec) )
-	ROM_LOAD( "epr-7107.ic23",   0x30000, 0x8000, CRC(8f50ea24) SHA1(781687e202dedca7b72c9bd5b97d9d46fcfd601c) )
-
-	ROM_REGION( 0x0300, "color_proms", 0 )
-	ROM_LOAD( "epr-7113.ic20",   0x00000, 0x0100, CRC(5c0e1360) SHA1(2011b3eef2a58f9bd3f3b1bb9e6c201db85727c2) ) /* palette red component */
-	ROM_LOAD( "epr-7112.ic14",   0x00100, 0x0100, CRC(46fbd351) SHA1(1fca7fbc5d5f8e13e58bbac735511bd0af392446) ) /* palette green component */
-	ROM_LOAD( "epr-7111.ic8",    0x00200, 0x0100, CRC(8123b6b9) SHA1(fb2c5498f0603b5cd270402a738c891a85453666) ) /* palette blue component - N82S129AN */
-
-	ROM_REGION( 0x0100, "lookup_proms", 0 )
-	ROM_LOAD( "pr5317.ic37",   0x00000, 0x0100, CRC(648350b8) SHA1(c7986aa9127ef5b50b845434cb4e81dff9861cd2) ) /* N82S129AN */
-
-	ROM_REGION( 0x0400, "plds", 0 )
-	ROM_LOAD( "315-5137.bin",   0x00000, 0x0104, CRC(6ffd9e6f) SHA1(a60a3a2ec5bc256b18bfff0fec0172ee2e4fd955) ) /* TI PAL16R4A-2CN Located at IC10 */
-	ROM_LOAD( "315-5138.bin",   0x00000, 0x0104, CRC(dd223015) SHA1(8d70f91b118e8653dda1efee3eaea287ae63809f) ) /* TI PAL16R4ACN Located at IC11 */
+	ROM_REGION( 0x1000, "plds", 0 )
+	ROM_LOAD( "315-5137.ic10",   0x0000, 0x0104, CRC(6ffd9e6f) SHA1(a60a3a2ec5bc256b18bfff0fec0172ee2e4fd955) ) /* TI PAL16R4A-2CN Located at IC10 */
+	ROM_LOAD( "315-5138.ic11",   0x0200, 0x0104, CRC(dd223015) SHA1(8d70f91b118e8653dda1efee3eaea287ae63809f) ) /* TI PAL16R4ACN Located at IC11 */
+	ROM_LOAD( "315-5139.ic50",   0x0400, 0x0943, CRC(4b6036a9) SHA1(a0f838d38b0829f20c61a10d1b9027d85555baa3) ) // PLS153 CK2605 located at IC50 */
+	// Note that IC7, IC13 and IC19 (315-5155) are not PLDs, but are a custom graphics shifter.
 ROM_END
 
 /*
@@ -5083,34 +5091,34 @@ ROM_END
 
 ROM_START( ufosensib )
 	ROM_REGION( 0x40000, "maincpu", 0 )
-	ROM_LOAD( "k108.ic18.3-4s", 0x20000, 0x8000, CRC(6b1d0955) SHA1(dbda145d40eaecd30c1d55a9675c58a2967c20c4) )
+	ROM_LOAD( "k1-08.ic18.3-4s", 0x20000, 0x8000, CRC(6b1d0955) SHA1(dbda145d40eaecd30c1d55a9675c58a2967c20c4) )
 	ROM_CONTINUE(               0x00000, 0x8000 )             /* Now load the operands in RAM */
-	ROM_LOAD( "k109.ic19.4s",   0x30000, 0x8000, CRC(fc543b26) SHA1(b9e1d2ca6f9811bf341edf104fe209dbf56e4b2d) )
+	ROM_LOAD( "k1-09.ic19.4s",   0x30000, 0x8000, CRC(fc543b26) SHA1(b9e1d2ca6f9811bf341edf104fe209dbf56e4b2d) )
 	ROM_CONTINUE(               0x10000, 0x8000 )
-	ROM_LOAD( "k110.ic20.4-5s", 0x38000, 0x8000, CRC(6ba2dc77) SHA1(09a65f55988ae28e285d402af9a2a1f1dc05a82c) )
+	ROM_LOAD( "k1-10.ic20.4-5s", 0x38000, 0x8000, CRC(6ba2dc77) SHA1(09a65f55988ae28e285d402af9a2a1f1dc05a82c) )
 	ROM_CONTINUE(               0x18000, 0x8000 )
 
 	ROM_REGION( 0x10000, "soundcpu", 0 )
-	ROM_LOAD( "epr-11667.126", 0x0000, 0x8000, CRC(110baba9) SHA1(e14cf5af11ac9691eca897bbae7c238665cd2a4d) ) /* label on chip is "k111.ic168.10v" */
+	ROM_LOAD( "epr-11667.126", 0x0000, 0x8000, CRC(110baba9) SHA1(e14cf5af11ac9691eca897bbae7c238665cd2a4d) ) /* label on chip is "k1-11.ic168.10v" */
 
 	ROM_REGION( 0x18000, "tiles", 0 )
-	ROM_LOAD( "epr-11664.4",   0x00000, 0x8000, CRC(1b1bc3d5) SHA1(2a09e0dbe2d467c151dce705f249367df849eaeb) ) /* label on chip is "k101.ic72.6d" */
-	ROM_LOAD( "epr-11665.5",   0x08000, 0x8000, CRC(3659174a) SHA1(176d2436abb45827a8d387241082854f55dc0314) ) /* label on chip is "k102.ic73.6-7d" */
-	ROM_LOAD( "epr-11666.6",   0x10000, 0x8000, CRC(99dcc793) SHA1(ad1d0acb60e7c1a7016955e142ebca1cf07b4908) ) /* label on chip is "k103.ic74.7d" */
+	ROM_LOAD( "epr-11664.4",   0x00000, 0x8000, CRC(1b1bc3d5) SHA1(2a09e0dbe2d467c151dce705f249367df849eaeb) ) /* label on chip is "k1-01.ic72.6e" */
+	ROM_LOAD( "epr-11665.5",   0x08000, 0x8000, CRC(3659174a) SHA1(176d2436abb45827a8d387241082854f55dc0314) ) /* label on chip is "k1-02.ic73.6-7e" */
+	ROM_LOAD( "epr-11666.6",   0x10000, 0x8000, CRC(99dcc793) SHA1(ad1d0acb60e7c1a7016955e142ebca1cf07b4908) ) /* label on chip is "k1-03.ic74.7e" */
 
 	ROM_REGION( 0x20000, "sprites", 0 )
-	ROM_LOAD( "epr-11658.87",  0x00000, 0x8000, CRC(3b5a20f7) SHA1(03e0934b0913c3a2cadf1d28b8a700d70b80fbac) ) /* label on chip is "k105.ic15.1-2s" */
-	ROM_LOAD( "epr-11657.86",  0x08000, 0x8000, CRC(010f81a9) SHA1(1b7ee05c80edfa403e32c216fa69387ca556895e) ) /* label on chip is "k104.ic14.1s" */
-	ROM_LOAD( "epr-11660.89",  0x10000, 0x8000, CRC(e1e2e7c5) SHA1(434039a70049a6e74e2a2f48b60345f720e6b1af) ) /* label on chip is "k107.ic17.2-3s" */
-	ROM_LOAD( "epr-11659.88",  0x18000, 0x8000, CRC(286c7286) SHA1(449a19ea9a9f9df47005e8dac1b8eacaebc515e7) ) /* label on chip is "k106.ic16.2s" */
+	ROM_LOAD( "epr-11658.87",  0x00000, 0x8000, CRC(3b5a20f7) SHA1(03e0934b0913c3a2cadf1d28b8a700d70b80fbac) ) /* label on chip is "k1-05.ic15.1-2s" */
+	ROM_LOAD( "epr-11657.86",  0x08000, 0x8000, CRC(010f81a9) SHA1(1b7ee05c80edfa403e32c216fa69387ca556895e) ) /* label on chip is "k1-04.ic14.1s" */
+	ROM_LOAD( "epr-11660.89",  0x10000, 0x8000, CRC(e1e2e7c5) SHA1(434039a70049a6e74e2a2f48b60345f720e6b1af) ) /* label on chip is "k1-07.ic17.2-3s" */
+	ROM_LOAD( "epr-11659.88",  0x18000, 0x8000, CRC(286c7286) SHA1(449a19ea9a9f9df47005e8dac1b8eacaebc515e7) ) /* label on chip is "k1-06.ic16.2s" */
 
 	ROM_REGION( 0x0300, "color_proms", 0 )
-	ROM_LOAD( "pr11656.20",   0x0000, 0x0100, CRC(640740eb) SHA1(9a601a3665f612d00c70019d33c7abd3cca9434b) ) /* palette red component - label on chip is "74s287.ic134.9f" */
-	ROM_LOAD( "pr11655.14",   0x0100, 0x0100, CRC(a0c3fa77) SHA1(cdffa1de06d30ec421323145dfc3271803fc25d4) ) /* palette green component - label on chip is "74s287.ic133.9e" */
+	ROM_LOAD( "pr11656.20",   0x0000, 0x0100, CRC(640740eb) SHA1(9a601a3665f612d00c70019d33c7abd3cca9434b) ) /* palette red component - label on chip is "74s287.ic134.9h" */
+	ROM_LOAD( "pr11655.14",   0x0100, 0x0100, CRC(a0c3fa77) SHA1(cdffa1de06d30ec421323145dfc3271803fc25d4) ) /* palette green component - label on chip is "74s287.ic133.9f" */
 	ROM_LOAD( "pr11654.8",    0x0200, 0x0100, CRC(ba624305) SHA1(eb1d0dde60f81ff510ac8c1212e0ed5703febaf3) ) /* palette blue component - label on chip is "74s287.ic132.9d" */
 
 	ROM_REGION( 0x0100, "lookup_proms", 0 )
-	ROM_LOAD( "pr5317.28",    0x0000, 0x0100, CRC(648350b8) SHA1(c7986aa9127ef5b50b845434cb4e81dff9861cd2) ) /* label on chip is "74s287.ic115.8j" */
+	ROM_LOAD( "pr5317.28",    0x0000, 0x0100, CRC(648350b8) SHA1(c7986aa9127ef5b50b845434cb4e81dff9861cd2) ) /* label on chip is "74s287.ic116.8k" */
 
 	ROM_REGION( 0x2000, "plds", 0 )
 	ROM_LOAD( "pal6l8.ic3.1c",   0x0000, 0x0104, NO_DUMP ) /* PAL is read protected */
@@ -5429,7 +5437,7 @@ void system1_state::init_dakkochn()
 
 
 
-READ8_MEMBER(system1_state::nob_start_r)
+u8 system1_state::nob_start_r()
 {
 	/* in reality, it's likely some M1-dependent behavior */
 	return (m_maincpu->pc() <= 0x0003) ? 0x80 : m_maincpu_region->base()[1];
@@ -5445,11 +5453,11 @@ void system1_state::init_nob()
 	/* hack to fix incorrect JMP at start, which should obviously be to $0080 */
 	/* patching the ROM causes errors in the self-test */
 	/* in real-life, it could be some behavior dependent upon M1 */
-	space.install_read_handler(0x0001, 0x0001, read8_delegate(*this, FUNC(system1_state::nob_start_r)));
+	space.install_read_handler(0x0001, 0x0001, read8smo_delegate(*this, FUNC(system1_state::nob_start_r)));
 
 	/* install MCU communications */
-	iospace.install_readwrite_handler(0x18, 0x18, read8_delegate(*this, FUNC(system1_state::nob_maincpu_latch_r)), write8_delegate(*this, FUNC(system1_state::nob_maincpu_latch_w)));
-	iospace.install_read_handler(0x1c, 0x1c, read8_delegate(*this, FUNC(system1_state::nob_mcu_status_r)));
+	iospace.install_readwrite_handler(0x18, 0x18, read8smo_delegate(*this, FUNC(system1_state::nob_maincpu_latch_r)), write8smo_delegate(*this, FUNC(system1_state::nob_maincpu_latch_w)));
+	iospace.install_read_handler(0x1c, 0x1c, read8smo_delegate(*this, FUNC(system1_state::nob_mcu_status_r)));
 }
 
 void system1_state::init_nobb()
@@ -5476,10 +5484,10 @@ void system1_state::init_nobb()
 
 	init_bank44();
 
-	iospace.install_read_handler(0x1c, 0x1c, read8_delegate(*this, FUNC(system1_state::nobb_inport1c_r)));
-	iospace.install_read_handler(0x02, 0x02, read8_delegate(*this, FUNC(system1_state::nobb_inport22_r)));
-	iospace.install_read_handler(0x03, 0x03, read8_delegate(*this, FUNC(system1_state::nobb_inport23_r)));
-	iospace.install_write_handler(0x04, 0x04, write8_delegate(*this, FUNC(system1_state::nobb_outport24_w)));
+	iospace.install_read_handler(0x1c, 0x1c, read8smo_delegate(*this, FUNC(system1_state::nobb_inport1c_r)));
+	iospace.install_read_handler(0x02, 0x02, read8smo_delegate(*this, FUNC(system1_state::nobb_inport22_r)));
+	iospace.install_read_handler(0x03, 0x03, read8smo_delegate(*this, FUNC(system1_state::nobb_inport23_r)));
+	iospace.install_write_handler(0x04, 0x04, write8smo_delegate(*this, FUNC(system1_state::nobb_outport24_w)));
 }
 
 
@@ -5509,7 +5517,7 @@ void system1_state::init_shtngmst()
 	address_space &iospace = m_maincpu->space(AS_IO);
 	iospace.install_read_port(0x12, 0x12, "TRIGGER");
 	iospace.install_read_port(0x18, 0x18, 0x03, "18");
-	iospace.install_read_handler(0x1c, 0x1c, 0, 0x02, 0, read8_delegate(*this, FUNC(system1_state::shtngmst_gunx_r)));
+	iospace.install_read_handler(0x1c, 0x1c, 0, 0x02, 0, read8smo_delegate(*this, FUNC(system1_state::shtngmst_gunx_r)));
 	iospace.install_read_port(0x1d, 0x1d, 0x02, "GUNY");
 	init_bank0c();
 }
@@ -5582,7 +5590,7 @@ GAME( 1986, wboy4,      wboy,     sys1piox_315_5162, wboy,      system1_state, i
 GAME( 1986, wboyu,      wboy,     sys1pio,           wboyu,     system1_state, init_bank00,       ROT0,   "Escape (Sega license)", "Wonder Boy (prototype?)", MACHINE_SUPPORTS_SAVE ) // appears to be a very early / unfinished version.
 GAME( 1986, wboy5,      wboy,     sys1piox_315_5135, wboy3,     system1_state, init_bank00,       ROT0,   "bootleg", "Wonder Boy (set 5, bootleg)", MACHINE_SUPPORTS_SAVE )
 GAME( 1986, wboyub,     wboy,     sys1piox_315_5177, wboy,      system1_state, init_bank00,       ROT0,   "bootleg", "Wonder Boy (US bootleg)", MACHINE_SUPPORTS_SAVE )
-GAME( 1987, blockgal,   0,        sys1pioxb,         blockgal,  system1_state, init_blockgal,     ROT90,  "Sega / Vic Tokai","Block Gal (MC-8123B, 317-0029)", MACHINE_SUPPORTS_SAVE)
+GAME( 1987, blockgal,   0,        blockgal,          blockgal,  system1_state, init_blockgal,     ROT90,  "Sega / Vic Tokai","Block Gal (MC-8123B, 317-0029)", MACHINE_SUPPORTS_SAVE)
 
 /* PIO-based System 1 with ROM banking */
 GAME( 1985, hvymetal,   0,        sys1piox_315_5135, hvymetal,  system1_state, init_bank44,       ROT0,   "Sega", "Heavy Metal (315-5135)", MACHINE_SUPPORTS_SAVE )
@@ -5593,8 +5601,7 @@ GAME( 1986, brain,      0,        sys1pio,           brain,     system1_state, i
 GAME( 1985, choplift,   0,        sys2rowm,          choplift,  system1_state, init_bank0c,       ROT0,   "Sega (licensed from Dan Gorlin)", "Choplifter (8751 315-5151)", MACHINE_SUPPORTS_SAVE )
 GAME( 1985, chopliftu,  choplift, sys2row,           choplift,  system1_state, init_bank0c,       ROT0,   "Sega (licensed from Dan Gorlin)", "Choplifter (unprotected)", MACHINE_SUPPORTS_SAVE )
 GAME( 1985, chopliftbl, choplift, sys2row,           choplift,  system1_state, init_bank0c,       ROT0,   "bootleg", "Choplifter (bootleg)", MACHINE_SUPPORTS_SAVE )
-GAME( 1985, shtngmst,   0,        sys2m,             shtngmst,  system1_state, init_shtngmst,     ROT0,   "Sega", "Shooting Master (8751 315-5159)", MACHINE_SUPPORTS_SAVE | MACHINE_NOT_WORKING )
-GAME( 1985, shtngmste,  shtngmst, sys2m,             shtngmst,  system1_state, init_shtngmst,     ROT0,   "Sega / EVG", "Shooting Master (EVG, 8751 315-5159a)", MACHINE_SUPPORTS_SAVE )
+GAME( 1985, shtngmst,   0,        sys2m,             shtngmst,  system1_state, init_shtngmst,     ROT0,   "Sega", "Shooting Master (8751 315-5159a)", MACHINE_SUPPORTS_SAVE )
 GAME( 1986, gardiab,    gardia,   sys2_317_0007,     gardia,    system1_state, init_bank44,       ROT270, "bootleg", "Gardia (317-0007?, bootleg)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1986, gardiaj,    gardia,   sys2_317_0006,     gardia,    system1_state, init_bank44,       ROT270, "Coreland / Sega", "Gardia (Japan, 317-0006)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1986, wboysys2,   wboy,     sys2_315_5177,     wboysys2,  system1_state, init_bank0c,       ROT0,   "Escape (Sega license)", "Wonder Boy (system 2, set 1, 315-5177)", MACHINE_SUPPORTS_SAVE )
@@ -5612,6 +5619,6 @@ GAME( 2009, wbmlvcd,    wbml,     sys2xboot,         wbml,      system1_state, i
 GAME( 1987, wbmld,      wbml,     sys2xboot,         wbml,      system1_state, init_bootsys2d,    ROT0,   "bootleg (mpatou)", "Wonder Boy in Monster Land (decrypted bootleg of Japan New Ver., MC-8123, 317-0043)", MACHINE_SUPPORTS_SAVE )
 GAME( 1987, wbmljod,    wbml,     sys2xboot,         wbml,      system1_state, init_bootsys2d,    ROT0,   "bootleg (mpatou)", "Wonder Boy in Monster Land (decrypted bootleg of Japan Old Ver., MC-8123, 317-0043)", MACHINE_SUPPORTS_SAVE )
 GAME( 1987, dakkochn,   0,        sys2xb,            dakkochn,  system1_state, init_dakkochn,     ROT0,   "White Board", "DakkoChan House (MC-8123B, 317-5014)", MACHINE_SUPPORTS_SAVE )
-GAME( 1987, blockgalb,  blockgal, sys2x,             blockgal,  system1_state, init_bootleg,      ROT90,  "bootleg", "Block Gal (bootleg)", MACHINE_SUPPORTS_SAVE )
+GAME( 1987, blockgalb,  blockgal, sys2x,             blockgalb, system1_state, init_bootleg,      ROT90,  "bootleg", "Block Gal (bootleg)", MACHINE_SUPPORTS_SAVE )
 GAME( 1988, ufosensi,   0,        sys2rowxb,         ufosensi,  system1_state, init_wbml,         ROT0,   "Sega", "Ufo Senshi Yohko Chan (MC-8123, 317-0064)", MACHINE_SUPPORTS_SAVE )
 GAME( 1988, ufosensib,  ufosensi, sys2rowxboot,      ufosensi,  system1_state, init_bootsys2,     ROT0,   "bootleg", "Ufo Senshi Yohko Chan (bootleg, not encrypted)", MACHINE_SUPPORTS_SAVE )

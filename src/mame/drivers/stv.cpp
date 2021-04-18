@@ -94,7 +94,7 @@ offsets:
     0x001f PORT-AD (8ch, write: bits 0-2 - set channel, read: channel data with autoinc channel number)
 */
 
-READ8_MEMBER(stv_state::stv_ioga_r)
+uint8_t stv_state::stv_ioga_r(offs_t offset)
 {
 	const char *const portg[] = { "PORTG.0", "PORTG.1", "PORTG.2", "PORTG.3" };
 
@@ -130,7 +130,7 @@ READ8_MEMBER(stv_state::stv_ioga_r)
 	return res;
 }
 
-WRITE8_MEMBER(stv_state::stv_ioga_w)
+void stv_state::stv_ioga_w(offs_t offset, uint8_t data)
 {
 	if(offset & 0x10 && !machine().side_effects_disabled())
 		printf("Writing to mirror %08x %02x?\n",offset * 2 + 1,data);
@@ -162,7 +162,7 @@ WRITE8_MEMBER(stv_state::stv_ioga_w)
 	}
 }
 
-READ8_MEMBER(stv_state::critcrsh_ioga_r)
+uint8_t stv_state::critcrsh_ioga_r(offs_t offset)
 {
 	uint8_t res;
 	const char *const lgnames[] = { "LIGHTX", "LIGHTY" };
@@ -177,13 +177,13 @@ READ8_MEMBER(stv_state::critcrsh_ioga_r)
 			res = bitswap<8>(res, 2, 3, 0, 1, 6, 7, 5, 4) & 0xf3;
 			res |= (ioport("PORTC")->read() & 0x10) ? 0x0 : 0x4; // x/y hit latch actually
 			break;
-		default: res = stv_ioga_r(space,offset); break;
+		default: res = stv_ioga_r(offset); break;
 	}
 
 	return res;
 }
 
-READ8_MEMBER(stv_state::magzun_ioga_r)
+uint8_t stv_state::magzun_ioga_r(offs_t offset)
 {
 	uint8_t res;
 
@@ -199,23 +199,23 @@ READ8_MEMBER(stv_state::magzun_ioga_r)
 		case 0x19:
 			res = 0;
 			break;
-		default: res = stv_ioga_r(space,offset); break;
+		default: res = stv_ioga_r(offset); break;
 	}
 
 	return res;
 }
 
-WRITE8_MEMBER(stv_state::magzun_ioga_w)
+void stv_state::magzun_ioga_w(offs_t offset, uint8_t data)
 {
 	switch(offset * 2 + 1)
 	{
 		case 0x13: m_serial_tx = (data << 8) | (m_serial_tx & 0xff); break;
 		case 0x15: m_serial_tx = (data & 0xff) | (m_serial_tx & 0xff00); break;
-		default: stv_ioga_w(space,offset,data); break;
+		default: stv_ioga_w(offset,data); break;
 	}
 }
 
-READ8_MEMBER(stv_state::stvmp_ioga_r)
+uint8_t stv_state::stvmp_ioga_r(offs_t offset)
 {
 	const char *const mpnames[2][5] = {
 		{"P1_KEY0", "P1_KEY1", "P1_KEY2", "P1_KEY3", "P1_KEY4"},
@@ -229,7 +229,7 @@ READ8_MEMBER(stv_state::stvmp_ioga_r)
 		case 0x01:
 		case 0x03:
 			if(m_port_sel & 0x10) // joystick select <<< this is obviously wrong, this bit only select PORTE direction
-				res = stv_ioga_r(space,offset);
+				res = stv_ioga_r(offset);
 			else // mahjong panel select
 			{
 				int i;
@@ -241,27 +241,27 @@ READ8_MEMBER(stv_state::stvmp_ioga_r)
 				}
 			}
 			break;
-		default: res = stv_ioga_r(space,offset); break;
+		default: res = stv_ioga_r(offset); break;
 	}
 
 	return res;
 }
 
-WRITE8_MEMBER(stv_state::stvmp_ioga_w)
+void stv_state::stvmp_ioga_w(offs_t offset, uint8_t data)
 {
 	switch(offset * 2 + 1)
 	{
 		case 0x09: m_mux_data = data ^ 0xff; break;
 		case 0x11: m_port_sel = data; break;
-		default:   stv_ioga_w(space,offset,data); break;
+		default:   stv_ioga_w(offset,data); break;
 	}
 }
 
-WRITE8_MEMBER(stv_state::hop_ioga_w)
+void stv_state::hop_ioga_w(offs_t offset, uint8_t data)
 {
 	if ((offset * 2 + 1) == 7)
 		m_hopper->motor_w(data & 0x80);
-	stv_ioga_w(space, offset, data);
+	stv_ioga_w(offset, data);
 }
 
 /*
@@ -332,7 +332,7 @@ void stv_state::init_stv()
     TODO: game doesn't work if not in debugger?
 */
 
-READ32_MEMBER(stv_state::magzun_hef_hack_r)
+uint32 stv_state::magzun_hef_hack_r()
 {
 	if(m_maincpu->pc()==0x604bf20) return 0x00000001; //HWEF
 
@@ -341,7 +341,7 @@ READ32_MEMBER(stv_state::magzun_hef_hack_r)
 	return m_workram_h[0x08e830/4];
 }
 
-READ32_MEMBER(stv_state::magzun_rx_hack_r)
+uint32_t stv_state::magzun_rx_hack_r()
 {
 	if(m_maincpu->pc()==0x604c006) return 0x40;
 
@@ -356,8 +356,8 @@ void stv_state::init_magzun()
 
 	init_stv();
 
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x608e830, 0x608e833, read32_delegate(*this, FUNC(stv_state::magzun_hef_hack_r)));
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x60ff3b4, 0x60ff3b7, read32_delegate(*this, FUNC(stv_state::magzun_rx_hack_r)));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x608e830, 0x608e833, read32smo_delegate(*this, FUNC(stv_state::magzun_hef_hack_r)));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x60ff3b4, 0x60ff3b7, read32smo_delegate(*this, FUNC(stv_state::magzun_rx_hack_r)));
 
 	/* Program ROM patches, don't understand how to avoid these two checks ... */
 	{
@@ -619,8 +619,8 @@ void stv_state::init_batmanfr()
 
 	init_stv();
 
-	m_maincpu->space(AS_PROGRAM).install_write_handler(0x04800000, 0x04800003, write32_delegate(*this, FUNC(stv_state::batmanfr_sound_comms_w)));
-	m_slave->space(AS_PROGRAM).install_write_handler(0x04800000, 0x04800003, write32_delegate(*this, FUNC(stv_state::batmanfr_sound_comms_w)));
+	m_maincpu->space(AS_PROGRAM).install_write_handler(0x04800000, 0x04800003, write32s_delegate(*this, FUNC(stv_state::batmanfr_sound_comms_w)));
+	m_slave->space(AS_PROGRAM).install_write_handler(0x04800000, 0x04800003, write32s_delegate(*this, FUNC(stv_state::batmanfr_sound_comms_w)));
 
 	m_minit_boost = m_sinit_boost = 0;
 	m_minit_boost_timeslice = m_sinit_boost_timeslice = attotime::from_usec(50);
@@ -815,7 +815,7 @@ void stv_state::init_ffreveng()
 }
 
 
-READ32_MEMBER(stv_state::decathlt_prot_r)
+uint32_t stv_state::decathlt_prot_r(offs_t offset, uint32_t mem_mask)
 {
 	// needs to be a way to indicate if device is enabled and fall through to cartridge data if not?
 	if (m_newprotection_element)
@@ -825,12 +825,12 @@ READ32_MEMBER(stv_state::decathlt_prot_r)
 	}
 
 	uint32 ret = 0;
-	if (mem_mask & 0xffff0000) ret |= (m_5838crypt->data_r(space, offset, mem_mask)<<16);
-	if (mem_mask & 0x0000ffff) ret |= m_5838crypt->data_r(space, offset, mem_mask);
+	if (mem_mask & 0xffff0000) ret |= (m_5838crypt->data_r()<<16);
+	if (mem_mask & 0x0000ffff) ret |= m_5838crypt->data_r();
 	return ret;
 }
 
-WRITE32_MEMBER(stv_state::decathlt_prot_srcaddr_w)
+void stv_state::decathlt_prot_srcaddr_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	int offs = offset * 4;
 
@@ -840,22 +840,22 @@ WRITE32_MEMBER(stv_state::decathlt_prot_srcaddr_w)
 
 	if ((offs & 0x7fffff) == 0x7FFFF0)
 	{
-		m_5838crypt->srcaddr_w(space, offset, data, mem_mask);
+		m_5838crypt->srcaddr_w(offs, data, mem_mask);
 	}
 	else if ((offs & 0x7fffff) == 0x7FFFF4)
 	{
-		m_5838crypt->data_w(space, offset, data, mem_mask);
+		m_5838crypt->data_w(offs, data, mem_mask);
 	}
 }
 
 void stv_state::init_decathlt()
 {
-	m_maincpu->space(AS_PROGRAM).install_write_handler(0x2000000, 0x37fffff, write32_delegate(*this, FUNC(stv_state::decathlt_prot_srcaddr_w))); // set compressed data source address, write data
+	m_maincpu->space(AS_PROGRAM).install_write_handler(0x2000000, 0x37fffff, write32s_delegate(*this, FUNC(stv_state::decathlt_prot_srcaddr_w))); // set compressed data source address, write data
 
 	// really needs installing over the whole range, with fallbacks to read rom if device is disabled or isn't accessed on given address
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x27ffff8, 0x27ffffb, read32_delegate(*this, FUNC(stv_state::decathlt_prot_r))); // read decompressed data
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x2fffff8, 0x2fffffb, read32_delegate(*this, FUNC(stv_state::decathlt_prot_r))); //  ^
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x37ffff8, 0x37ffffb, read32_delegate(*this, FUNC(stv_state::decathlt_prot_r))); //  ^
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x27ffff8, 0x27ffffb, read32s_delegate(*this, FUNC(stv_state::decathlt_prot_r))); // read decompressed data
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x2fffff8, 0x2fffffb, read32s_delegate(*this, FUNC(stv_state::decathlt_prot_r))); //  ^
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x37ffff8, 0x37ffffb, read32s_delegate(*this, FUNC(stv_state::decathlt_prot_r))); //  ^
 
 	m_protbank->configure_entry(0, memregion("cart")->base() + 0x0000000);
 	m_protbank->configure_entry(1, memregion("cart")->base() + 0x0800000);
@@ -971,19 +971,19 @@ void stv_state::stv_select_game(int gameno)
 	}
 }
 
-READ8_MEMBER( stv_state::pdr1_input_r )
+uint8_t stv_state::pdr1_input_r()
 {
 	return (ioport("PDR1")->read() & 0x40) | 0x3f;
 }
 
 
-READ8_MEMBER( stv_state::pdr2_input_r )
+uint8_t stv_state::pdr2_input_r()
 {
 	return (ioport("PDR2")->read() & ~0x19) | 0x18 | (m_eeprom->do_read()<<0);
 }
 
 
-WRITE8_MEMBER( stv_state::pdr1_output_w )
+void stv_state::pdr1_output_w(uint8_t data)
 {
 	m_eeprom->clk_write((data & 0x08) ? ASSERT_LINE : CLEAR_LINE);
 	m_eeprom->di_write((data >> 4) & 1);
@@ -992,7 +992,7 @@ WRITE8_MEMBER( stv_state::pdr1_output_w )
 	stv_select_game(data & 3);
 }
 
-WRITE8_MEMBER( stv_state::pdr2_output_w )
+void stv_state::pdr2_output_w(uint8_t data)
 {
 	m_audiocpu->set_input_line(INPUT_LINE_RESET, (data & 0x10) ? ASSERT_LINE : CLEAR_LINE);
 	m_en_68k = ((data & 0x10) >> 4) ^ 1;
@@ -1131,11 +1131,11 @@ void stv_state::stv_5838(machine_config &config)
     Similar if not the same as Magic the Gathering, probably needs merging.
 */
 
-WRITE32_MEMBER( stv_state::batmanfr_sound_comms_w )
+void stv_state::batmanfr_sound_comms_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	// FIXME
 	if(ACCESSING_BITS_16_31)
-		m_rax->data_w(space, 0, data >> 16, 0x0000ffff);
+		m_rax->data_w(data >> 16);
 	if(ACCESSING_BITS_0_15)
 		printf("Warning: write %04x & %08x to lo-word sound communication area\n",data,mem_mask);
 }
@@ -2761,7 +2761,7 @@ ROM_START( batmanfr )
 	ROM_LOAD16_WORD_SWAP( "gfx5.u15",   0x1800000, 0x0400000, CRC(e201f830) SHA1(5aa22fcc8f2e153d1abc3aa4050c594b3942ee67) )
 	ROM_LOAD16_WORD_SWAP( "gfx6.u18",   0x1c00000, 0x0400000, CRC(c6b381a3) SHA1(46431f1e47c084a0bf85535d35af27471653b008) )
 
-	ROM_REGION16_LE( 0x1000000, "rax", 0 )
+	ROM_REGION( 0x1000000, "rax", 0 )
 	ROM_LOAD( "350snda1.u52",  0x000000, 0x080000, CRC(9027e7a0) SHA1(678df530838b078964a044ce734776f391654e6c) )
 	ROM_LOAD( "snd0.u48",      0x400000, 0x200000, CRC(02b1927c) SHA1(08b21d8b31b0f15c59fb5bb7eaf425e6fe04f7b5) )
 	ROM_LOAD( "snd1.u49",      0x600000, 0x200000, CRC(58b18eda) SHA1(7f3105fe04d9c0cdfd76e3323f623a4d0f7dad06) )
@@ -3579,6 +3579,25 @@ ROM_START( sackids )
 	ROM_REGION32_BE( 0x3000000, "abus", ROMREGION_ERASE00 ) /* SH2 code */
 ROM_END
 
+ROM_START( dfeverg )
+	STV_BIOS
+
+	ROM_REGION32_BE( 0x3000000, "cart", ROMREGION_ERASE00 ) // SH2 code
+	ROM_LOAD16_WORD_SWAP( "13",    0x0000000, 0x080000, CRC(ecd7ac4b) SHA1(9bb4ae5ac236192bb6e927a3b5b75f84264e36aa) )
+	ROM_LOAD16_WORD_SWAP( "1",     0x0400000, 0x400000, CRC(d72f1640) SHA1(6a2ef0ca2b525d9ef0a817bb1d99275cf954242e) )
+	ROM_LOAD16_WORD_SWAP( "2",     0x0800000, 0x400000, CRC(c2e8aee5) SHA1(f7e404be93f99c8206636dc3391f162fc83abe2f) )
+	ROM_LOAD16_WORD_SWAP( "3",     0x0c00000, 0x400000, CRC(cb5b2744) SHA1(18d42bb6ced01e3e9fa1ed66c07bf91e34811510) )
+	ROM_LOAD16_WORD_SWAP( "4",     0x1000000, 0x400000, CRC(7eca59b2) SHA1(e03d71e1e9a67dadb2b76dde87f01147afe9ce34) )
+	ROM_LOAD16_WORD_SWAP( "5",     0x1400000, 0x400000, CRC(c3450f2b) SHA1(52dbfc8900d569debd92d2dd0d7fc25e133c5fbb) )
+	ROM_LOAD16_WORD_SWAP( "6",     0x1800000, 0x400000, CRC(1ac57ed5) SHA1(a34fb91818b586813d5f7ff5885bc07211189751) )
+	ROM_LOAD16_WORD_SWAP( "8",     0x1c00000, 0x400000, CRC(acc78f10) SHA1(9081d3006cc2f4daac1a8b99b729ac17bd6fed52) )
+	ROM_LOAD16_WORD_SWAP( "9",     0x2000000, 0x400000, CRC(4ffbba8d) SHA1(526b5ba3b874c0ee7ce3fca7631bed1e0b84fea1) )
+	ROM_LOAD16_WORD_SWAP( "10",    0x2400000, 0x400000, CRC(4b2a4397) SHA1(e8499e20939f26009f4678b85d3bfb5f02f4ddcb) )
+	ROM_LOAD16_WORD_SWAP( "11",    0x2800000, 0x400000, CRC(58877b19) SHA1(fff50cc05ae39a3b8313756d606e27ae2e62af26) )
+	// IC12 is tested but wasn't included in the dump. This causes missing backgrounds
+	ROM_LOAD16_WORD_SWAP( "12",    0x2c00000, 0x400000, NO_DUMP )
+ROM_END
+
 ROM_START( skychal )
 	STV_BIOS
 
@@ -3680,8 +3699,8 @@ GAME( 1996, diehard,   stvbios, stv,      stv,      stv_state,   init_diehard,  
 GAME( 1996, dnmtdeka,  diehard, stv,      stv,      stv_state,   init_dnmtdeka,   ROT0,   "Sega",                         "Dynamite Deka (J 960515 V1.000)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_SOUND  )
 GAME( 1995, ejihon,    stvbios, stv,      stv,      stv_state,   init_stv,        ROT0,   "Sega",                         "Ejihon Tantei Jimusyo (J 950613 V1.000)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
 GAME( 1998, elandore,  stvbios, stv_5881, stv6b,    stv_state,   init_elandore,   ROT0,   "Sai-Mate",                     "Touryuu Densetsu Elan-Doree / Elan Doree - Legend of Dragoon (JUET 980922 V1.006)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, ffrevng10, ffreveng,stv_5881, stv6b,    stv_state,   init_ffreveng,   ROT0,   "Capcom",                       "Final Fight Revenge (JUET 990714 V1.000)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, ffreveng,  stvbios, stv_5881, stv6b,    stv_state,   init_ffreveng,   ROT0,   "Capcom",                       "Final Fight Revenge (JUET 990930 V1.100)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1999, ffrevng10, ffreveng,stv_5881, stv6b,    stv_state,   init_ffreveng,   ROT0,   "Capcom",                       "Final Fight Revenge / Final Revenge (JUET 990714 V1.000)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1999, ffreveng,  stvbios, stv_5881, stv6b,    stv_state,   init_ffreveng,   ROT0,   "Capcom",                       "Final Fight Revenge / Final Revenge (JUET 990930 V1.100)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
 GAME( 1995, fhboxers,  stvbios, stv,      stv,      stv_state,   init_fhboxers,   ROT0,   "Sega",                         "Funky Head Boxers (JUETBKAL 951218 V1.000)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
 GAME( 1997, findlove,  stvbios, stv,      stv,      stv_state,   init_stv,        ROT0,   "Daiki / FCF",                  "Zenkoku Seifuku Bishoujo Grand Prix Find Love (J 971212 V1.000)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
 GAME( 1994, gaxeduel,  stvbios, stv,      stv6b,    stv_state,   init_gaxeduel,   ROT0,   "Sega",                         "Golden Axe - The Duel (JUETL 950117 V1.000)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS)
@@ -3781,7 +3800,8 @@ GAME( 1998, twsoc98,   twcup98, stv_5881, stv,      stv_state,   init_twcup98,  
 GAME( 1996, magzun,    stvbios, magzun,   stv,      stv_state,   init_magzun,     ROT0,   "Sega",                         "Magical Zunou Power (J 961031 V1.000)", MACHINE_NOT_WORKING | MACHINE_NODEVICE_MICROPHONE )
 GAME( 1998, choroqhr,  stvbios, stv,      stv,      stv_state,   init_stv,        ROT0,   "Sega / Takara",                "Choro Q Hyper Racing 5 (J 981230 V1.000)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
 GAME( 1999, fanzonem,  stvbios, stv,      stv,      stv_state,   init_stv,        ROT0,   "Sega",                         "Fantasy Zone (medal game, REV.A) (J 990202 V1.000)", MACHINE_NOT_WORKING ) // require SH2's SCI serial port emulated, to communicate with coin/medal-related I/O board
-GAME( 2000, sackids,   stvbios, stv,      stv,      stv_state,   init_stv,        ROT0,    "Sega",                         "Soreyuke Anpanman Crayon Kids (J 001026 V1.000)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
+GAME( 2000, sackids,   stvbios, stv,      stv,      stv_state,   init_stv,        ROT0,   "Sega",                         "Soreyuke Anpanman Crayon Kids (J 001026 V1.000)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
+GAME( 2001, dfeverg,   stvbios, stv,      stv,      stv_state,   init_stv,        ROT0,   "Sega",                         "Dancing Fever Gold (J 000821 V2.001)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
 
 /* CD games */
 GAME( 1995, sfish2,    0,       stvcd,    stv,      stv_state,   init_stv,        ROT0,   "Sega",                         "Sport Fishing 2 (UET 951106 V1.10e)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING | MACHINE_NODEVICE_LAN )

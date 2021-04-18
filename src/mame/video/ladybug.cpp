@@ -36,7 +36,7 @@ ladybug_video_device::ladybug_video_device(machine_config const &mconfig, char c
 {
 }
 
-WRITE8_MEMBER(ladybug_video_device::bg_w)
+void ladybug_video_device::bg_w(offs_t offset, uint8_t data)
 {
 	m_bg_ram[offset & 0x07ff] = data;
 	m_bg_tilemap->mark_tile_dirty(offset & 0x03ff);
@@ -207,7 +207,7 @@ void zerohour_stars_device::draw(bitmap_ind16 &bitmap, rectangle const &cliprect
 			if (cliprect.contains(xloc, yloc) && (hcond == vcond))
 			{
 				if (((state & 0x000ff) == 0x000ff) && !feedback && (xloc >= firstx) && (xloc <= lastx))
-					bitmap.pix16(yloc, xloc) = pal_offs + ((state >> 9) & 0x1f);
+					bitmap.pix(yloc, xloc) = pal_offs + ((state >> 9) & 0x1f);
 			}
 
 			// update LFSR state
@@ -403,7 +403,7 @@ TILE_GET_INFO_MEMBER(sraider_state::get_grid_tile_info)
 	}
 }
 
-WRITE8_MEMBER(sraider_state::sraider_io_w)
+void sraider_state::sraider_io_w(uint8_t data)
 {
 	// bit7 = flip
 	// bit6 = grid red

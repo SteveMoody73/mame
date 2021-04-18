@@ -88,7 +88,7 @@ hard drive  3.5 adapter     long 3.5 IDE cable      3.5 adapter   PCB
  *
  *************************************/
 
-WRITE32_MEMBER(djmain_state::sndram_bank_w)
+void djmain_state::sndram_bank_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	if (ACCESSING_BITS_16_31)
 	{
@@ -96,7 +96,7 @@ WRITE32_MEMBER(djmain_state::sndram_bank_w)
 	}
 }
 
-READ32_MEMBER(djmain_state::sndram_r)
+uint32_t djmain_state::sndram_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = 0;
 
@@ -116,7 +116,7 @@ READ32_MEMBER(djmain_state::sndram_r)
 	return data;
 }
 
-WRITE32_MEMBER(djmain_state::sndram_w)
+void djmain_state::sndram_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	offset |= 0x20000 * m_sndram_bank;
 	if (ACCESSING_BITS_24_31)
@@ -135,7 +135,7 @@ WRITE32_MEMBER(djmain_state::sndram_w)
 
 //---------
 
-READ32_MEMBER(djmain_state::obj_ctrl_r)
+uint32_t djmain_state::obj_ctrl_r(offs_t offset)
 {
 	// read m_obj_regs[0x0c/4]: unknown
 	// read m_obj_regs[0x24/4]: unknown
@@ -143,14 +143,14 @@ READ32_MEMBER(djmain_state::obj_ctrl_r)
 	return m_obj_regs[offset];
 }
 
-WRITE32_MEMBER(djmain_state::obj_ctrl_w)
+void djmain_state::obj_ctrl_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	// write m_obj_regs[0x28/4]: bank for rom readthrough
 
 	COMBINE_DATA(&m_obj_regs[offset]);
 }
 
-READ32_MEMBER(djmain_state::obj_rom_r)
+uint32_t djmain_state::obj_rom_r(offs_t offset, uint32_t mem_mask)
 {
 	uint8_t *mem8 = memregion("gfx1")->base();
 	int bank = m_obj_regs[0x28/4] >> 16;
@@ -170,7 +170,7 @@ READ32_MEMBER(djmain_state::obj_rom_r)
 
 //---------
 
-WRITE32_MEMBER(djmain_state::v_ctrl_w)
+void djmain_state::v_ctrl_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	if (ACCESSING_BITS_16_31)
 	{
@@ -186,7 +186,7 @@ WRITE32_MEMBER(djmain_state::v_ctrl_w)
 	}
 }
 
-READ32_MEMBER(djmain_state::v_rom_r)
+uint32_t djmain_state::v_rom_r(offs_t offset, uint32_t mem_mask)
 {
 	uint8_t *mem8 = memregion("k056832")->base();
 	int bank = m_k056832->word_r(0x34/2);
@@ -207,19 +207,19 @@ READ32_MEMBER(djmain_state::v_rom_r)
 
 //---------
 
-READ8_MEMBER(djmain_state::inp1_r)
+uint8_t djmain_state::inp1_r(offs_t offset)
 {
 	static const char *const portnames[] = { "DSW3", "BTN3", "BTN2", "BTN1" };
 	return ioport(portnames[ offset & 0x03 ])->read();
 }
 
-READ8_MEMBER(djmain_state::inp2_r)
+uint8_t djmain_state::inp2_r(offs_t offset)
 {
 	static const char *const portnames[] = { "DSW1", "DSW2", "UNK2", "UNK1" };
 	return ioport(portnames[ offset & 0x03 ])->read();
 }
 
-READ32_MEMBER(djmain_state::turntable_r)
+uint32_t djmain_state::turntable_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t result = 0;
 
@@ -244,7 +244,7 @@ READ32_MEMBER(djmain_state::turntable_r)
 	return result;
 }
 
-WRITE32_MEMBER(djmain_state::turntable_select_w)
+void djmain_state::turntable_select_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	if (ACCESSING_BITS_16_23)
 		m_turntable_select = (data >> 19) & 1;
@@ -284,7 +284,7 @@ WRITE32_MEMBER(djmain_state::turntable_select_w)
        15: not used?        (always low)
 */
 
-WRITE32_MEMBER(djmain_state::light_ctrl_1_w)
+void djmain_state::light_ctrl_1_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	if (ACCESSING_BITS_16_31)
 	{
@@ -295,7 +295,7 @@ WRITE32_MEMBER(djmain_state::light_ctrl_1_w)
 	}
 }
 
-WRITE32_MEMBER(djmain_state::light_ctrl_2_w)
+void djmain_state::light_ctrl_2_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	if (ACCESSING_BITS_16_31)
 	{
@@ -312,17 +312,17 @@ WRITE32_MEMBER(djmain_state::light_ctrl_2_w)
 
 // unknown ports :-(
 
-WRITE32_MEMBER(djmain_state::unknown590000_w)
+void djmain_state::unknown590000_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	//logerror("%08X: unknown 590000 write %08X: %08X & %08X\n", m_maincpu->pcbase(), offset, data, mem_mask);
 }
 
-WRITE32_MEMBER(djmain_state::unknown802000_w)
+void djmain_state::unknown802000_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	//logerror("%08X: unknown 802000 write %08X: %08X & %08X\n", m_maincpu->pcbase(), offset, data, mem_mask);
 }
 
-WRITE32_MEMBER(djmain_state::unknownc02000_w)
+void djmain_state::unknownc02000_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	//logerror("%08X: unknown c02000 write %08X: %08X & %08X\n", m_maincpu->pcbase(), offset, data, mem_mask);
 }
@@ -1593,6 +1593,27 @@ ROM_START( bm4thmix )
 	DISK_IMAGE( "847jaa11", 0, SHA1(8cad631531b5616d6a4b0a99d988f4b525932dc7) ) /* ver 1.00 JA */
 ROM_END
 
+ROM_START( bs4thmix )
+	ROM_REGION( 0x100000, "maincpu", 0 )        /* MC68EC020FG25 MPU */
+	ROM_LOAD16_BYTE( "847kaa01.6a", 0x000000, 0x80000, CRC(17c994e5) SHA1(2249d9e788029d194454dc0552246262d4131e8c) )
+	ROM_LOAD16_BYTE( "847kaa02.8a", 0x000001, 0x80000, CRC(25b2a690) SHA1(90216cc7fbbaa8709eec348a7dcc5e25c7638b34) )
+
+	ROM_REGION( 0x200000, "gfx1", 0)        /* SPRITE */
+	ROM_LOAD16_BYTE( "847kaa03.19a", 0x000000, 0x80000, CRC(f447d140) SHA1(cc15b80419940d127a77765508f877421ed86ee2) )
+	ROM_LOAD16_BYTE( "847kaa04.20a", 0x000001, 0x80000, CRC(edc3e286) SHA1(341b1dc6ee1562b1ddf235a66ac96b94c482b67c) )
+	ROM_LOAD16_BYTE( "847kaa05.22a", 0x100000, 0x80000, CRC(da165b5e) SHA1(e46110590e6ab89b55f6abfbf6c53c99d28a75a9) )
+	ROM_LOAD16_BYTE( "847kaa06.24a", 0x100001, 0x80000, CRC(8bfc2f28) SHA1(f8869867945d63d9f34b6228d95c5a61b193eed2) )
+
+	ROM_REGION( 0x200000, "k056832", 0 )       /* TILEMAP */
+	ROM_LOAD16_BYTE( "847kaa07.22d", 0x000000, 0x80000, CRC(0528276a) SHA1(ab4f2cdd2938a04f7da3e85f3cec9ca66c85b78a) )
+	ROM_LOAD16_BYTE( "847kaa08.23d", 0x000001, 0x80000, CRC(3c659505) SHA1(ffa81d2f3823076a16422b49ac0ecfb0db376d54) )
+	ROM_LOAD16_BYTE( "847kaa09.25d", 0x100000, 0x80000, CRC(c078f7d3) SHA1(2c268f1b7f1fa71c659d899a49e839128b789245) )
+	ROM_LOAD16_BYTE( "847kaa10.27d", 0x100001, 0x80000, CRC(2f676be7) SHA1(43d1844280117e76c95bb9b32ea3ca511fffc131) )
+
+	DISK_REGION( "ata:0:hdd:image" )            /* IDE HARD DRIVE */
+	DISK_IMAGE( "847kaa01", 0, SHA1(be35c25d11892b57817ca9da90734a439d259824) )
+ROM_END
+
 ROM_START( bm5thmix )
 	ROM_REGION( 0x100000, "maincpu", 0 )        /* MC68EC020FG25 MPU */
 	ROM_LOAD16_BYTE( "981jaa01.6a", 0x000000, 0x80000, CRC(03bbe7e3) SHA1(7d4ec3bc7719a3f1b81df309b5c74afaffde42ba) )
@@ -1996,6 +2017,23 @@ void djmain_state::init_bm4thmix()
 	m_ata_user_password = bm4thmix_user_password;
 }
 
+void djmain_state::init_bs4thmix()
+{
+	static const uint8_t bs4thmix_user_password[2 + 32] =
+	{
+		0x00, 0x00,
+		0x44, 0x42, 0x56, 0x4b, 0x4e, 0x47, 0x4c, 0x32,
+		0x48, 0x5d, 0x0c, 0x3e, 0x62, 0x6f, 0x7e, 0x73,
+		0x67, 0x10, 0x19, 0x79, 0x6c, 0x7d, 0x00, 0x01,
+		0x18, 0x06, 0x1e, 0x07, 0x77, 0x1a, 0x7d, 0x77
+	};
+
+	init_beatmania();
+
+	m_ata_master_password = beatmania_master_password;
+	m_ata_user_password = bs4thmix_user_password;
+}
+
 void djmain_state::init_bm5thmix()
 {
 	static const uint8_t bm5thmix_user_password[2 + 32] =
@@ -2166,6 +2204,7 @@ GAME( 1998, bm3rdmix, 0,        djmainj, bm3rdmix,  djmain_state, init_beatmania
 GAME( 1999, bmcompmx, 0,        djmainj, bmcompmx,  djmain_state, init_beatmania, ROT0, "Konami", "beatmania complete MIX (ver JA-B)", 0 )
 GAME( 1999, hmcompmx, bmcompmx, djmainu, bmcompmx,  djmain_state, init_hmcompmx,  ROT0, "Konami", "hiphopmania complete MIX (ver UA-B)", 0 )
 GAME( 1999, bm4thmix, 0,        djmainj, bm4thmix,  djmain_state, init_bm4thmix,  ROT0, "Konami", "beatmania 4th MIX (ver JA-A)", 0 )
+GAME( 1999, bs4thmix, bm4thmix, djmainu, bm4thmix,  djmain_state, init_bs4thmix,  ROT0, "Konami", "beatstage 4th MIX (ver KA-A)", 0 )
 GAME( 1999, bm5thmix, 0,        djmainj, bm5thmix,  djmain_state, init_bm5thmix,  ROT0, "Konami", "beatmania 5th MIX (ver JA-A)", 0 )
 GAME( 2000, bmcompm2, 0,        djmainj, bm5thmix,  djmain_state, init_bmcompm2,  ROT0, "Konami", "beatmania complete MIX 2 (ver JA-A)", 0 )
 GAME( 2000, hmcompm2, bmcompm2, djmainu, hmcompm2,  djmain_state, init_hmcompm2,  ROT0, "Konami", "hiphopmania complete MIX 2 (ver UA-A)", 0 )

@@ -28,6 +28,7 @@
 
 // core emulator headers -- must be first (profiler needs attotime, attotime needs xtal)
 #include "emucore.h"
+#include "osdcore.h"
 #include "eminline.h"
 #include "xtal.h"
 #include "attotime.h"
@@ -38,9 +39,6 @@
 
 // commonly-referenced utilities imported from lib/util
 #include "palette.h"
-#include "unicode.h"
-#include "strformat.h"
-#include "vecstream.h"
 
 // emulator-specific utilities
 #include "hash.h"
@@ -50,7 +48,6 @@
 
 // memory and address spaces
 #include "emumem.h"
-#include "memarray.h"
 
 // machine-wide utilities
 #include "romentry.h"
@@ -67,7 +64,6 @@
 #include "addrmap.h" // Needs optional_device<> and required_device<>
 #include "distate.h"
 #include "dimemory.h"
-#include "dirom.h"
 #include "opresolv.h"
 #include "dipalette.h"
 #include "digfx.h"

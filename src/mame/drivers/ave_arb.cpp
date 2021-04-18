@@ -45,7 +45,6 @@ TODO:
 #include "machine/6522via.h"
 #include "machine/nvram.h"
 #include "sound/dac.h"
-#include "sound/volt_reg.h"
 #include "bus/generic/slot.h"
 #include "bus/generic/carts.h"
 
@@ -67,15 +66,16 @@ public:
 		m_display(*this, "display"),
 		m_board(*this, "board"),
 		m_via(*this, "via"),
+		m_extram(*this, "extram", 0x800, ENDIANNESS_LITTLE),
 		m_dac(*this, "dac"),
 		m_cart(*this, "cartslot"),
 		m_inputs(*this, "IN.%u", 0)
 	{ }
 
 	// halt button is tied to NMI, reset button to RESET(but only if halt button is held)
-	void update_reset() { m_maincpu->set_input_line(INPUT_LINE_RESET, (m_inputs[1]->read() == 3) ? ASSERT_LINE : CLEAR_LINE); }
 	DECLARE_INPUT_CHANGED_MEMBER(reset_button) { update_reset(); }
 	DECLARE_INPUT_CHANGED_MEMBER(halt_button) { m_maincpu->set_input_line(M6502_NMI_LINE, newval ? ASSERT_LINE : CLEAR_LINE); update_reset(); }
+	void update_reset();
 
 	// machine configs
 	void arb(machine_config &config);
@@ -90,6 +90,7 @@ private:
 	required_device<pwm_display_device> m_display;
 	required_device<sensorboard_device> m_board;
 	required_device<via6522_device> m_via;
+	memory_share_creator<u8> m_extram;
 	required_device<dac_bit_interface> m_dac;
 	optional_device<generic_slot_device> m_cart;
 	required_ioport_array<2> m_inputs;
@@ -100,37 +101,40 @@ private:
 
 	// cartridge
 	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(cart_load);
-	DECLARE_READ8_MEMBER(cartridge_r);
+	u8 cartridge_r(offs_t offset);
 	u32 m_cart_mask;
 
 	// I/O handlers
 	void update_display();
-	DECLARE_WRITE8_MEMBER(leds_w);
-	DECLARE_WRITE8_MEMBER(control_w);
-	DECLARE_READ8_MEMBER(input_r);
+	void leds_w(u8 data);
+	void control_w(u8 data);
+	u8 input_r();
 
-	u16 m_inp_mux;
-	u16 m_led_select;
-	u8 m_led_group;
-	u8 m_led_latch;
-	u16 m_led_data;
+	u16 m_inp_mux = 0;
+	u16 m_led_select = 0;
+	u8 m_led_group = 0;
+	u8 m_led_latch = 0;
+	u16 m_led_data = 0;
 };
 
 void arb_state::machine_start()
 {
-	// zerofill
-	m_inp_mux = 0;
-	m_led_select = 0;
-	m_led_group = 0;
-	m_led_latch = 0;
-	m_led_data = 0;
-
 	// register for savestates
 	save_item(NAME(m_inp_mux));
 	save_item(NAME(m_led_select));
 	save_item(NAME(m_led_group));
 	save_item(NAME(m_led_latch));
 	save_item(NAME(m_led_data));
+}
+
+void arb_state::update_reset()
+{
+	bool state = m_inputs[1]->read() == 3;
+
+	// RESET goes to 6502+6522
+	m_maincpu->set_input_line(INPUT_LINE_RESET, state ? ASSERT_LINE : CLEAR_LINE);
+	if (state)
+		m_via->reset();
 }
 
 
@@ -151,12 +155,12 @@ DEVICE_IMAGE_LOAD_MEMBER(arb_state::cart_load)
 
 	// extra ram (optional)
 	if (image.get_feature("ram"))
-		m_maincpu->space(AS_PROGRAM).install_ram(0x0800, 0x0fff, 0x1000, nullptr);
+		m_maincpu->space(AS_PROGRAM).install_ram(0x0800, 0x0fff, 0x1000, m_extram);
 
 	return image_init_result::PASS;
 }
 
-READ8_MEMBER(arb_state::cartridge_r)
+u8 arb_state::cartridge_r(offs_t offset)
 {
 	return m_cart->read_rom(offset & m_cart_mask);
 }
@@ -175,14 +179,14 @@ void arb_state::update_display()
 	m_display->matrix(m_led_select | 0x200, m_led_data);
 }
 
-WRITE8_MEMBER(arb_state::leds_w)
+void arb_state::leds_w(u8 data)
 {
 	// PA0-PA7: led latch input
 	m_led_latch = ~data & 0xff;
 	update_display();
 }
 
-WRITE8_MEMBER(arb_state::control_w)
+void arb_state::control_w(u8 data)
 {
 	// PB0-PB3: 74145 A-D
 	// 74145 0-8: input mux, led row select
@@ -197,7 +201,7 @@ WRITE8_MEMBER(arb_state::control_w)
 	m_dac->write(BIT(data, 7));
 }
 
-READ8_MEMBER(arb_state::input_r)
+u8 arb_state::input_r()
 {
 	u8 data = 0;
 
@@ -265,7 +269,7 @@ void arb_state::v2(machine_config &config)
 	M65C02(config, m_maincpu, 16_MHz_XTAL); // W65C02S6TPG-14
 	m_maincpu->set_addrmap(AS_PROGRAM, &arb_state::v2_map);
 
-	VIA6522(config, m_via, 16_MHz_XTAL); // W65C22S6TPG-14
+	W65C22S(config, m_via, 16_MHz_XTAL); // W65C22S6TPG-14
 	m_via->writepa_handler().set(FUNC(arb_state::leds_w));
 	m_via->writepb_handler().set(FUNC(arb_state::control_w));
 	m_via->readpa_handler().set(FUNC(arb_state::input_r));
@@ -284,7 +288,6 @@ void arb_state::v2(machine_config &config)
 	/* sound hardware */
 	SPEAKER(config, "speaker").front_center();
 	DAC_1BIT(config, m_dac).add_route(ALL_OUTPUTS, "speaker", 0.25);
-	VOLTAGE_REGULATOR(config, "vref").add_route(0, "dac", 1.0, DAC_VREF_POS_INPUT);
 }
 
 void arb_state::arb(machine_config &config)
@@ -295,7 +298,11 @@ void arb_state::arb(machine_config &config)
 	M6502(config.replace(), m_maincpu, 4_MHz_XTAL/2); // R6502P
 	m_maincpu->set_addrmap(AS_PROGRAM, &arb_state::main_map);
 
-	m_via->set_clock(4_MHz_XTAL/4); // R6522P
+	MOS6522(config.replace(), m_via, 4_MHz_XTAL/4); // R6522P
+	m_via->writepa_handler().set(FUNC(arb_state::leds_w));
+	m_via->writepb_handler().set(FUNC(arb_state::control_w));
+	m_via->readpa_handler().set(FUNC(arb_state::input_r));
+	m_via->irq_handler().set_inputline(m_maincpu, M6502_IRQ_LINE);
 
 	/* cartridge */
 	GENERIC_CARTSLOT(config, m_cart, generic_plain_slot, "arb");

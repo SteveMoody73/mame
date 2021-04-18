@@ -109,7 +109,7 @@ Parts:
  TL7705ACP       - Supply Voltage Supervisor
  TC428CPA        - Dual CMOS High-speed Driver
  L4974A          - ST 3.5A Switching Regulator
- OO              - LEDs (red); "Fehelerdiagnose siehe Fehlertable"
+ OO              - LEDs (red); "Fehlerdiagnose siehe Fehlertable"
 
 Connectors:
 
@@ -117,7 +117,7 @@ Connectors:
  P1  - Türöffnungen [1-6]
  P2  - PSG In/Out [1-6]
  P3  - Lautsprecher [1-6]
- P6  - Service - Test gerät [1-6]
+ P6  - Service - Test Gerät [1-6]
  P7  - Maschine [1-8]
  P8  - Münzeinheit [1-8]
  P9  - Akzeptor [1-4]
@@ -169,6 +169,8 @@ Quick Jack administration/service mode:
 #include "speaker.h"
 
 
+namespace {
+
 class adp_state : public driver_device
 {
 public:
@@ -190,6 +192,10 @@ public:
 	void funland(machine_config &config);
 	void skattva(machine_config &config);
 
+protected:
+	virtual void machine_start() override;
+	virtual void machine_reset() override;
+
 private:
 	required_device<microtouch_device> m_microtouch;
 	required_device<cpu_device> m_maincpu;
@@ -203,10 +209,8 @@ private:
 	uint8_t m_mux_data;
 
 	/* devices */
-	DECLARE_READ16_MEMBER(input_r);
-	DECLARE_WRITE16_MEMBER(input_w);
-	DECLARE_MACHINE_START(skattv);
-	DECLARE_MACHINE_RESET(skattv);
+	uint16_t input_r();
+	void input_w(uint16_t data);
 	void adp_palette(palette_device &device) const;
 	void fstation_palette(palette_device &device) const;
 	//INTERRUPT_GEN_MEMBER(adp_int);
@@ -253,12 +257,12 @@ void adp_state::fc7_map(address_map &map)
 	map(0xfffff9, 0xfffff9).r(m_duart, FUNC(mc68681_device::get_irq_vector));
 }
 
-MACHINE_START_MEMBER(adp_state,skattv)
+void adp_state::machine_start()
 {
 	save_item(NAME(m_mux_data));
 }
 
-MACHINE_RESET_MEMBER(adp_state,skattv)
+void adp_state::machine_reset()
 {
 	m_mux_data = 0;
 }
@@ -281,7 +285,7 @@ void adp_state::fstation_palette(palette_device &palette) const
 		palette.set_pen_color(i, rgb_t(pal3bit(i>>5), pal3bit(i>>2), pal2bit(i>>0)));
 }
 
-READ16_MEMBER(adp_state::input_r)
+uint16_t adp_state::input_r()
 {
 	uint16_t data = 0xffff;
 
@@ -290,7 +294,7 @@ READ16_MEMBER(adp_state::input_r)
 	return data;
 }
 
-WRITE16_MEMBER(adp_state::input_w)
+void adp_state::input_w(uint16_t data)
 {
 	m_mux_data++;
 	m_mux_data &= 0x0f;
@@ -541,9 +545,6 @@ void adp_state::quickjac(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &adp_state::quickjac_mem);
 	m_maincpu->set_addrmap(m68000_device::AS_CPU_SPACE, &adp_state::fc7_map);
 
-	MCFG_MACHINE_START_OVERRIDE(adp_state,skattv)
-	MCFG_MACHINE_RESET_OVERRIDE(adp_state,skattv)
-
 	MC68681(config, m_duart, XTAL(8'664'000) / 2);
 	m_duart->irq_cb().set_inputline(m_maincpu, M68K_IRQ_4);
 	m_duart->a_tx_cb().set(m_microtouch, FUNC(microtouch_device::rx));
@@ -704,6 +705,8 @@ ROM_START( fstation )
 	ROM_LOAD16_BYTE( "spielekoffer_video_9_sp_f1.i", 0x00000, 0x80000, CRC(b6eb971e) SHA1(14e3272c66a82db0f77123974eea28f308209b1b) )
 	ROM_LOAD16_BYTE( "spielekoffer_video_9_sp_f1.ii", 0x00001, 0x80000, CRC(64138dcb) SHA1(1b629915cba32f8f6164ae5075c175b522b4a323) )
 ROM_END
+
+} // Anonymous namespace
 
 
 GAME( 1993, quickjac,  0,        quickjac, quickjac, adp_state, empty_init, ROT0, "ADP",     "Quick Jack",                        MACHINE_NOT_WORKING )

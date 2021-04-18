@@ -24,8 +24,8 @@ PAL16R6A 11H
 #include "includes/dietgo.h"
 
 #include "cpu/m68000/m68000.h"
-#include "sound/ym2151.h"
 #include "sound/okim6295.h"
+#include "sound/ym2151.h"
 #include "machine/decocrpt.h"
 #include "machine/deco102.h"
 #include "machine/gen_latch.h"
@@ -34,7 +34,7 @@ PAL16R6A 11H
 #include "speaker.h"
 
 
-READ16_MEMBER( dietgo_state::dietgo_protection_region_0_104_r )
+uint16_t dietgo_state::dietgo_protection_region_0_104_r(offs_t offset)
 {
 	int real_address = 0 + (offset *2);
 	int deco146_addr = bitswap<32>(real_address, /* NC */31,30,29,28,27,26,25,24,23,22,21,20,19,18, 13,12,11,/**/      17,16,15,14,    10,9,8, 7,6,5,4, 3,2,1,0) & 0x7fff;
@@ -43,7 +43,7 @@ READ16_MEMBER( dietgo_state::dietgo_protection_region_0_104_r )
 	return data;
 }
 
-WRITE16_MEMBER( dietgo_state::dietgo_protection_region_0_104_w )
+void dietgo_state::dietgo_protection_region_0_104_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	int real_address = 0 + (offset *2);
 	int deco146_addr = bitswap<32>(real_address, /* NC */31,30,29,28,27,26,25,24,23,22,21,20,19,18, 13,12,11,/**/      17,16,15,14,    10,9,8, 7,6,5,4, 3,2,1,0) & 0x7fff;

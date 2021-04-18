@@ -2,7 +2,7 @@
 // copyright-holders:R. Belmont, Peter Ferrie
 /***************************************************************************
 
-    savquest.c
+    savquest.cpp
 
     "Savage Quest" (c) 1999 Interactive Light, developed by Angel Studios.
     Skeleton by R. Belmont
@@ -59,6 +59,9 @@
 #include "machine/ds128x.h"
 #include "bus/isa/sblaster.h"
 
+
+namespace {
+
 class savquest_state : public pcat_base_state
 {
 public:
@@ -67,9 +70,17 @@ public:
 		m_vga(*this, "vga"),
 		m_voodoo(*this, "voodoo")
 	{
+		std::fill(std::begin(m_mtxc_config_reg), std::end(m_mtxc_config_reg), 0);
 	}
 
 	void savquest(machine_config &config);
+
+protected:
+	// driver_device overrides
+//  virtual void video_start();
+
+	virtual void machine_start() override;
+	virtual void machine_reset() override;
 
 private:
 	std::unique_ptr<uint32_t[]> m_bios_f0000_ram;
@@ -102,28 +113,23 @@ private:
 	uint8_t m_piix4_config_reg[8][256];
 	uint32_t m_pci_3dfx_regs[0x40];
 
-	DECLARE_WRITE32_MEMBER( bios_f0000_ram_w );
-	DECLARE_WRITE32_MEMBER( bios_e0000_ram_w );
-	DECLARE_WRITE32_MEMBER( bios_e4000_ram_w );
-	DECLARE_WRITE32_MEMBER( bios_e8000_ram_w );
-	DECLARE_WRITE32_MEMBER( bios_ec000_ram_w );
+	void bios_f0000_ram_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
+	void bios_e0000_ram_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
+	void bios_e4000_ram_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
+	void bios_e8000_ram_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
+	void bios_ec000_ram_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
 
-	DECLARE_READ8_MEMBER(parallel_port_r);
-	DECLARE_WRITE8_MEMBER(parallel_port_w);
+	uint8_t parallel_port_r(offs_t offset);
+	void parallel_port_w(offs_t offset, uint8_t data);
 
 	DECLARE_WRITE_LINE_MEMBER(vblank_assert);
 
-	DECLARE_READ8_MEMBER(smram_r);
-	DECLARE_WRITE8_MEMBER(smram_w);
+	uint8_t smram_r(offs_t offset);
+	void smram_w(offs_t offset, uint8_t data);
 
 	void savquest_io(address_map &map);
 	void savquest_map(address_map &map);
 
-	// driver_device overrides
-//  virtual void video_start();
-
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
 	void intel82439tx_init();
 	void vid_3dfx_init();
 
@@ -380,7 +386,7 @@ osd_printf_warning("PCI write: %x %x\n", reg, data);
 	m_pci_3dfx_regs[reg / 4] = data;
 }
 
-WRITE32_MEMBER(savquest_state::bios_f0000_ram_w)
+void savquest_state::bios_f0000_ram_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	//if (m_mtxc_config_reg[0x59] & 0x20)       // write to RAM if this region is write-enabled
 	#if 1
@@ -391,7 +397,7 @@ WRITE32_MEMBER(savquest_state::bios_f0000_ram_w)
 	#endif
 }
 
-WRITE32_MEMBER(savquest_state::bios_e0000_ram_w)
+void savquest_state::bios_e0000_ram_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	//if (m_mtxc_config_reg[0x5e] & 2)       // write to RAM if this region is write-enabled
 	#if 1
@@ -402,7 +408,7 @@ WRITE32_MEMBER(savquest_state::bios_e0000_ram_w)
 	#endif
 }
 
-WRITE32_MEMBER(savquest_state::bios_e4000_ram_w)
+void savquest_state::bios_e4000_ram_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	//if (m_mtxc_config_reg[0x5e] & 0x20)       // write to RAM if this region is write-enabled
 	#if 1
@@ -413,7 +419,7 @@ WRITE32_MEMBER(savquest_state::bios_e4000_ram_w)
 	#endif
 }
 
-WRITE32_MEMBER(savquest_state::bios_e8000_ram_w)
+void savquest_state::bios_e8000_ram_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	//if (m_mtxc_config_reg[0x5f] & 2)       // write to RAM if this region is write-enabled
 	#if 1
@@ -424,7 +430,7 @@ WRITE32_MEMBER(savquest_state::bios_e8000_ram_w)
 	#endif
 }
 
-WRITE32_MEMBER(savquest_state::bios_ec000_ram_w)
+void savquest_state::bios_ec000_ram_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	//if (m_mtxc_config_reg[0x5f] & 0x20)       // write to RAM if this region is write-enabled
 	#if 1
@@ -441,7 +447,7 @@ static const uint8_t m_hasp_prodinfo[] = {0x51, 0x4c, 0x52, 0x4d, 0x53, 0x4e, 0x
 										0x53, 0x57, 0x53, 0x5d, 0x52, 0x5e, 0x53, 0x5b, 0x53, 0x59, 0xac, 0x58, 0x53, 0xa4
 										};
 
-READ8_MEMBER(savquest_state::parallel_port_r)
+uint8_t savquest_state::parallel_port_r(offs_t offset)
 {
 	if (offset == 1)
 	{
@@ -497,7 +503,7 @@ READ8_MEMBER(savquest_state::parallel_port_r)
 	return 0;
 }
 
-WRITE8_MEMBER(savquest_state::parallel_port_w)
+void savquest_state::parallel_port_w(offs_t offset, uint8_t data)
 {
 	if (!offset)
 	{
@@ -717,22 +723,22 @@ WRITE8_MEMBER(savquest_state::parallel_port_w)
 	}
 }
 
-READ8_MEMBER(savquest_state::smram_r)
+uint8_t savquest_state::smram_r(offs_t offset)
 {
 	/* TODO: way more complex than this */
 	if(m_mtxc_config_reg[0x72] & 0x40)
 		return m_smram[offset];
 	else
-		return m_vga->mem_r(space,offset,0xff);
+		return m_vga->mem_r(offset);
 }
 
-WRITE8_MEMBER(savquest_state::smram_w)
+void savquest_state::smram_w(offs_t offset, uint8_t data)
 {
 	/* TODO: way more complex than this */
 	if(m_mtxc_config_reg[0x72] & 0x40)
 		m_smram[offset] = data;
 	else
-		m_vga->mem_w(space,offset,data,0xff);
+		m_vga->mem_w(offset,data);
 
 }
 
@@ -791,6 +797,9 @@ void savquest_state::machine_start()
 
 	intel82439tx_init();
 	vid_3dfx_init();
+
+	for (int i = 0; i < 8; i++)
+		std::fill(std::begin(m_piix4_config_reg[i]), std::end(m_piix4_config_reg[i]), 0);
 }
 
 void savquest_state::machine_reset()
@@ -864,6 +873,8 @@ ROM_START( savquest )
 	DISK_REGION( "ide:0:hdd:image" )
 	DISK_IMAGE( "savquest", 0, SHA1(b7c8901172b66706a7ab5f5c91e6912855153fa9) )
 ROM_END
+
+} // Anonymous namespace
 
 
 GAME(1999, savquest, 0, savquest, savquest, savquest_state, empty_init, ROT0, "Interactive Light", "Savage Quest", MACHINE_IS_SKELETON)

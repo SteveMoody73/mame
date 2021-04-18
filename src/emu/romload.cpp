@@ -1,15 +1,17 @@
 // license:BSD-3-Clause
-// copyright-holders:Nicola Salmoria,Paul Priest,Aaron Giles
+// copyright-holders:Nicola Salmoria,Paul Priest,Aaron Giles,Vas Crabb
 /*********************************************************************
 
     romload.cpp
 
     ROM loading functions.
+
 *********************************************************************/
 
 #include "emu.h"
 #include "romload.h"
 
+#include "corestr.h"
 #include "emuopts.h"
 #include "drivenum.h"
 #include "softlist_dev.h"
@@ -30,27 +32,72 @@
 #define TEMPBUFFER_MAX_SIZE     (1024 * 1024 * 1024)
 
 /***************************************************************************
-    HELPERS (also used by diimage.cpp)
- ***************************************************************************/
+    HELPERS
+****************************************************************************/
 
 namespace {
 
-rom_entry const *next_parent_system(game_driver const *&system, std::vector<rom_entry> &rom_entries)
+auto next_parent_system(game_driver const &system)
 {
-	if (!system)
-		return nullptr;
-	int const parent(driver_list::find(system->parent));
-	if (0 > parent)
+	return
+			[sys = &system, roms = std::vector<rom_entry>()] () mutable -> rom_entry const *
+			{
+				if (!sys)
+					return nullptr;
+				int const parent(driver_list::find(sys->parent));
+				if (0 > parent)
+				{
+					sys = nullptr;
+					return nullptr;
+				}
+				else
+				{
+					sys = &driver_list::driver(parent);
+					roms = rom_build_entries(sys->rom);
+					return &roms[0];
+				}
+			};
+}
+
+
+auto next_parent_software(std::vector<software_info const *> const &parents)
+{
+	auto part(parents.front()->parts().end());
+	return
+			[&parents, current = parents.cbegin(), part, end = part] () mutable -> const rom_entry *
+			{
+				if (part == end)
+				{
+					if (parents.end() == current)
+						return nullptr;
+					part = (*current)->parts().cbegin();
+					end = (*current)->parts().cend();
+					do { ++current; } while ((parents.cend() != current) && (*current)->parts().empty());
+				}
+				return &(*part++).romdata()[0];
+			};
+}
+
+
+std::vector<std::string> make_software_searchpath(software_list_device &swlist, software_info const &swinfo, std::vector<software_info const *> &parents)
+{
+	std::vector<std::string> result;
+
+	// search <rompath>/<list>/<software> following parents
+	for (software_info const *i = &swinfo; i; )
 	{
-		system = nullptr;
-		return nullptr;
+		if (std::find(parents.begin(), parents.end(), i) != parents.end())
+			break;
+		parents.emplace_back(i);
+		result.emplace_back(util::string_format("%s" PATH_SEPARATOR "%s", swlist.list_name(), i->shortname()));
+		i = i->parentname().empty() ? nullptr : swlist.find(i->parentname());
 	}
-	else
-	{
-		system = &driver_list::driver(parent);
-		rom_entries = rom_build_entries(system->rom);
-		return &rom_entries[0];
-	}
+
+	// search <rompath>/<software> following parents
+	for (software_info const *i : parents)
+		result.emplace_back(i->shortname());
+
+	return result;
 }
 
 
@@ -58,14 +105,13 @@ chd_error do_open_disk(const emu_options &options, std::initializer_list<std::re
 {
 	// hashes are fixed, but we might need to try multiple filenames
 	std::set<std::string> tried;
-	const util::hash_collection hashes(ROM_GETHASHDATA(romp));
+	const util::hash_collection hashes(romp->hashdata());
 	std::string filename, fullpath;
 	const rom_entry *parent(nullptr);
 	chd_error result(CHDERR_FILE_NOT_FOUND);
 	while (romp && (CHDERR_NONE != result))
 	{
-		filename = ROM_GETNAME(romp);
-		filename.append(".chd");
+		filename = romp->name() + ".chd";
 		if (tried.insert(filename).second)
 		{
 			// piggyback on emu_file to find the disk image file
@@ -124,7 +170,7 @@ chd_error do_open_disk(const emu_options &options, std::initializer_list<std::re
 				}
 
 				// try it if it matches the hashes
-				if (romp && (util::hash_collection(ROM_GETHASHDATA(romp)) == hashes))
+				if (romp && (util::hash_collection(romp->hashdata()) == hashes))
 					break;
 			}
 		}
@@ -146,7 +192,11 @@ chd_error do_open_disk(const emu_options &options, std::initializer_list<std::re
 
 const rom_entry *rom_first_region(const device_t &device)
 {
-	const rom_entry *romp = &device.rom_region_vector().front();
+	return rom_first_region(&device.rom_region_vector().front());
+}
+
+const rom_entry *rom_first_region(const rom_entry *romp)
+{
 	while (ROMENTRY_ISPARAMETER(romp) || ROMENTRY_ISSYSTEM_BIOS(romp) || ROMENTRY_ISDEFAULT_BIOS(romp))
 		romp++;
 	return !ROMENTRY_ISEND(romp) ? romp : nullptr;
@@ -281,10 +331,10 @@ static void CLIB_DECL ATTR_PRINTF(1,2) debugload(const char *string, ...)
     CHD file associated with the given region
 -------------------------------------------------*/
 
-chd_file *rom_load_manager::get_disk_handle(const char *region)
+chd_file *rom_load_manager::get_disk_handle(std::string_view region)
 {
 	for (auto &curdisk : m_chd_list)
-		if (strcmp(curdisk->region(), region) == 0)
+		if (curdisk->region() == region)
 			return &curdisk->chd();
 	return nullptr;
 }
@@ -295,7 +345,7 @@ chd_file *rom_load_manager::get_disk_handle(const char *region)
     file associated with the given region
 -------------------------------------------------*/
 
-int rom_load_manager::set_disk_handle(const char *region, const char *fullpath)
+int rom_load_manager::set_disk_handle(std::string_view region, const char *fullpath)
 {
 	auto chd = std::make_unique<open_chd>(region);
 	auto err = chd->orig_chd().open(fullpath);
@@ -361,7 +411,7 @@ void rom_load_manager::count_roms()
 	m_romstotalsize = 0;
 
 	/* loop over regions, then over files */
-	for (device_t &device : device_iterator(machine().config().root_device()))
+	for (device_t &device : device_enumerator(machine().config().root_device()))
 		for (region = rom_first_region(device); region != nullptr; region = rom_next_region(region))
 			for (rom = rom_first_file(region); rom != nullptr; rom = rom_next_file(rom))
 				if (ROM_GETBIOSFLAGS(rom) == 0 || ROM_GETBIOSFLAGS(rom) == device.system_bios())
@@ -403,15 +453,12 @@ void rom_load_manager::handle_missing_file(const rom_entry *romp, const std::vec
 		tried += ')';
 	}
 
-	std::string name(ROM_GETNAME(romp));
-
 	const bool is_chd(chderr != CHDERR_NONE);
-	if (is_chd)
-		name += ".chd";
+	const std::string name(is_chd ? romp->name() + ".chd" : romp->name());
 
 	const bool is_chd_error(is_chd && chderr != CHDERR_FILE_NOT_FOUND);
 	if (is_chd_error)
-		m_errorstring.append(string_format("%s CHD ERROR: %s\n", name.c_str(), chd_file::error_string(chderr)));
+		m_errorstring.append(string_format("%s CHD ERROR: %s\n", name, chd_file::error_string(chderr)));
 
 	if (ROM_ISOPTIONAL(romp))
 	{
@@ -420,7 +467,7 @@ void rom_load_manager::handle_missing_file(const rom_entry *romp, const std::vec
 			m_errorstring.append(string_format("OPTIONAL %s NOT FOUND%s\n", name, tried));
 		m_warnings++;
 	}
-	else if (util::hash_collection(ROM_GETHASHDATA(romp)).flag(util::hash_collection::FLAG_NO_DUMP))
+	else if (util::hash_collection(romp->hashdata()).flag(util::hash_collection::FLAG_NO_DUMP))
 	{
 		// no good dumps are okay
 		if (!is_chd_error)
@@ -445,8 +492,8 @@ void rom_load_manager::handle_missing_file(const rom_entry *romp, const std::vec
 
 void rom_load_manager::dump_wrong_and_correct_checksums(const util::hash_collection &hashes, const util::hash_collection &acthashes)
 {
-	m_errorstring.append(string_format("    EXPECTED: %s\n", hashes.macro_string().c_str()));
-	m_errorstring.append(string_format("       FOUND: %s\n", acthashes.macro_string().c_str()));
+	m_errorstring.append(string_format("    EXPECTED: %s\n", hashes.macro_string()));
+	m_errorstring.append(string_format("       FOUND: %s\n", acthashes.macro_string()));
 }
 
 
@@ -455,7 +502,7 @@ void rom_load_manager::dump_wrong_and_correct_checksums(const util::hash_collect
     and hash signatures of a file
 -------------------------------------------------*/
 
-void rom_load_manager::verify_length_and_hash(emu_file *file, const char *name, u32 explength, const util::hash_collection &hashes)
+void rom_load_manager::verify_length_and_hash(emu_file *file, std::string_view name, u32 explength, const util::hash_collection &hashes)
 {
 	// we've already complained if there is no file
 	if (!file)
@@ -478,7 +525,7 @@ void rom_load_manager::verify_length_and_hash(emu_file *file, const char *name, 
 	else
 	{
 		// verify checksums
-		util::hash_collection const &acthashes = file->hashes(hashes.hash_types().c_str());
+		util::hash_collection const &acthashes = file->hashes(hashes.hash_types());
 		if (hashes != acthashes)
 		{
 			// otherwise, it's just bad
@@ -600,7 +647,7 @@ std::unique_ptr<emu_file> rom_load_manager::open_rom_file(std::initializer_list<
 
 	// extract CRC to use for searching
 	u32 crc = 0;
-	bool const has_crc = util::hash_collection(ROM_GETHASHDATA(romp)).crc(crc);
+	bool const has_crc = util::hash_collection(romp->hashdata()).crc(crc);
 
 	// attempt reading up the chain through the parents
 	// it also automatically attempts any kind of load by checksum supported by the archives.
@@ -624,7 +671,7 @@ std::unique_ptr<emu_file> rom_load_manager::open_rom_file(std::initializer_list<
 }
 
 
-std::unique_ptr<emu_file> rom_load_manager::open_rom_file(const std::vector<std::string> &paths, std::vector<std::string> &tried, bool has_crc, u32 crc, const std::string &name, osd_file::error &filerr)
+std::unique_ptr<emu_file> rom_load_manager::open_rom_file(const std::vector<std::string> &paths, std::vector<std::string> &tried, bool has_crc, u32 crc, std::string_view name, osd_file::error &filerr)
 {
 	// record the set names we search
 	tried.insert(tried.end(), paths.begin(), paths.end());
@@ -684,15 +731,15 @@ int rom_load_manager::read_rom_data(emu_file *file, const rom_entry *parent_regi
 
 	/* make sure the length was an even multiple of the group size */
 	if (numbytes % groupsize != 0)
-		osd_printf_warning("Warning in RomModule definition: %s length not an even multiple of group size\n", ROM_GETNAME(romp));
+		osd_printf_warning("Warning in RomModule definition: %s length not an even multiple of group size\n", romp->name());
 
 	/* make sure we only fill within the region space */
 	if (ROM_GETOFFSET(romp) + numgroups * groupsize + (numgroups - 1) * skip > m_region->bytes())
-		throw emu_fatalerror("Error in RomModule definition: %s out of memory region space\n", ROM_GETNAME(romp));
+		throw emu_fatalerror("Error in RomModule definition: %s out of memory region space\n", romp->name());
 
 	/* make sure the length was valid */
 	if (numbytes == 0)
-		throw emu_fatalerror("Error in RomModule definition: %s has an invalid length\n", ROM_GETNAME(romp));
+		throw emu_fatalerror("Error in RomModule definition: %s has an invalid length\n", romp->name());
 
 	/* special case for simple loads */
 	if (datamask == 0xff && (groupsize == 1 || !reversed) && skip == 0)
@@ -797,7 +844,7 @@ void rom_load_manager::fill_rom_data(const rom_entry *romp)
 		throw emu_fatalerror("Error in RomModule definition: FILL has an invalid length\n");
 
 	// for fill bytes, the byte that gets filled is the first byte of the hashdata string
-	u8 fill_byte = u8(strtol(ROM_GETHASHDATA(romp), nullptr, 0));
+	u8 fill_byte = u8(strtol(romp->hashdata().c_str(), nullptr, 0));
 
 	// fill the data (filling value is stored in place of the hashdata)
 	if(skip != 0)
@@ -817,9 +864,9 @@ void rom_load_manager::fill_rom_data(const rom_entry *romp)
 void rom_load_manager::copy_rom_data(const rom_entry *romp)
 {
 	u8 *base = m_region->base() + ROM_GETOFFSET(romp);
-	const char *srcrgntag = ROM_GETNAME(romp);
+	const std::string &srcrgntag = romp->name();
 	u32 numbytes = ROM_GETLENGTH(romp);
-	u32 srcoffs = u32(strtol(ROM_GETHASHDATA(romp), nullptr, 0));  /* srcoffset in place of hashdata */
+	u32 srcoffs = u32(strtol(romp->hashdata().c_str(), nullptr, 0));  /* srcoffset in place of hashdata */
 
 	/* make sure we copy within the region space */
 	if (ROM_GETOFFSET(romp) + numbytes > m_region->bytes())
@@ -922,7 +969,7 @@ void rom_load_manager::process_rom_entries(std::initializer_list<std::reference_
 				if (baserom)
 				{
 					LOG("Verifying length (%X) and checksums\n", explength);
-					verify_length_and_hash(file.get(), ROM_GETNAME(baserom), explength, util::hash_collection(ROM_GETHASHDATA(baserom)));
+					verify_length_and_hash(file.get(), baserom->name(), explength, util::hash_collection(baserom->hashdata()));
 					LOG("Verify finished\n");
 				}
 
@@ -956,7 +1003,7 @@ void rom_load_manager::process_rom_entries(std::initializer_list<std::reference_
 chd_error rom_load_manager::open_disk_diff(emu_options &options, const rom_entry *romp, chd_file &source, chd_file &diff_chd)
 {
 	// TODO: use system name and/or software list name in the path - the current setup doesn't scale
-	std::string fname = std::string(ROM_GETNAME(romp)).append(".dif");
+	std::string fname = romp->name() + ".dif";
 
 	/* try to open the diff */
 	LOG("Opening differencing image file: %s\n", fname.c_str());
@@ -999,11 +1046,11 @@ chd_error rom_load_manager::open_disk_diff(emu_options &options, const rom_entry
     for a region
 -------------------------------------------------*/
 
-void rom_load_manager::process_disk_entries(std::initializer_list<std::reference_wrapper<const std::vector<std::string> > > searchpath, const char *regiontag, const rom_entry *romp, std::function<const rom_entry * ()> next_parent)
+void rom_load_manager::process_disk_entries(std::initializer_list<std::reference_wrapper<const std::vector<std::string> > > searchpath, std::string_view regiontag, const rom_entry *romp, std::function<const rom_entry * ()> next_parent)
 {
 	/* remove existing disk entries for this region */
 	m_chd_list.erase(std::remove_if(m_chd_list.begin(), m_chd_list.end(),
-			[regiontag] (std::unique_ptr<open_chd> &chd) { return !strcmp(chd->region(), regiontag); }), m_chd_list.end());
+			[regiontag] (std::unique_ptr<open_chd> &chd) { return chd->region() == regiontag; }), m_chd_list.end());
 
 	/* loop until we hit the end of this region */
 	for ( ; !ROMENTRY_ISREGIONEND(romp); romp++)
@@ -1015,7 +1062,7 @@ void rom_load_manager::process_disk_entries(std::initializer_list<std::reference
 			chd_error err;
 
 			/* make the filename of the source */
-			const std::string filename = std::string(ROM_GETNAME(romp)).append(".chd");
+			const std::string filename = romp->name() + ".chd";
 
 			/* first open the source drive */
 			// FIXME: we've lost the ability to search parents here
@@ -1033,7 +1080,7 @@ void rom_load_manager::process_disk_entries(std::initializer_list<std::reference
 			acthashes.add_sha1(chd->orig_chd().sha1());
 
 			/* verify the hash */
-			const util::hash_collection hashes(ROM_GETHASHDATA(romp));
+			const util::hash_collection hashes(romp->hashdata());
 			if (hashes != acthashes)
 			{
 				m_errorstring.append(string_format("%s WRONG CHECKSUMS:\n", filename));
@@ -1068,6 +1115,23 @@ void rom_load_manager::process_disk_entries(std::initializer_list<std::reference
 }
 
 
+/*-------------------------------------------------
+    get_software_searchpath - get search path
+    for a software list item
+-------------------------------------------------*/
+
+std::vector<std::string> rom_load_manager::get_software_searchpath(software_list_device &swlist, const software_info &swinfo)
+{
+	std::vector<software_info const *> parents;
+	return make_software_searchpath(swlist, swinfo, parents);
+}
+
+
+/*-------------------------------------------------
+    open_disk_image - open a disk image for a
+    device
+-------------------------------------------------*/
+
 chd_error rom_load_manager::open_disk_image(const emu_options &options, const device_t &device, const rom_entry *romp, chd_file &image_chd)
 {
 	const std::vector<std::string> searchpath(device.searchpath());
@@ -1075,47 +1139,24 @@ chd_error rom_load_manager::open_disk_image(const emu_options &options, const de
 	driver_device const *const driver(dynamic_cast<driver_device const *>(&device));
 	std::function<const rom_entry * ()> next_parent;
 	if (driver)
-		next_parent = [sys = &driver->system(), roms = std::vector<rom_entry>()] () mutable { return next_parent_system(sys, roms); };
+		next_parent = next_parent_system(driver->system());
 	else
 		next_parent = [] () { return nullptr; };
 	return do_open_disk(options, { searchpath }, romp, image_chd, std::move(next_parent));
 }
 
 
+/*-------------------------------------------------
+    open_disk_image - open a disk image for a
+    software item
+-------------------------------------------------*/
+
 chd_error rom_load_manager::open_disk_image(const emu_options &options, software_list_device &swlist, const software_info &swinfo, const rom_entry *romp, chd_file &image_chd)
 {
 	std::vector<software_info const *> parents;
-	std::vector<std::string> listsearch, freesearch, disksearch;
-	disksearch.emplace_back(swlist.list_name());
-
-	for (software_info const *i = &swinfo; i; )
-	{
-		if (std::find(parents.begin(), parents.end(), i) != parents.end())
-			break;
-		parents.emplace_back(i);
-		listsearch.emplace_back(util::string_format("%s" PATH_SEPARATOR "%s", swlist.list_name(), i->shortname()));
-		freesearch.emplace_back(i->shortname());
-		i = i->parentname().empty() ? nullptr : swlist.find(i->parentname());
-	}
-
-	auto part(parents.front()->parts().end());
-	return do_open_disk(
-			options,
-			{ listsearch, freesearch, disksearch },
-			romp,
-			image_chd,
-			[&parents, current = parents.cbegin(), part, end = part] () mutable -> const rom_entry *
-			{
-				if (part == end)
-				{
-					if (parents.end() == current)
-						return nullptr;
-					part = (*current)->parts().cbegin();
-					end = (*current)->parts().cend();
-					do { ++current; } while ((parents.cend() != current) && (*current)->parts().empty());
-				}
-				return &(*part++).romdata()[0];
-			});
+	std::vector<std::string> searchpath = make_software_searchpath(swlist, swinfo, parents);
+	searchpath.emplace_back(swlist.list_name()); // look for loose disk images in software list directory
+	return do_open_disk(options, { searchpath }, romp, image_chd, next_parent_software(parents));
 }
 
 
@@ -1124,7 +1165,7 @@ chd_error rom_load_manager::open_disk_image(const emu_options &options, software
     flags for the given device
 -------------------------------------------------*/
 
-void rom_load_manager::normalize_flags_for_device(const char *rgntag, u8 &width, endianness_t &endian)
+void rom_load_manager::normalize_flags_for_device(std::string_view rgntag, u8 &width, endianness_t &endian)
 {
 	device_t *device = machine().root_device().subdevice(rgntag);
 	device_memory_interface *memory;
@@ -1165,7 +1206,7 @@ void rom_load_manager::normalize_flags_for_device(const char *rgntag, u8 &width,
     more general process_region_list.
 -------------------------------------------------*/
 
-void rom_load_manager::load_software_part_region(device_t &device, software_list_device &swlist, const char *swname, const rom_entry *start_region)
+void rom_load_manager::load_software_part_region(device_t &device, software_list_device &swlist, std::string_view swname, const rom_entry *start_region)
 {
 	m_errorstring.clear();
 	m_softwarningstring.clear();
@@ -1175,10 +1216,8 @@ void rom_load_manager::load_software_part_region(device_t &device, software_list
 	m_romsloadedsize = 0;
 
 	std::vector<const software_info *> parents;
-	std::vector<std::string> listsearch, freesearch, disksearch, devsearch;
-	listsearch.emplace_back(util::string_format("%s" PATH_SEPARATOR "%s", swlist.list_name(), swname));
-	freesearch.emplace_back(swname);
-	const software_info *swinfo = swlist.find(swname);
+	std::vector<std::string> swsearch, disksearch, devsearch;
+	const software_info *const swinfo = swlist.find(std::string(swname));
 	if (swinfo)
 	{
 		// dispay a warning for unsupported software
@@ -1196,21 +1235,12 @@ void rom_load_manager::load_software_part_region(device_t &device, software_list
 		}
 
 		// walk the chain of parents and add them to the search path
-		parents.emplace_back(swinfo);
-		swinfo = !swinfo->parentname().empty() ? swlist.find(swinfo->parentname()) : nullptr;
-		while (swinfo)
-		{
-			if (std::find(parents.begin(), parents.end(), swinfo) != parents.end())
-			{
-				m_errorstring.append(util::string_format("WARNING: parent/clone relationships form a loop for software %s (in list %s)\n", swname, swlist.list_name()));
-				m_softwarningstring.append(util::string_format("Parent/clone relationships from a loop for software %s (in list %s)\n", swname, swlist.list_name()));
-				break;
-			}
-			parents.emplace_back(swinfo);
-			listsearch.emplace_back(util::string_format("%s" PATH_SEPARATOR "%s", swlist.list_name(), swinfo->shortname()));
-			freesearch.emplace_back(swinfo->shortname());
-			swinfo = !swinfo->parentname().empty() ? swlist.find(swinfo->parentname()) : nullptr;
-		}
+		swsearch = make_software_searchpath(swlist, *swinfo, parents);
+	}
+	else
+	{
+		swsearch.emplace_back(util::string_format("%s" PATH_SEPARATOR "%s", swlist.list_name(), swname));
+		swsearch.emplace_back(swname);
 	}
 
 	// this is convenient for CD-only lists so you don't need an extra level of directories containing one file each
@@ -1227,7 +1257,7 @@ void rom_load_manager::load_software_part_region(device_t &device, software_list
 	{
 		u32 regionlength = ROMREGION_GETLENGTH(region);
 
-		std::string regiontag = device.subtag(ROMREGION_GETTAG(region));
+		std::string regiontag = device.subtag(region->name());
 		LOG("Processing region \"%s\" (length=%X)\n", regiontag.c_str(), regionlength);
 
 		// the first entry must be a region
@@ -1239,14 +1269,14 @@ void rom_load_manager::load_software_part_region(device_t &device, software_list
 		memory_region *memregion = machine().root_device().memregion(regiontag);
 		if (memregion != nullptr)
 		{
-			normalize_flags_for_device(regiontag.c_str(), width, endianness);
+			normalize_flags_for_device(regiontag, width, endianness);
 
 			// clear old region (TODO: should be moved to an image unload function)
 			machine().memory().region_free(memregion->name());
 		}
 
 		// remember the base and length
-		m_region = machine().memory().region_alloc(regiontag.c_str(), regionlength, width, endianness);
+		m_region = machine().memory().region_alloc(regiontag, regionlength, width, endianness);
 		LOG("Allocated %X bytes @ %p\n", m_region->bytes(), m_region->base());
 
 		if (ROMREGION_ISERASE(region)) // clear the region if it's requested
@@ -1269,46 +1299,29 @@ void rom_load_manager::load_software_part_region(device_t &device, software_list
 		if (ROMREGION_ISROMDATA(region))
 		{
 			if (devsearch.empty())
-				process_rom_entries({ listsearch, freesearch }, 0U, region, region + 1, true);
+				process_rom_entries({ swsearch }, 0U, region, region + 1, true);
 			else
-				process_rom_entries({ listsearch, freesearch, devsearch }, 0U, region, region + 1, true);
+				process_rom_entries({ swsearch, devsearch }, 0U, region, region + 1, true);
 		}
 		else if (ROMREGION_ISDISKDATA(region))
 		{
 			if (!next_parent)
 			{
 				if (!parents.empty())
-				{
-					auto part(parents.front()->parts().end());
-					next_parent =
-							[&parents, current = parents.cbegin(), part, end = part] () mutable -> const rom_entry *
-							{
-								if (part == end)
-								{
-									if (parents.end() == current)
-										return nullptr;
-									part = (*current)->parts().cbegin();
-									end = (*current)->parts().cend();
-									do { ++current; } while ((parents.cend() != current) && (*current)->parts().empty());
-								}
-								return &(*part++).romdata()[0];
-							};
-				}
+					next_parent = next_parent_software(parents);
 				else
-				{
 					next_parent = [] () { return nullptr; };
-				}
 			}
 			if (devsearch.empty())
-				process_disk_entries({ listsearch, freesearch, disksearch }, regiontag.c_str(), region + 1, next_parent);
+				process_disk_entries({ swsearch, disksearch }, regiontag, region + 1, next_parent);
 			else
-				process_disk_entries({ listsearch, freesearch, disksearch, devsearch }, regiontag.c_str(), region + 1, next_parent);
+				process_disk_entries({ swsearch, disksearch, devsearch }, regiontag, region + 1, next_parent);
 		}
 	}
 
 	// now go back and post-process all the regions
 	for (const rom_entry *region = start_region; region != nullptr; region = rom_next_region(region))
-		region_post_process(device.memregion(ROMREGION_GETTAG(region)), ROMREGION_ISINVERTED(region));
+		region_post_process(device.memregion(region->name()), ROMREGION_ISINVERTED(region));
 
 	// display the results and exit
 	display_rom_load_results(true);
@@ -1322,7 +1335,7 @@ void rom_load_manager::load_software_part_region(device_t &device, software_list
 void rom_load_manager::process_region_list()
 {
 	// loop until we hit the end
-	device_iterator deviter(machine().root_device());
+	device_enumerator deviter(machine().root_device());
 	std::vector<std::string> searchpath;
 	for (device_t &device : deviter)
 	{
@@ -1332,7 +1345,7 @@ void rom_load_manager::process_region_list()
 		{
 			u32 regionlength = ROMREGION_GETLENGTH(region);
 
-			std::string regiontag = device.subtag(ROM_GETNAME(region));
+			std::string regiontag = device.subtag(region->name());
 			LOG("Processing region \"%s\" (length=%X)\n", regiontag.c_str(), regionlength);
 
 			// the first entry must be a region
@@ -1343,10 +1356,10 @@ void rom_load_manager::process_region_list()
 				// if this is a device region, override with the device width and endianness
 				u8 width = ROMREGION_GETWIDTH(region) / 8;
 				endianness_t endianness = ROMREGION_ISBIGENDIAN(region) ? ENDIANNESS_BIG : ENDIANNESS_LITTLE;
-				normalize_flags_for_device(regiontag.c_str(), width, endianness);
+				normalize_flags_for_device(regiontag, width, endianness);
 
 				// remember the base and length
-				m_region = machine().memory().region_alloc(regiontag.c_str(), regionlength, width, endianness);
+				m_region = machine().memory().region_alloc(regiontag, regionlength, width, endianness);
 				LOG("Allocated %X bytes @ %p\n", m_region->bytes(), m_region->base());
 
 				if (ROMREGION_ISERASE(region)) // clear the region if it's requested
@@ -1373,11 +1386,11 @@ void rom_load_manager::process_region_list()
 				{
 					driver_device const *const driver(dynamic_cast<driver_device const *>(&device));
 					if (driver)
-						next_parent = [sys = &driver->system(), roms = std::vector<rom_entry>()] () mutable { return next_parent_system(sys, roms); };
+						next_parent = next_parent_system(driver->system());
 					else
 						next_parent = [] () { return nullptr; };
 				}
-				process_disk_entries({ searchpath }, regiontag.c_str(), region + 1, next_parent);
+				process_disk_entries({ searchpath }, regiontag, region + 1, next_parent);
 			}
 		}
 	}
@@ -1385,7 +1398,7 @@ void rom_load_manager::process_region_list()
 	// now go back and post-process all the regions
 	for (device_t &device : deviter)
 		for (const rom_entry *region = rom_first_region(device); region != nullptr; region = rom_next_region(region))
-			region_post_process(device.memregion(ROM_GETNAME(region)), ROMREGION_ISINVERTED(region));
+			region_post_process(device.memregion(region->name()), ROMREGION_ISINVERTED(region));
 
 	// and finally register all per-game parameters
 	for (device_t &device : deviter)
@@ -1406,10 +1419,21 @@ void rom_load_manager::process_region_list()
 
 rom_load_manager::rom_load_manager(running_machine &machine)
 	: m_machine(machine)
+	, m_warnings(0)
+	, m_knownbad(0)
+	, m_errors(0)
+	, m_romsloaded(0)
+	, m_romstotal(0)
+	, m_romsloadedsize(0)
+	, m_romstotalsize(0)
+	, m_chd_list()
+	, m_region(nullptr)
+	, m_errorstring()
+	, m_softwarningstring()
 {
 	// figure out which BIOS we are using
-	std::map<std::string, std::string> card_bios;
-	for (device_t &device : device_iterator(machine.config().root_device()))
+	std::map<std::string_view, std::string> card_bios;
+	for (device_t &device : device_enumerator(machine.config().root_device()))
 	{
 		device_slot_interface const *const slot(dynamic_cast<device_slot_interface *>(&device));
 		if (slot)
@@ -1417,7 +1441,7 @@ rom_load_manager::rom_load_manager(running_machine &machine)
 			device_t const *const card(slot->get_card_device());
 			slot_option const &slot_opt(machine.options().slot_option(slot->slot_name()));
 			if (card && !slot_opt.bios().empty())
-				card_bios.emplace(std::make_pair(std::string(card->tag()), slot_opt.bios()));
+				card_bios.emplace(card->tag(), slot_opt.bios());
 		}
 
 		if (device.rom_region())

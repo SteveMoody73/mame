@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Barry Rodewald, Robbbert, 68bit
+// copyright-holders:Barry Rodewald, 68bit
 /*
     Gimix 6809-Based Computers
 
@@ -83,25 +83,27 @@ public:
 		, m_rombank1(*this, "rombank1")
 		, m_rombank2(*this, "rombank2")
 		, m_fixedrombank(*this, "fixedrombank")
+		, m_lowerram(*this, "lower_ram")
+		, m_upperram(*this, "upper_ram")
 		, m_dma_dip(*this, "dma_s2")
 	{}
 
 	void gimix(machine_config &config);
 
 private:
-	DECLARE_WRITE8_MEMBER(system_w);
+	void system_w(offs_t offset, uint8_t data);
 	DECLARE_WRITE_LINE_MEMBER(fdc_irq_w);
 	DECLARE_WRITE_LINE_MEMBER(fdc_drq_w);
-	DECLARE_READ8_MEMBER(dma_r);
-	DECLARE_WRITE8_MEMBER(dma_w);
-	DECLARE_READ8_MEMBER(fdc_r);
-	DECLARE_WRITE8_MEMBER(fdc_w);
-	DECLARE_READ8_MEMBER(pia_pa_r);
-	DECLARE_WRITE8_MEMBER(pia_pa_w);
-	DECLARE_READ8_MEMBER(pia_pb_r);
-	DECLARE_WRITE8_MEMBER(pia_pb_w);
+	uint8_t dma_r(offs_t offset);
+	void dma_w(offs_t offset, uint8_t data);
+	uint8_t fdc_r(offs_t offset);
+	void fdc_w(offs_t offset, uint8_t data);
+	uint8_t pia_pa_r();
+	void pia_pa_w(uint8_t data);
+	uint8_t pia_pb_r();
+	void pia_pb_w(uint8_t data);
 
-	DECLARE_FLOPPY_FORMATS(floppy_formats);
+	static void floppy_formats(format_registration &fr);
 
 	void gimix_banked_mem(address_map &map);
 	void gimix_mem(address_map &map);
@@ -152,6 +154,8 @@ private:
 	required_memory_bank m_rombank1;
 	required_memory_bank m_rombank2;
 	required_memory_bank m_fixedrombank;
+	required_memory_bank m_lowerram;
+	memory_bank_creator m_upperram;
 
 	required_ioport m_dma_dip;
 };
@@ -201,7 +205,7 @@ void gimix_state::refresh_memory()
 	}
 }
 
-WRITE8_MEMBER( gimix_state::system_w )
+void gimix_state::system_w(offs_t offset, uint8_t data)
 {
 	if(offset == 0x7f)  // task register
 	{
@@ -233,7 +237,7 @@ WRITE8_MEMBER( gimix_state::system_w )
 	}
 }
 
-READ8_MEMBER(gimix_state::dma_r)
+uint8_t gimix_state::dma_r(offs_t offset)
 {
 	switch(offset)
 	{
@@ -255,7 +259,7 @@ READ8_MEMBER(gimix_state::dma_r)
 	return 0xff;
 }
 
-WRITE8_MEMBER(gimix_state::dma_w)
+void gimix_state::dma_w(offs_t offset, uint8_t data)
 {
 	switch(offset)
 	{
@@ -374,7 +378,7 @@ WRITE8_MEMBER(gimix_state::dma_w)
 	}
 }
 
-READ8_MEMBER(gimix_state::fdc_r)
+uint8_t gimix_state::fdc_r(offs_t offset)
 {
 	// motors are switched on on FDC access
 	if(m_selected_drive == 1 && m_floppy0_ready == false)
@@ -404,7 +408,7 @@ READ8_MEMBER(gimix_state::fdc_r)
 	return m_fdc->read(offset);
 }
 
-WRITE8_MEMBER(gimix_state::fdc_w)
+void gimix_state::fdc_w(offs_t offset, uint8_t data)
 {
 	// motors are switched on on FDC access
 	if(m_selected_drive == 1)
@@ -418,23 +422,23 @@ WRITE8_MEMBER(gimix_state::fdc_w)
 	m_fdc->write(offset,data);
 }
 
-READ8_MEMBER(gimix_state::pia_pa_r)
+uint8_t gimix_state::pia_pa_r()
 {
 	return m_pia1_pa;
 }
 
-WRITE8_MEMBER(gimix_state::pia_pa_w)
+void gimix_state::pia_pa_w(uint8_t data)
 {
 	m_pia1_pa = data;
 	logerror("PIA: Port A write %02x\n",data);
 }
 
-READ8_MEMBER(gimix_state::pia_pb_r)
+uint8_t gimix_state::pia_pb_r()
 {
 	return m_pia1_pb;
 }
 
-WRITE8_MEMBER(gimix_state::pia_pb_w)
+void gimix_state::pia_pb_w(uint8_t data)
 {
 	m_pia1_pb = data;
 	logerror("PIA: Port B write %02x\n",data);
@@ -494,9 +498,9 @@ void gimix_state::machine_reset()
 	m_floppy1_ready = false;
 	m_floppy2_ready = false;
 	m_floppy3_ready = false;
-	membank("lower_ram")->set_base(m_ram->pointer());
+	m_lowerram->set_base(m_ram->pointer());
 	if(m_ram->size() > 65536)
-		membank("upper_ram")->set_base(m_ram->pointer()+0x10000);
+		m_upperram->set_base(m_ram->pointer()+0x10000);
 
 	// initialise FDC clock based on DIP Switch S2-9 (5.25"/8" drive select)
 	if(m_dma_dip->read() & 0x00000100)
@@ -520,7 +524,7 @@ void gimix_state::machine_start()
 	{
 		for (int bank = 0; bank < 16; bank++)
 		{
-			m_bank[bank]->space(AS_PROGRAM).install_readwrite_bank(0x10000,m_ram->size()-1,"upper_ram");
+			m_bank[bank]->space(AS_PROGRAM).install_readwrite_bank(0x10000,m_ram->size()-1,m_upperram);
 		}
 	}
 	m_floppy0->get_device()->set_rpm(300);
@@ -531,11 +535,12 @@ void gimix_state::driver_start()
 {
 }
 
-FLOPPY_FORMATS_MEMBER( gimix_state::floppy_formats )
-	FLOPPY_MFI_FORMAT,
-	FLOPPY_FLEX_FORMAT,
-	FLOPPY_OS9_FORMAT
-FLOPPY_FORMATS_END
+void gimix_state::floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_FLEX_FORMAT);
+	fr.add(FLOPPY_OS9_FORMAT);
+}
 
 static void gimix_floppies(device_slot_interface &device)
 {
@@ -717,7 +722,7 @@ offs_t gimix_state::os9_dasm_override(std::ostream &stream, offs_t pc, const uti
 	if ((opcodes.r8(pc) == 0x10) && (opcodes.r8(pc+1) == 0x3F))
 	{
 		call = opcodes.r8(pc+2);
-		if ((call < ARRAY_LENGTH(os9syscalls)) && (os9syscalls[call] != nullptr))
+		if ((call < std::size(os9syscalls)) && (os9syscalls[call] != nullptr))
 		{
 			util::stream_format(stream, "OS9   %s", os9syscalls[call]);
 			result = 3;
@@ -755,10 +760,10 @@ void gimix_state::gimix(machine_config &config)
 	m_fdc->intrq_wr_callback().set(FUNC(gimix_state::fdc_irq_w));
 	m_fdc->drq_wr_callback().set(FUNC(gimix_state::fdc_drq_w));
 	m_fdc->set_force_ready(true);
-	FLOPPY_CONNECTOR(config, "fdc:0", gimix_floppies, "525hd", gimix_state::floppy_formats).enable_sound(true);;
-	FLOPPY_CONNECTOR(config, "fdc:1", gimix_floppies, "525hd", gimix_state::floppy_formats).enable_sound(true);;
-	FLOPPY_CONNECTOR(config, "fdc:2", gimix_floppies, "525hd", gimix_state::floppy_formats).enable_sound(true);;
-	FLOPPY_CONNECTOR(config, "fdc:3", gimix_floppies, "525hd", gimix_state::floppy_formats).enable_sound(true);;
+	FLOPPY_CONNECTOR(config, "fdc:0", gimix_floppies, "525hd", gimix_state::floppy_formats).enable_sound(true);
+	FLOPPY_CONNECTOR(config, "fdc:1", gimix_floppies, "525hd", gimix_state::floppy_formats).enable_sound(true);
+	FLOPPY_CONNECTOR(config, "fdc:2", gimix_floppies, "525hd", gimix_state::floppy_formats).enable_sound(true);
+	FLOPPY_CONNECTOR(config, "fdc:3", gimix_floppies, "525hd", gimix_state::floppy_formats).enable_sound(true);
 
 	/* parallel ports */
 	pia6821_device &pia1(PIA6821(config, "pia1", 2'000'000));

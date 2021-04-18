@@ -85,7 +85,7 @@
 
 #include "emu.h"
 #include "cpu/powerpc/ppc.h"
-#include "cpu/tlcs900/tlcs900.h"
+#include "cpu/tlcs900/tmp95c063.h"
 #include "cpu/mn10200/mn10200.h"
 #include "cpu/tms32051/tms32051.h"
 #include "video/tc0780fpa.h"
@@ -116,6 +116,10 @@ public:
 
 	void init_optiger();
 
+protected:
+	virtual void machine_reset() override;
+	virtual void video_start() override;
+
 private:
 	required_device<ppc603e_device> m_maincpu;
 	required_device<tmp95c063_device> m_iocpu;
@@ -126,24 +130,22 @@ private:
 	required_memory_region m_polyrom;
 	required_device<gfxdecode_device> m_gfxdecode;
 
-	DECLARE_READ64_MEMBER(video_r);
-	DECLARE_WRITE64_MEMBER(video_w);
-	DECLARE_READ64_MEMBER(ppc_common_r);
-	DECLARE_WRITE64_MEMBER(ppc_common_w);
-	DECLARE_READ64_MEMBER(dsp_r);
-	DECLARE_WRITE64_MEMBER(dsp_w);
-	DECLARE_READ8_MEMBER(tlcs_common_r);
-	DECLARE_WRITE8_MEMBER(tlcs_common_w);
-	DECLARE_READ8_MEMBER(tlcs_sound_r);
-	DECLARE_WRITE8_MEMBER(tlcs_sound_w);
-	DECLARE_WRITE16_MEMBER(tlcs_unk_w);
-	DECLARE_READ16_MEMBER(tms_dspshare_r);
-	DECLARE_WRITE16_MEMBER(tms_dspshare_w);
-	DECLARE_READ16_MEMBER(dsp_rom_r);
-	DECLARE_WRITE16_MEMBER(dsp_roml_w);
-	DECLARE_WRITE16_MEMBER(dsp_romh_w);
-	virtual void machine_reset() override;
-	virtual void video_start() override;
+	uint64_t video_r(offs_t offset, uint64_t mem_mask = ~0);
+	void video_w(offs_t offset, uint64_t data, uint64_t mem_mask = ~0);
+	uint64_t ppc_common_r(offs_t offset, uint64_t mem_mask = ~0);
+	void ppc_common_w(offs_t offset, uint64_t data, uint64_t mem_mask = ~0);
+	uint64_t dsp_r(offs_t offset, uint64_t mem_mask = ~0);
+	void dsp_w(offs_t offset, uint64_t data, uint64_t mem_mask = ~0);
+	uint8_t tlcs_common_r(offs_t offset);
+	void tlcs_common_w(offs_t offset, uint8_t data);
+	uint8_t tlcs_sound_r(offs_t offset);
+	void tlcs_sound_w(offs_t offset, uint8_t data);
+	void tlcs_unk_w(offs_t offset, uint16_t data);
+	uint16_t tms_dspshare_r(offs_t offset);
+	void tms_dspshare_w(offs_t offset, uint16_t data);
+	uint16_t dsp_rom_r();
+	void dsp_roml_w(uint16_t data);
+	void dsp_romh_w(uint16_t data);
 	uint32_t screen_update_taitopjc(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	INTERRUPT_GEN_MEMBER(taitopjc_vbi);
 	uint32_t videochip_r(offs_t address);
@@ -310,7 +312,7 @@ void taitopjc_state::videochip_w(offs_t address, uint32_t data)
 	}
 }
 
-READ64_MEMBER(taitopjc_state::video_r)
+uint64_t taitopjc_state::video_r(offs_t offset, uint64_t mem_mask)
 {
 	uint64_t r = 0;
 
@@ -325,7 +327,7 @@ READ64_MEMBER(taitopjc_state::video_r)
 	return r;
 }
 
-WRITE64_MEMBER(taitopjc_state::video_w)
+void taitopjc_state::video_w(offs_t offset, uint64_t data, uint64_t mem_mask)
 {
 	if (offset == 0)
 	{
@@ -344,7 +346,7 @@ WRITE64_MEMBER(taitopjc_state::video_w)
 	}
 }
 
-READ64_MEMBER(taitopjc_state::ppc_common_r)
+uint64_t taitopjc_state::ppc_common_r(offs_t offset, uint64_t mem_mask)
 {
 	uint64_t r = 0;
 	uint32_t address;
@@ -365,7 +367,7 @@ READ64_MEMBER(taitopjc_state::ppc_common_r)
 	return r;
 }
 
-WRITE64_MEMBER(taitopjc_state::ppc_common_w)
+void taitopjc_state::ppc_common_w(offs_t offset, uint64_t data, uint64_t mem_mask)
 {
 	uint32_t address = offset * 2;
 
@@ -394,7 +396,7 @@ WRITE64_MEMBER(taitopjc_state::ppc_common_w)
 	}
 }
 
-READ64_MEMBER(taitopjc_state::dsp_r)
+uint64_t taitopjc_state::dsp_r(offs_t offset, uint64_t mem_mask)
 {
 	uint64_t r = 0;
 
@@ -485,7 +487,7 @@ void taitopjc_state::print_display_list()
 	}
 }
 
-WRITE64_MEMBER(taitopjc_state::dsp_w)
+void taitopjc_state::dsp_w(offs_t offset, uint64_t data, uint64_t mem_mask)
 {
 	//logerror("dsp_w: %08X, %08X%08X, %08X%08X at %08X\n", offset, (uint32_t)(data >> 32), (uint32_t)(data), (uint32_t)(mem_mask >> 32), (uint32_t)(mem_mask), m_maincpu->pc());
 
@@ -544,7 +546,7 @@ void taitopjc_state::ppc603e_mem(address_map &map)
 
 
 
-READ8_MEMBER(taitopjc_state::tlcs_common_r)
+uint8_t taitopjc_state::tlcs_common_r(offs_t offset)
 {
 	if (offset & 1)
 	{
@@ -556,7 +558,7 @@ READ8_MEMBER(taitopjc_state::tlcs_common_r)
 	}
 }
 
-WRITE8_MEMBER(taitopjc_state::tlcs_common_w)
+void taitopjc_state::tlcs_common_w(offs_t offset, uint8_t data)
 {
 	if (offset & 1)
 	{
@@ -590,7 +592,7 @@ WRITE8_MEMBER(taitopjc_state::tlcs_common_w)
 	}
 }
 
-READ8_MEMBER(taitopjc_state::tlcs_sound_r)
+uint8_t taitopjc_state::tlcs_sound_r(offs_t offset)
 {
 	if (offset == 0x17)
 	{
@@ -600,12 +602,12 @@ READ8_MEMBER(taitopjc_state::tlcs_sound_r)
 	return 0;
 }
 
-WRITE8_MEMBER(taitopjc_state::tlcs_sound_w)
+void taitopjc_state::tlcs_sound_w(offs_t offset, uint8_t data)
 {
 //  printf("tlcs_sound_w: %08X, %02X\n", offset, data);
 }
 
-WRITE16_MEMBER(taitopjc_state::tlcs_unk_w)
+void taitopjc_state::tlcs_unk_w(offs_t offset, uint16_t data)
 {
 	if (offset == 0xc/2)
 	{
@@ -648,12 +650,12 @@ void taitopjc_state::mn10200_map(address_map &map)
 
 
 
-READ16_MEMBER(taitopjc_state::tms_dspshare_r)
+uint16_t taitopjc_state::tms_dspshare_r(offs_t offset)
 {
 	return m_dsp_ram[offset];
 }
 
-WRITE16_MEMBER(taitopjc_state::tms_dspshare_w)
+void taitopjc_state::tms_dspshare_w(offs_t offset, uint16_t data)
 {
 	if (offset == 0xffc)
 	{
@@ -662,7 +664,7 @@ WRITE16_MEMBER(taitopjc_state::tms_dspshare_w)
 	m_dsp_ram[offset] = data;
 }
 
-READ16_MEMBER(taitopjc_state::dsp_rom_r)
+uint16_t taitopjc_state::dsp_rom_r()
 {
 	assert(m_dsp_rom_address < 0x800000);
 
@@ -671,13 +673,13 @@ READ16_MEMBER(taitopjc_state::dsp_rom_r)
 	return data;
 }
 
-WRITE16_MEMBER(taitopjc_state::dsp_roml_w)
+void taitopjc_state::dsp_roml_w(uint16_t data)
 {
 	m_dsp_rom_address &= 0xffff0000;
 	m_dsp_rom_address |= data;
 }
 
-WRITE16_MEMBER(taitopjc_state::dsp_romh_w)
+void taitopjc_state::dsp_romh_w(uint16_t data)
 {
 	m_dsp_rom_address &= 0xffff;
 	m_dsp_rom_address |= (uint32_t)(data) << 16;
@@ -838,6 +840,9 @@ ROM_START( optiger )
 	ROM_LOAD32_BYTE( "e63-32-1_p-hl.22", 0x000001, 0x080000, CRC(cca8bacc) SHA1(e5a081f5c12a52601745f5b67fe3412033581b00) )
 	ROM_LOAD32_BYTE( "e63-31-1_p-lh.8",  0x000002, 0x080000, CRC(ad69e649) SHA1(9fc853d2cb6e7cac87dc06bad91048f191b799c5) )
 	ROM_LOAD32_BYTE( "e63-30-1_p-ll.7",  0x000003, 0x080000, CRC(a6183479) SHA1(e556c3edf100342079e680ec666f018fca7a82b0) )
+
+	ROM_REGION( 0x8000, "dsp", 0 )
+	ROM_LOAD( "tms320bc53.bin", 0x0000, 0x8000, CRC(4b8e7fd6) SHA1(07d354a2e4d7554e215fa8d91b5eeeaf573766b0) ) // decapped. TODO: believed to be a generic TI part, verify if it is and if dump is good, if so move in the CPU core
 
 	ROM_REGION16_LE( 0x20000, "dspdata", 0 )
 	ROM_LOAD16_BYTE( "e63-04_l.29",  0x000000, 0x010000, CRC(eccae391) SHA1(e5293c16342cace54dc4b6dfb827558e18ac25a4) )

@@ -11,6 +11,8 @@
 ****************************************************************************/
 
 #include "emu.h"
+#include "audio/bu3905.h"
+#include "audio/sa16.h"
 //#include "bus/midi/midi.h"
 #include "cpu/mcs51/mcs51.h"
 #include "machine/i8251.h"
@@ -32,6 +34,7 @@ public:
 		, m_io(*this, "io")
 		, m_usart(*this, "usart")
 		, m_lcdc(*this, "lcdc")
+		, m_sampler(*this, "sampler")
 	{
 	}
 
@@ -59,6 +62,7 @@ protected:
 	required_device<mb62h195_device> m_io;
 	required_device<i8251_device> m_usart;
 	required_device<hd44780_device> m_lcdc;
+	required_device<sa16_base_device> m_sampler;
 };
 
 class roland_s220_state : public roland_s10_state
@@ -66,6 +70,7 @@ class roland_s220_state : public roland_s10_state
 public:
 	roland_s220_state(const machine_config &mconfig, device_type type, const char *tag)
 		: roland_s10_state(mconfig, type, tag)
+		, m_outctrl(*this, "outctrl")
 	{
 	}
 
@@ -80,19 +85,21 @@ private:
 	void led_latch2_w(u8 data);
 
 	void s220_ext_map(address_map &map);
+
+	required_device<bu3905_device> m_outctrl;
 };
 
 
 HD44780_PIXEL_UPDATE(roland_s10_state::lcd_pixel_update)
 {
 	if (x < 5 && y < 8 && line < 2 && pos < 8)
-		bitmap.pix16(y, (line * 8 + pos) * 6 + x) = state;
+		bitmap.pix(y, (line * 8 + pos) * 6 + x) = state;
 }
 
 HD44780_PIXEL_UPDATE(roland_s220_state::lcd_pixel_update)
 {
 	if (x < 5 && y < 8 && line < 2 && pos < 16)
-		bitmap.pix16(line * 8 + y, pos * 6 + x) = state;
+		bitmap.pix(line * 8 + y, pos * 6 + x) = state;
 }
 
 u8 roland_s10_state::qdd_r(offs_t offset)
@@ -136,6 +143,7 @@ void roland_s10_state::led_latch_w(u8 data)
 
 void roland_s220_state::output_control_w(offs_t offset, u8 data)
 {
+	m_outctrl->write(offset, data & 0x0f);
 }
 
 void roland_s220_state::vca_cv_w(offs_t offset, u8 data)
@@ -163,7 +171,7 @@ void roland_s10_state::mks100_ext_map(address_map &map)
 	map(0x9000, 0x90ff).mirror(0xf00).w(FUNC(roland_s10_state::led_data_w));
 	map(0xa000, 0xa0ff).mirror(0xf00).rw(FUNC(roland_s10_state::sw_scan_r), FUNC(roland_s10_state::sw_scan_w));
 	map(0xc000, 0xc000).mirror(0xfff).w(FUNC(roland_s10_state::led_latch_w));
-	//map(0xe000, 0xffff).rw("wave", FUNC(rf5c36_device::read), FUNC(rf5c36_device::write));
+	map(0xe000, 0xffff).rw(m_sampler, FUNC(rf5c36_device::read), FUNC(rf5c36_device::write));
 }
 
 void roland_s10_state::s10_ext_map(address_map &map)
@@ -183,7 +191,7 @@ void roland_s220_state::s220_ext_map(address_map &map)
 	map(0x9000, 0x90ff).mirror(0xf00).w(FUNC(roland_s220_state::vca_cv_w));
 	map(0xa000, 0xa0ff).mirror(0xf00).rw(FUNC(roland_s220_state::sw_scan_r), FUNC(roland_s220_state::sw_scan_w));
 	map(0xc000, 0xc000).mirror(0xfff).w(FUNC(roland_s220_state::led_latch2_w));
-	//map(0xe000, 0xffff).rw("wave", FUNC(rf5c36_device::read), FUNC(rf5c36_device::write));
+	map(0xe000, 0xffff).rw(m_sampler, FUNC(rf5c36_device::read), FUNC(rf5c36_device::write));
 }
 
 
@@ -238,11 +246,12 @@ void roland_s10_state::s10(machine_config &config)
 	HD44780(config, m_lcdc, 0);
 	m_lcdc->set_lcd_size(2, 8);
 	m_lcdc->set_pixel_update_cb(FUNC(roland_s10_state::lcd_pixel_update));
-	m_lcdc->set_busy_factor(0.005);
+	m_lcdc->set_busy_factor(0.005f);
 
 	UPD7001(config, "adc", RES_K(27), CAP_P(47));
 
-	//RF5C36(config, "wave", 26.88_MHz_XTAL);
+	RF5C36(config, m_sampler, 26.88_MHz_XTAL);
+	m_sampler->int_callback().set_inputline(m_maincpu, MCS51_INT1_LINE);
 }
 
 void roland_s10_state::mks100(machine_config &config)
@@ -276,6 +285,10 @@ void roland_s220_state::s220(machine_config &config)
 	subdevice<screen_device>("screen")->set_size(6*16, 8*2);
 	subdevice<screen_device>("screen")->set_visarea_full();
 	m_lcdc->set_pixel_update_cb(FUNC(roland_s220_state::lcd_pixel_update));
+
+	BU3905(config, m_outctrl);
+
+	m_sampler->sh_callback().set(m_outctrl, FUNC(bu3905_device::axi_w));
 }
 
 

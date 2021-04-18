@@ -41,6 +41,9 @@
 
 #include "cops.lh"
 
+
+namespace {
+
 #define LOG_CDROM   1
 #define LOG_DACIA   1
 
@@ -60,19 +63,14 @@ public:
 		, m_irq(0)
 	{ }
 
-	// devices
-	required_device<cpu_device> m_maincpu;
-	required_device<sn76489_device> m_sn;
-	required_device<sony_ldp1450_device> m_ld;
-
-	// screen updates
-	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
-
 	void revlatns(machine_config &config);
 	void base(machine_config &config);
 	void cops(machine_config &config);
 	void cops_map(address_map &map);
 	void revlatns_map(address_map &map);
+
+	void init_cops();
+
 protected:
 	// driver_device overrides
 	virtual void machine_start() override;
@@ -80,27 +78,33 @@ protected:
 
 	virtual void video_start() override;
 
-public:
-	DECLARE_WRITE8_MEMBER(io1_w);
-	DECLARE_READ8_MEMBER(io1_r);
-	DECLARE_READ8_MEMBER(io1_lm_r);
-	DECLARE_WRITE8_MEMBER(io2_w);
-	DECLARE_READ8_MEMBER(io2_r);
-	DECLARE_READ8_MEMBER(ldstatus_r);
+private:
+	// devices
+	required_device<cpu_device> m_maincpu;
+	required_device<sn76489_device> m_sn;
+	required_device<sony_ldp1450_device> m_ld;
+
+	// screen updates
+	[[maybe_unused]] uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
+
+	void io1_w(offs_t offset, uint8_t data);
+	uint8_t io1_r(offs_t offset);
+	uint8_t io1_lm_r(offs_t offset);
+	void io2_w(offs_t offset, uint8_t data);
+	uint8_t io2_r(offs_t offset);
 	DECLARE_WRITE_LINE_MEMBER(dacia_irq);
-	DECLARE_WRITE_LINE_MEMBER(ld_w);
+	[[maybe_unused]] DECLARE_WRITE_LINE_MEMBER(ld_w);
 	DECLARE_WRITE_LINE_MEMBER(via1_irq);
 	DECLARE_WRITE_LINE_MEMBER(via2_irq);
 	void dacia_receive(uint8_t data);
 	void update_dacia_irq();
-	DECLARE_WRITE8_MEMBER(dacia_w);
-	DECLARE_READ8_MEMBER(dacia_r);
-	DECLARE_WRITE8_MEMBER(via1_b_w);
-	DECLARE_WRITE8_MEMBER(via1_cb1_w);
-	DECLARE_WRITE8_MEMBER(cdrom_data_w);
-	DECLARE_WRITE8_MEMBER(cdrom_ctrl_w);
-	DECLARE_READ8_MEMBER(cdrom_data_r);
-	void init_cops();
+	void dacia_w(offs_t offset, uint8_t data);
+	uint8_t dacia_r(offs_t offset);
+	void via1_b_w(uint8_t data);
+	void via1_cb1_w(uint8_t data);
+	void cdrom_data_w(uint8_t data);
+	void cdrom_ctrl_w(uint8_t data);
+	uint8_t cdrom_data_r();
 	int m_irq;
 
 	uint8_t m_lcd_addr_l, m_lcd_addr_h;
@@ -159,8 +163,8 @@ public:
 
 	uint8_t m_ld_command_to_send[8];
 	uint8_t m_ld_command_current_byte;
-	uint8_t ldcount=0;
-	uint8_t lddata;
+	uint8_t m_ldcount=0;
+	uint8_t m_lddata;
 	uint8_t generate_isr();
 	uint8_t generate_isr2();
 //  void laserdisc_w(uint8_t data);
@@ -202,7 +206,7 @@ uint32_t cops_state::screen_update( screen_device &screen, bitmap_ind16 &bitmap,
  *
  *************************************/
 
-WRITE8_MEMBER(cops_state::cdrom_data_w)
+void cops_state::cdrom_data_w(uint8_t data)
 {
 	const char *regs[4] = { "CMD", "PARAM", "WRITE", "CTRL" };
 	m_cdrom_data = bitswap<8>(data,0,1,2,3,4,5,6,7);
@@ -210,13 +214,13 @@ WRITE8_MEMBER(cops_state::cdrom_data_w)
 	if (LOG_CDROM) logerror("%s:cdrom_data_w(reg = %s, data = %02x)\n", machine().describe_context(), regs[reg & 0x03], m_cdrom_data);
 }
 
-WRITE8_MEMBER(cops_state::cdrom_ctrl_w)
+void cops_state::cdrom_ctrl_w(uint8_t data)
 {
 	if (LOG_CDROM) logerror("%s:cdrom_ctrl_w(%02x)\n", machine().describe_context(), data);
 	m_cdrom_ctrl = data;
 }
 
-READ8_MEMBER(cops_state::cdrom_data_r)
+uint8_t cops_state::cdrom_data_r()
 {
 	const char *regs[4] = { "STATUS", "RESULT", "READ", "FIFOST" };
 	uint8_t reg = ((m_cdrom_ctrl & 4) >> 1) | ((m_cdrom_ctrl & 8) >> 3);
@@ -229,15 +233,10 @@ READ8_MEMBER(cops_state::cdrom_data_r)
  *
  *************************************/
 
-READ8_MEMBER(cops_state::ldstatus_r)
-{
-	return m_ld->status_r();
-}
-
 TIMER_CALLBACK_MEMBER(cops_state::ld_timer_callback)
 {
 	m_dacia_receiver_full = 1;
- int m_ld_command_total_bytes =8;
+	int m_ld_command_total_bytes =8;
 
 	if ( m_ld_command_current_byte < m_ld_command_total_bytes )
 	{
@@ -252,15 +251,15 @@ TIMER_CALLBACK_MEMBER(cops_state::ld_timer_callback)
 
 WRITE_LINE_MEMBER(cops_state::ld_w)
 {
-	lddata <<= 1;
+	m_lddata <<= 1;
 
-	if ( state ) lddata |= 1;
+	if ( state ) m_lddata |= 1;
 
-	if ( ++ldcount >= 8 )
+	if ( ++m_ldcount >= 8 )
 	{
-		ldcount = 0;
-		lddata  = 0;
-		printf("LDBYTE %d",lddata);
+		m_ldcount = 0;
+		m_lddata  = 0;
+		printf("LDBYTE %d", m_lddata);
 	}
 
 	printf("LDBIT %d",state);
@@ -366,7 +365,7 @@ uint8_t cops_state::generate_isr2()
 	return isr2;
 }
 
-READ8_MEMBER(cops_state::dacia_r)
+uint8_t cops_state::dacia_r(offs_t offset)
 {
 	switch(offset & 0x07)
 	{
@@ -431,12 +430,11 @@ READ8_MEMBER(cops_state::dacia_r)
 	}
 }
 
-WRITE8_MEMBER(cops_state::dacia_w)
+void cops_state::dacia_w(offs_t offset, uint8_t data)
 {
 	switch(offset & 0x07)
 	{
 		case 0: /* IRQ enable Register 1 */
-		{
 			m_dacia_irq1_reg &= ~0x80;
 
 			if (data & 0x80) //enable bits
@@ -450,10 +448,8 @@ WRITE8_MEMBER(cops_state::dacia_w)
 			if (LOG_DACIA) logerror("DACIA IRQ 1 Register: %02x\n", m_dacia_irq1_reg);
 			update_dacia_irq();
 			break;
-		}
 
 		case 1: /* Control / Format Register 1 */
-		{
 			if (data & 0x80) //Format Register
 			{
 				m_dacia_rts1 = (data & 0x01);
@@ -484,13 +480,12 @@ WRITE8_MEMBER(cops_state::dacia_w)
 
 			}
 			break;
-		}
+
 		case 2: /* Compare / Aux Ctrl Register 1 */
-		{
 			if (m_dacia_reg1 == CMP_REGISTER)
 			{
-				m_dacia_cmp1 =1;
-				m_dacia_cmpval1=data;
+				m_dacia_cmp1 = 1;
+				m_dacia_cmpval1 = data;
 				if (LOG_DACIA) logerror("DACIA Compare mode: %02x \n", data);
 //              update_dacia_irq();
 			}
@@ -498,15 +493,13 @@ WRITE8_MEMBER(cops_state::dacia_w)
 			{
 				if (LOG_DACIA) logerror("DACIA Aux ctrl: %02x \n", data);
 			}
-		}
+			[[fallthrough]]; // FIXME: really?
 		case 3: /* Transmit Data Register 1 */
-		{
 			if (LOG_DACIA) logerror("DACIA Transmit: %02x %c\n", data, (char)data);
 			m_ld->command_w(data);
 			break;
-		}
+
 		case 4: /* IRQ enable Register 2 */
-		{
 			m_dacia_irq2_reg &= ~0x80;
 
 			if (data & 0x80) //enable bits
@@ -520,10 +513,8 @@ WRITE8_MEMBER(cops_state::dacia_w)
 			if (LOG_DACIA) logerror("DACIA IRQ 2 Register: %02x\n", m_dacia_irq2_reg);
 			update_dacia_irq();
 			break;
-		}
 
 		case 5: /* Control / Format Register 2 */
-		{
 			if (data & 0x80) //Format Register
 			{
 				m_dacia_rts2 = (data & 0x01);
@@ -554,9 +545,8 @@ WRITE8_MEMBER(cops_state::dacia_w)
 
 			}
 			break;
-		}
+
 		case 6: /* Compare / Aux Ctrl Register 2 */
-		{
 			if (m_dacia_reg2 == CMP_REGISTER)
 			{
 				m_dacia_cmp2 =1;
@@ -568,9 +558,8 @@ WRITE8_MEMBER(cops_state::dacia_w)
 			{
 				if (LOG_DACIA) logerror("DACIA Aux ctrl 2: %02x \n", data);
 			}
-		}
+			[[fallthrough]]; // FIXME: really?
 		case 7: /* Transmit Data Register 2 */
-		{
 			if (LOG_DACIA) logerror("DACIA Transmit 2: %02x %c\n", data, (char)data);
 
 		//  for (int i=0; i <8; i++)
@@ -579,7 +568,6 @@ WRITE8_MEMBER(cops_state::dacia_w)
 			}
 //          m_ld->command_w(data);
 			break;
-		}
 	}
 }
 /*************************************
@@ -588,7 +576,7 @@ WRITE8_MEMBER(cops_state::dacia_w)
  *
  *************************************/
 
-READ8_MEMBER(cops_state::io1_r)
+uint8_t cops_state::io1_r(offs_t offset)
 {
 	switch( offset & 0x0f )
 	{
@@ -604,7 +592,7 @@ READ8_MEMBER(cops_state::io1_r)
 	}
 }
 
-READ8_MEMBER(cops_state::io1_lm_r)
+uint8_t cops_state::io1_lm_r(offs_t offset)
 {
 	switch( offset & 0x0f )
 	{
@@ -622,7 +610,7 @@ READ8_MEMBER(cops_state::io1_lm_r)
 	}
 }
 
-WRITE8_MEMBER(cops_state::io1_w)
+void cops_state::io1_w(offs_t offset, uint8_t data)
 {
 	int i;
 	char output_name[16];
@@ -697,7 +685,7 @@ WRITE8_MEMBER(cops_state::io1_w)
 	}
 }
 
-READ8_MEMBER(cops_state::io2_r)
+uint8_t cops_state::io2_r(offs_t offset)
 {
 	switch( offset & 0x0f )
 	{
@@ -709,7 +697,7 @@ READ8_MEMBER(cops_state::io2_r)
 	}
 }
 
-WRITE8_MEMBER(cops_state::io2_w)
+void cops_state::io2_w(offs_t offset, uint8_t data)
 {
 	switch( offset & 0x0f )
 	{
@@ -760,7 +748,7 @@ WRITE_LINE_MEMBER(cops_state::via1_irq)
 	m_maincpu->set_input_line(M6502_IRQ_LINE, m_irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
-WRITE8_MEMBER(cops_state::via1_b_w)
+void cops_state::via1_b_w(uint8_t data)
 {
 	m_sn_data = bitswap<8>(data,0,1,2,3,4,5,6,7);
 	if (m_sn_cb1)
@@ -769,7 +757,7 @@ WRITE8_MEMBER(cops_state::via1_b_w)
 	}
 }
 
-WRITE8_MEMBER(cops_state::via1_cb1_w)
+void cops_state::via1_cb1_w(uint8_t data)
 {
 	m_sn_cb1 = data;
 }
@@ -891,6 +879,10 @@ void cops_state::machine_start()
 	m_ld_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(cops_state::ld_timer_callback),this));
 
 	m_ld_timer->adjust(attotime::from_hz(167*5), 0, attotime::from_hz(167*5));
+
+	m_dacia_cmpval1 = m_dacia_cmpval2 = 0;
+	m_ld_command_current_byte = 0;
+	std::fill(std::begin(m_ld_command_to_send), std::end(m_ld_command_to_send), 0);
 }
 
 void cops_state::machine_reset()
@@ -932,7 +924,7 @@ void cops_state::base(machine_config &config)
 	screen.set_screen_update("laserdisc", FUNC(laserdisc_device::screen_update));
 
 	/* via */
-	via6522_device &via1(VIA6522(config, "via6522_1", MAIN_CLOCK/2));
+	via6522_device &via1(MOS6522(config, "via6522_1", MAIN_CLOCK/2));
 	via1.irq_handler().set(FUNC(cops_state::via1_irq));
 	via1.writepb_handler().set(FUNC(cops_state::via1_b_w));
 	via1.cb1_handler().set(FUNC(cops_state::via1_cb1_w));
@@ -951,10 +943,10 @@ void cops_state::cops(machine_config &config)
 	base(config);
 	m_maincpu->set_addrmap(AS_PROGRAM, &cops_state::cops_map);
 
-	via6522_device &via2(VIA6522(config, "via6522_2", MAIN_CLOCK/2));
+	via6522_device &via2(MOS6522(config, "via6522_2", MAIN_CLOCK/2));
 	via2.irq_handler().set(FUNC(cops_state::via2_irq));
 
-	via6522_device &via3(VIA6522(config, "via6522_3", MAIN_CLOCK/2));
+	via6522_device &via3(MOS6522(config, "via6522_3", MAIN_CLOCK/2));
 	via3.readpa_handler().set(FUNC(cops_state::cdrom_data_r));
 	via3.writepa_handler().set(FUNC(cops_state::cdrom_data_w));
 	via3.writepb_handler().set(FUNC(cops_state::cdrom_ctrl_w));
@@ -1012,6 +1004,8 @@ ROM_START( revlatns )
 	DISK_REGION( "laserdisc" )
 	DISK_IMAGE_READONLY( "revlatns", 0, NO_DUMP )
 ROM_END
+
+} // Anonymous namespace
 
 
 GAMEL( 1994, cops,     0,    cops,     cops,     cops_state, init_cops, ROT0, "Atari Games",                      "Cops (USA)",  MACHINE_NOT_WORKING | MACHINE_NO_SOUND, layout_cops )

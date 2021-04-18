@@ -99,8 +99,6 @@
 
 #include "formats/victor9k_dsk.h"
 
-#include "emucore.h" // emu_fatalerror
-
 
 victor9k_format::victor9k_format()
 {
@@ -132,7 +130,7 @@ int victor9k_format::find_size(io_generic *io, uint32_t form_factor)
 	return -1;
 }
 
-int victor9k_format::identify(io_generic *io, uint32_t form_factor)
+int victor9k_format::identify(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
 	int type = find_size(io, form_factor);
 
@@ -250,7 +248,7 @@ void victor9k_format::build_sector_description(const format &f, uint8_t *sectdat
 	}
 }
 
-bool victor9k_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
+bool victor9k_format::load(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants, floppy_image *image)
 {
 	int type = find_size(io, form_factor);
 	if(type == -1)
@@ -278,8 +276,10 @@ bool victor9k_format::load(io_generic *io, uint32_t form_factor, floppy_image *i
 			floppy_image_format_t::desc_e *desc = get_sector_desc(f, current_size, sector_count);
 
 			int remaining_size = total_size - current_size;
-			if(remaining_size < 0)
-				throw emu_fatalerror("victor9k_format: Incorrect track layout, max_size=%d, current_size=%d", total_size, current_size);
+			if(remaining_size < 0) {
+				osd_printf_error("victor9k_format: Incorrect track layout, max_size=%d, current_size=%d\n", total_size, current_size);
+				return false;
+			}
 
 			// Fixup the end gap
 			desc[18].p2 = remaining_size / 8;
@@ -392,7 +392,7 @@ const int victor9k_format::rpm[9] =
 	252, 267, 283, 300, 321, 342, 368, 401, 417
 };
 
-bool victor9k_format::save(io_generic *io, floppy_image *image)
+bool victor9k_format::save(io_generic *io, const std::vector<uint32_t> &variants, floppy_image *image)
 {
 	const format &f = formats[0];
 
@@ -415,25 +415,20 @@ bool victor9k_format::save(io_generic *io, floppy_image *image)
 
 void victor9k_format::extract_sectors(floppy_image *image, const format &f, desc_s *sdesc, int track, int head, int sector_count)
 {
-	uint8_t bitstream[500000/8];
-	uint8_t sectdata[50000];
-	desc_xs sectors[256];
-	int track_size;
-
 	// Extract the sectors
-	generate_bitstream_from_track(track, head, cell_size[speed_zone[head][track]], bitstream, track_size, image);
-	extract_sectors_from_bitstream_victor_gcr5(bitstream, track_size, sectors, sectdata, sizeof(sectdata));
+	auto bitstream = generate_bitstream_from_track(track, head, cell_size[speed_zone[head][track]], image);
+	auto sectors = extract_sectors_from_bitstream_victor_gcr5(bitstream);
 
 	for(int i=0; i<sector_count; i++) {
 		desc_s &ds = sdesc[i];
-		desc_xs &xs = sectors[ds.sector_id];
-		if(!xs.data)
+		const auto &data = sectors[ds.sector_id];
+		if(data.empty())
 			memset((void *)ds.data, 0, ds.size);
-		else if(xs.size < ds.size) {
-			memcpy((void *)ds.data, xs.data, xs.size);
-			memset((uint8_t *)ds.data + xs.size, 0, xs.size - ds.size);
+		else if(data.size() < ds.size) {
+			memcpy((void *)ds.data, data.data(), data.size());
+			memset((uint8_t *)ds.data + data.size(), 0, data.size() - ds.size);
 		} else
-			memcpy((void *)ds.data, xs.data, ds.size);
+			memcpy((void *)ds.data, data.data(), ds.size);
 	}
 }
 

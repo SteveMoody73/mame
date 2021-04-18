@@ -16,7 +16,7 @@
 
 #include "cpu/m6809/hd6309.h"
 #include "machine/watchdog.h"
-#include "sound/2203intf.h"
+#include "sound/ym2203.h"
 
 #include "speaker.h"
 
@@ -34,7 +34,7 @@ INTERRUPT_GEN_MEMBER(labyrunr_state::labyrunr_timer_interrupt)
 }
 
 
-WRITE8_MEMBER(labyrunr_state::labyrunr_bankswitch_w)
+void labyrunr_state::labyrunr_bankswitch_w(uint8_t data)
 {
 	if (data & 0xe0) popmessage("bankswitch %02x", data);
 

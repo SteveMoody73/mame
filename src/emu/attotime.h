@@ -122,6 +122,9 @@ public:
 	/** Convert to string using at @p precision */
 	const char *as_string(int precision = 9) const;
 
+	/** Convert to string for human readability in logs */
+	std::string to_string() const;
+
 	/** @return the attoseconds portion. */
 	constexpr attoseconds_t attoseconds() const noexcept { return m_attoseconds; }
 	/** @return the seconds portion. */
@@ -354,7 +357,7 @@ inline attotime attotime::from_ticks(u64 ticks, u32 frequency)
 			return attotime(0, ticks * attos_per_tick);
 
 		u32 remainder;
-		s32 secs = divu_64x32_rem(ticks, frequency, &remainder);
+		s32 secs = divu_64x32_rem(ticks, frequency, remainder);
 		return attotime(secs, u64(remainder) * attos_per_tick);
 	}
 	else

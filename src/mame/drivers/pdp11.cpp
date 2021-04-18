@@ -89,11 +89,14 @@
 ****************************************************************************/
 
 #include "emu.h"
+#include "bus/qbus/qbus.h"
 #include "cpu/t11/t11.h"
 #include "cpu/i86/i186.h"
 #include "machine/terminal.h"
 #include "machine/rx01.h"
 
+
+namespace {
 
 class pdp11_state : public driver_device
 {
@@ -102,6 +105,7 @@ public:
 		: driver_device(mconfig, type, tag)
 		, m_maincpu(*this, "maincpu")
 		, m_terminal(*this, "terminal")
+		, m_qbus(*this, "qbus")
 	{ }
 
 	void pdp11ub2(machine_config &config);
@@ -109,15 +113,19 @@ public:
 	void pdp11qb(machine_config &config);
 	void sms1000(machine_config &config);
 
+protected:
+	virtual void machine_start() override;
+	virtual void machine_reset() override;
+
 private:
 	required_device<t11_device> m_maincpu;
 	required_device<generic_terminal_device> m_terminal;
-	DECLARE_READ16_MEMBER( teletype_ctrl_r );
-	DECLARE_WRITE16_MEMBER( teletype_ctrl_w );
+	required_device<qbus_device> m_qbus;
+	uint16_t teletype_ctrl_r(offs_t offset);
+	void teletype_ctrl_w(offs_t offset, uint16_t data);
 	void kbd_put(u8 data);
 	uint8_t m_teletype_data;
 	uint16_t m_teletype_status;
-	virtual void machine_reset() override;
 	DECLARE_MACHINE_RESET(pdp11ub2);
 	DECLARE_MACHINE_RESET(pdp11qb);
 	void load9312prom(uint8_t *desc, uint8_t *src, int size);
@@ -126,7 +134,7 @@ private:
 	void sms1000_mem_188(address_map &map);
 };
 
-READ16_MEMBER(pdp11_state::teletype_ctrl_r)
+uint16_t pdp11_state::teletype_ctrl_r(offs_t offset)
 {
 	uint16_t res = 0;
 
@@ -154,7 +162,7 @@ READ16_MEMBER(pdp11_state::teletype_ctrl_r)
 	return res;
 }
 
-WRITE16_MEMBER(pdp11_state::teletype_ctrl_w)
+void pdp11_state::teletype_ctrl_w(offs_t offset, uint16_t data)
 {
 	switch(offset)
 	{
@@ -278,6 +286,14 @@ static INPUT_PORTS_START( pdp11 )
 	M9312_PORT_CONFSETTING
 INPUT_PORTS_END
 
+void pdp11_state::machine_start()
+{
+	m_teletype_data = 0;
+	m_teletype_status = 0;
+
+	save_item(NAME(m_teletype_data));
+	save_item(NAME(m_teletype_status));
+}
 
 void pdp11_state::machine_reset()
 {
@@ -369,7 +385,7 @@ void pdp11_state::kbd_put(u8 data)
 void pdp11_state::pdp11(machine_config &config)
 {
 	/* basic machine hardware */
-	T11(config, m_maincpu, XTAL(4'000'000)); // Need proper CPU here
+	T11(config, m_maincpu, 4'000'000); // Need proper CPU here
 	m_maincpu->set_initial_mode(6 << 13);
 	m_maincpu->set_addrmap(AS_PROGRAM, &pdp11_state::pdp11_mem);
 
@@ -378,6 +394,13 @@ void pdp11_state::pdp11(machine_config &config)
 	m_terminal->set_keyboard_callback(FUNC(pdp11_state::kbd_put));
 
 	RX01(config, "rx01", 0);
+	QBUS(config, m_qbus, 0);
+	m_qbus->set_space(m_maincpu, AS_PROGRAM);
+	m_qbus->birq4().set_inputline(m_maincpu, T11_IRQ0);
+	QBUS_SLOT(config, "qbus" ":1", qbus_cards, "pc11");
+	QBUS_SLOT(config, "qbus" ":2", qbus_cards, nullptr);
+	QBUS_SLOT(config, "qbus" ":3", qbus_cards, nullptr);
+	QBUS_SLOT(config, "qbus" ":4", qbus_cards, nullptr);
 }
 
 void pdp11_state::pdp11ub2(machine_config &config)
@@ -388,7 +411,7 @@ void pdp11_state::pdp11ub2(machine_config &config)
 
 void pdp11_state::pdp11qb(machine_config &config)
 {
-	pdp11(config);
+	pdp11(config); // FIXME: MXV11-B requires a F-11 or J-11 CPU
 	MCFG_MACHINE_RESET_OVERRIDE(pdp11_state,pdp11qb)
 
 	m_maincpu->set_initial_mode(0 << 13);
@@ -497,10 +520,13 @@ ROM_START( sms1000 )
 	ROM_LOAD( "2127001b",     0x1f000, 0x000100, NO_DUMP ) // has 3 of these
 ROM_END
 
+} // Anonymous namespace
+
+
 /* Driver */
 
-/*    YEAR  NAME      PARENT   COMPAT  MACHINE   INPUT  CLASS        INIT        COMPANY                          FULLNAME                          FLAGS */
-COMP( ????, pdp11ub,  0,       0,      pdp11,    pdp11, pdp11_state, empty_init, "Digital Equipment Corporation", "PDP-11 [Unibus](M9301-YA)",      MACHINE_NOT_WORKING | MACHINE_NO_SOUND)
-COMP( ????, pdp11ub2, pdp11ub, 0,      pdp11ub2, pdp11, pdp11_state, empty_init, "Digital Equipment Corporation", "PDP-11 [Unibus](M9312)",         MACHINE_NOT_WORKING | MACHINE_NO_SOUND)
-COMP( ????, pdp11qb,  pdp11ub, 0,      pdp11qb,  pdp11, pdp11_state, empty_init, "Digital Equipment Corporation", "PDP-11 [Q-BUS] (M7195 - MXV11)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND)
-COMP( 1987, sms1000,  0,       0,      sms1000,  pdp11, pdp11_state, empty_init, "Scientific Micro Systems",      "SMS-1000",                       MACHINE_IS_SKELETON )
+/*    YEAR  NAME      PARENT   COMPAT  MACHINE   INPUT  CLASS        INIT        COMPANY                          FULLNAME                            FLAGS */
+COMP( 197?, pdp11ub,  0,       0,      pdp11,    pdp11, pdp11_state, empty_init, "Digital Equipment Corporation", "PDP-11 [Unibus](M9301-YA)",        MACHINE_NOT_WORKING | MACHINE_NO_SOUND)
+COMP( 197?, pdp11ub2, pdp11ub, 0,      pdp11ub2, pdp11, pdp11_state, empty_init, "Digital Equipment Corporation", "PDP-11 [Unibus](M9312)",           MACHINE_NOT_WORKING | MACHINE_NO_SOUND)
+COMP( 198?, pdp11qb,  pdp11ub, 0,      pdp11qb,  pdp11, pdp11_state, empty_init, "Digital Equipment Corporation", "PDP-11 [Q-BUS] (M7195 - MXV11-B)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND)
+COMP( 1987, sms1000,  0,       0,      sms1000,  pdp11, pdp11_state, empty_init, "Scientific Micro Systems",      "SMS-1000",                         MACHINE_IS_SKELETON )

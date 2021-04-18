@@ -176,8 +176,8 @@ void airraid_video_device::mix_layer(screen_device &screen, bitmap_ind16 &bitmap
 {
 	for (int y = cliprect.min_y; y <= cliprect.max_y; y++)
 	{
-		uint16_t *dest = &bitmap.pix16(y);
-		uint16_t *src = &m_temp_bitmap.pix16(y);
+		uint16_t *const dest = &bitmap.pix(y);
+		uint16_t const *const src = &m_temp_bitmap.pix(y);
 		for (int x = cliprect.min_x; x <= cliprect.max_x; x++)
 		{
 			uint8_t pix = src[x] & 0xff;
@@ -239,13 +239,13 @@ uint32_t airraid_video_device::screen_update_airraid(screen_device &screen, bitm
 
 // public functions
 
-WRITE8_MEMBER(airraid_video_device::txram_w)
+void airraid_video_device::txram_w(offs_t offset, uint8_t data)
 {
 	m_txram[offset] = data;
 	m_tx_tilemap->mark_tile_dirty(offset/2);
 }
 
-WRITE8_MEMBER(airraid_video_device::vregs_w)
+void airraid_video_device::vregs_w(offs_t offset, uint8_t data)
 {
 	m_vregs[offset] = data;
 

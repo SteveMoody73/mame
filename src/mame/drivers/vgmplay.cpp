@@ -14,15 +14,7 @@
 #include "cpu/m6502/n2a03.h"
 #include "cpu/m68000/m68000.h"
 #include "cpu/sh/sh2.h"
-#include "sound/2203intf.h"
-#include "sound/2608intf.h"
-#include "sound/2610intf.h"
-#include "sound/2612intf.h"
-#include "sound/262intf.h"
-#include "sound/3526intf.h"
-#include "sound/3812intf.h"
 #include "sound/ay8910.h"
-#include "sound/8950intf.h"
 #include "sound/c140.h"
 #include "sound/c352.h"
 #include "sound/c6280.h"
@@ -46,9 +38,17 @@
 #include "sound/upd7759.h"
 #include "sound/vgm_visualizer.h"
 #include "sound/x1_010.h"
+#include "sound/y8950.h"
 #include "sound/ym2151.h"
+#include "sound/ym2203.h"
 #include "sound/ym2413.h"
+#include "sound/ym2608.h"
+#include "sound/ym2610.h"
+#include "sound/ym2612.h"
+#include "sound/ym3526.h"
+#include "sound/ym3812.h"
 #include "sound/ymf271.h"
+#include "sound/ymf262.h"
 #include "sound/ymf278b.h"
 #include "sound/ymz280b.h"
 #include "audio/vboy.h"
@@ -61,13 +61,16 @@
 
 #include <zlib.h>
 
+#include <algorithm>
+#include <iterator>
 #include <list>
 #include <memory>
+#include <queue>
 #include <utility>
 #include <vector>
-#include <queue>
 
-#define AS_IO16             1
+#define AS_IO16LE           1
+#define AS_IO16BE           4
 
 class vgmplay_disassembler : public util::disasm_interface
 {
@@ -124,6 +127,14 @@ enum vgm_chip
 	CT_GA20,
 
 	CT_COUNT,
+};
+
+enum C140_TYPE
+{
+	C140_LINEAR = 0,
+	C140_SYSTEM2,
+	C140_SYSTEM21,
+	C140_ASIC219
 };
 
 class vgmplay_device : public cpu_device
@@ -238,34 +249,38 @@ public:
 
 	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
 
-	template<int Index> DECLARE_READ8_MEMBER(segapcm_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(ym2608_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(ym2610_adpcm_a_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(ym2610_adpcm_b_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(y8950_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(ymf278b_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(ymf271_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(ymz280b_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(multipcm_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(upd7759_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(okim6295_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(k054539_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(c140_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(k053260_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(qsound_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(es5505_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(x1_010_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(c352_rom_r);
-	template<int Index> DECLARE_READ8_MEMBER(ga20_rom_r);
+	template<int Index> uint8_t segapcm_rom_r(offs_t offset);
+	template<int Index> uint8_t ym2608_rom_r(offs_t offset);
+	template<int Index> uint8_t ym2610_adpcm_a_rom_r(offs_t offset);
+	template<int Index> uint8_t ym2610_adpcm_b_rom_r(offs_t offset);
+	template<int Index> uint8_t y8950_rom_r(offs_t offset);
+	template<int Index> uint8_t ymf278b_rom_r(offs_t offset);
+	template<int Index> uint8_t ymf271_rom_r(offs_t offset);
+	template<int Index> uint8_t ymz280b_rom_r(offs_t offset);
+	template<int Index> uint8_t multipcm_rom_r(offs_t offset);
+	template<int Index> uint8_t upd7759_rom_r(offs_t offset);
+	template<int Index> uint8_t okim6295_rom_r(offs_t offset);
+	template<int Index> uint8_t k054539_rom_r(offs_t offset);
+	template<int Index> uint16_t c140_rom_r(offs_t offset);
+	template<int Index> uint16_t c219_rom_r(offs_t offset);
+	template<int Index> uint8_t k053260_rom_r(offs_t offset);
+	template<int Index> uint8_t qsound_rom_r(offs_t offset);
+	template<int Index> uint8_t es5505_rom_r(offs_t offset);
+	template<int Index> uint8_t x1_010_rom_r(offs_t offset);
+	template<int Index> uint8_t c352_rom_r(offs_t offset);
+	template<int Index> uint8_t ga20_rom_r(offs_t offset);
 
-	template<int Index> DECLARE_WRITE8_MEMBER(multipcm_bank_hi_w);
-	template<int Index> DECLARE_WRITE8_MEMBER(multipcm_bank_lo_w);
+	template<int Index> void multipcm_bank_hi_w(offs_t offset, uint8_t data);
+	template<int Index> void multipcm_bank_lo_w(offs_t offset, uint8_t data);
 
-	template<int Index> DECLARE_WRITE8_MEMBER(upd7759_bank_w);
+	template<int Index> void upd7759_bank_w(uint8_t data);
 
-	template<int Index> DECLARE_WRITE8_MEMBER(okim6295_nmk112_enable_w);
-	template<int Index> DECLARE_WRITE8_MEMBER(okim6295_bank_w);
-	template<int Index> DECLARE_WRITE8_MEMBER(okim6295_nmk112_bank_w);
+	template<int Index> void okim6295_nmk112_enable_w(offs_t offset, uint8_t data, uint8_t mem_mask = ~0);
+	template<int Index> void okim6295_bank_w(offs_t offset, uint8_t data, uint8_t mem_mask = ~0);
+	template<int Index> void okim6295_nmk112_bank_w(offs_t offset, uint8_t data, uint8_t mem_mask = ~0);
+
+	void set_c140_bank_type(int index, C140_TYPE type);
+	C140_TYPE c140_bank(int index) { return m_c140_bank[index]; }
 
 	void stop();
 	void pause();
@@ -336,8 +351,8 @@ private:
 	led_expiry_iterator m_act_led_off;
 	emu_timer *m_act_led_timer = nullptr;
 
-	address_space_config m_file_config, m_io_config, m_io16_config;
-	address_space *m_file = nullptr, *m_io = nullptr, *m_io16 = nullptr;
+	address_space_config m_file_config, m_io_config, m_io16le_config, m_io16be_config;
+	address_space *m_file = nullptr, *m_io = nullptr, *m_io16le = nullptr, *m_io16be = nullptr;
 
 	int m_icount = 0;
 	int m_state = RESET;
@@ -379,6 +394,8 @@ private:
 	uint32_t m_okim6295_bank[2];
 	uint32_t m_okim6295_nmk112_bank[2][4];
 
+	C140_TYPE m_c140_bank[2];
+
 	int m_sega32x_channel_hack;
 	int m_nes_apu_channel_hack[2];
 	uint8_t m_c6280_channel[2];
@@ -394,6 +411,10 @@ enum vgmplay_inputs : uint8_t
 	VGMPLAY_RESTART,
 	VGMPLAY_LOOP,
 	VGMPLAY_VIZ,
+	VGMPLAY_RATE_DOWN,
+	VGMPLAY_RATE_UP,
+	VGMPLAY_RATE_RST,
+	VGMPLAY_HOLD,
 };
 
 class vgmplay_state : public driver_device
@@ -403,23 +424,25 @@ public:
 
 	DECLARE_QUICKLOAD_LOAD_MEMBER(load_file);
 
-	DECLARE_READ8_MEMBER(file_r);
-	DECLARE_READ8_MEMBER(file_size_r);
+	uint8_t file_r(offs_t offset);
+	uint8_t file_size_r(offs_t offset);
 	DECLARE_INPUT_CHANGED_MEMBER(key_pressed);
 
-	template<int Index> DECLARE_WRITE8_MEMBER(upd7759_reset_w);
-	template<int Index> DECLARE_WRITE8_MEMBER(upd7759_data_w);
+	template<int Index> void upd7759_reset_w(uint8_t data);
+	template<int Index> void upd7759_data_w(uint8_t data);
 	template<int Index> DECLARE_WRITE_LINE_MEMBER(upd7759_drq_w);
-	template<int Index> DECLARE_WRITE8_MEMBER(okim6258_clock_w);
-	template<int Index> DECLARE_WRITE8_MEMBER(okim6258_divider_w);
-	template<int Index> DECLARE_WRITE8_MEMBER(okim6295_clock_w);
-	template<int Index> DECLARE_WRITE8_MEMBER(okim6295_pin7_w);
-	template<int Index> DECLARE_WRITE8_MEMBER(scc_w);
+	template<int Index> void okim6258_clock_w(offs_t offset, uint8_t data, uint8_t mem_mask = ~0);
+	template<int Index> void okim6258_divider_w(offs_t offset, uint8_t data, uint8_t mem_mask = ~0);
+	template<int Index> void okim6295_clock_w(offs_t offset, uint8_t data, uint8_t mem_mask = ~0);
+	template<int Index> void okim6295_pin7_w(offs_t offset, uint8_t data, uint8_t mem_mask = ~0);
+	template<int Index> void scc_w(offs_t offset, uint8_t data);
+	template<int Index> void c140_c219_w(offs_t offset, uint8_t data);
 
 	void vgmplay(machine_config &config);
 	void file_map(address_map &map);
 	void soundchips_map(address_map &map);
-	void soundchips16_map(address_map &map);
+	void soundchips16le_map(address_map &map);
+	void soundchips16be_map(address_map &map);
 	template<int Index> void segapcm_map(address_map &map);
 	template<int Index> void rf5c68_map(address_map &map);
 	template<int Index> void ym2608_map(address_map &map);
@@ -436,6 +459,7 @@ public:
 	template<int Index> void okim6295_map(address_map &map);
 	template<int Index> void k054539_map(address_map &map);
 	template<int Index> void c140_map(address_map &map);
+	template<int Index> void c219_map(address_map &map);
 	template<int Index> void k053260_map(address_map &map);
 	template<int Index> void qsound_map(address_map &map);
 	template<int Index> void scsp_map(address_map &map);
@@ -447,6 +471,9 @@ public:
 	template<int Index> void ga20_map(address_map &map);
 
 private:
+	virtual void machine_start() override;
+
+	uint32_t m_held_clock;
 	std::vector<uint8_t> m_file_data;
 	required_device<vgmplay_device> m_vgmplay;
 	required_device<vgmviz_device> m_mixer;
@@ -481,6 +508,7 @@ private:
 	required_device_array<k054539_device, 2> m_k054539;
 	required_device_array<h6280_device, 2> m_huc6280;
 	required_device_array<c140_device, 2> m_c140;
+	required_device_array<c219_device, 2> m_c219;
 	required_device_array<k053260_device, 2> m_k053260;
 	required_device_array<pokey_device, 2> m_pokey;
 	required_device<qsound_device> m_qsound;
@@ -512,7 +540,8 @@ vgmplay_device::vgmplay_device(const machine_config &mconfig, const char *tag, d
 	m_act_leds(*this, "led_act_%u", 0U),
 	m_file_config("file", ENDIANNESS_LITTLE, 8, 32),
 	m_io_config("io", ENDIANNESS_LITTLE, 8, 32),
-	m_io16_config("io16", ENDIANNESS_LITTLE, 16, 32)
+	m_io16le_config("io16le", ENDIANNESS_LITTLE, 16, 32),
+	m_io16be_config("io16be", ENDIANNESS_BIG, 16, 32)
 {
 }
 
@@ -521,7 +550,8 @@ void vgmplay_device::device_start()
 	set_icountptr(m_icount);
 	m_file = &space(AS_PROGRAM);
 	m_io = &space(AS_IO);
-	m_io16 = &space(AS_IO16);
+	m_io16le = &space(AS_IO16LE);
+	m_io16be = &space(AS_IO16BE);
 
 	m_act_leds.resolve();
 	m_act_led_index = std::make_unique<led_expiry_iterator[]>(CT_COUNT);
@@ -806,7 +836,7 @@ uint32_t vgmplay_device::handle_data_block(uint32_t address)
 		uint32_t data_size = size - 4;
 		if (type == 0xe0)
 			for (int i = 0; i < data_size; i++)
-				m_io16->write_byte((second ? A_SCSP_RAM_1 : A_SCSP_RAM_0) + ((start + i) ^ 1), m_file->read_byte(m_pc + 0xb + i));
+				m_io16be->write_byte((second ? A_SCSP_RAM_1 : A_SCSP_RAM_0) + ((start + i) ^ 1), m_file->read_byte(m_pc + 0xb + i));
 		else if (type == 0xe1)
 			for (int i = 0; i < data_size; i++)
 				m_io->write_byte((second ? A_ES5503_RAM_1 : A_ES5503_RAM_0) + start + i, m_file->read_byte(m_pc + 0xb + i));
@@ -844,7 +874,7 @@ uint32_t vgmplay_device::handle_pcm_write(uint32_t address)
 	else if (type == 0x06)
 	{
 		for (int i = 0; i < size; i++)
-			m_io16->write_byte((second ? A_SCSP_RAM_1 : A_SCSP_RAM_0) + ((dst + i) ^ 1), m_data_streams[type][src + i]);
+			m_io16be->write_byte((second ? A_SCSP_RAM_1 : A_SCSP_RAM_0) + ((dst + i) ^ 1), m_data_streams[type][src + i]);
 	}
 	else if (type == 0x07)
 	{
@@ -898,12 +928,12 @@ TIMER_CALLBACK_MEMBER(vgmplay_device::stream_timer_expired)
 		if (m_sega32x_channel_hack >= 0)
 		{
 			osd_printf_error("bad rip detected, enabling sega32x channels\n");
-			m_io16->write_word(A_32X_PWM, 5);
+			m_io16le->write_word(A_32X_PWM, 5);
 
 			m_sega32x_channel_hack = -2;
 		}
 
-		m_io16->write_word(A_32X_PWM + (s.reg << 1), ((m_data_streams[s.bank][offset + 1] & 0xf) << 8) | m_data_streams[s.bank][offset]);
+		m_io16le->write_word(A_32X_PWM + (s.reg << 1), ((m_data_streams[s.bank][offset + 1] & 0xf) << 8) | m_data_streams[s.bank][offset]);
 	}
 	else if (s.chip_type == CT_C6280)
 	{
@@ -957,14 +987,15 @@ void vgmplay_device::execute_run()
 			uint32_t version = m_file->read_dword(8);
 			m_pc = 0x34 + m_file->read_dword(0x34);
 
-			if ((version < 0x150 && m_pc != 0x34) ||
-				(version >= 0x150 && m_pc == 0x34))
+			if ((version < 0x150 && m_pc != 0x34) || (version >= 0x150 && m_pc == 0x34))
 			{
 				osd_printf_error("bad rip detected, v%x invalid header size 0x%x\n", version, m_pc);
 				m_pc = 0x40;
 			}
 			else if (version < 0x150)
+			{
 				m_pc = 0x40;
+			}
 
 			m_state = RUN;
 			break;
@@ -1298,7 +1329,7 @@ void vgmplay_device::execute_run()
 				uint8_t id = m_file->read_byte(m_pc + 1);
 				if (id == 0xff)
 					for (int i = 0; i < 0xff; i++)
-						m_streams[id].timer->enable(false);
+						m_streams[i].timer->enable(false);
 				else
 					m_streams[id].timer->enable(false);
 
@@ -1473,14 +1504,14 @@ void vgmplay_device::execute_run()
 						if (m_sega32x_channel_hack == 32)
 						{
 							osd_printf_error("bad rip detected, enabling sega32x channels\n");
-							m_io16->write_word(A_32X_PWM, 5);
+							m_io16le->write_word(A_32X_PWM, 5);
 
 							m_sega32x_channel_hack = -2;
 						}
 					}
 				}
 
-				m_io16->write_word(A_32X_PWM + ((offset & 0xf0) >> 3), ((offset & 0xf) << 8) | data);
+				m_io16le->write_word(A_32X_PWM + ((offset & 0xf0) >> 3), ((offset & 0xf) << 8) | data);
 				m_pc += 3;
 				break;
 			}
@@ -1730,9 +1761,9 @@ void vgmplay_device::execute_run()
 				pulse_act_led(CT_SCSP);
 				uint8_t offset = m_file->read_byte(m_pc + 1);
 				if (offset & 0x80)
-					m_io16->write_byte(A_SCSP_1 + ((offset & 0x7f) << 8) + (m_file->read_byte(m_pc + 2) ^ 1), m_file->read_byte(m_pc + 3));
+					m_io16be->write_byte(A_SCSP_1 + ((offset & 0x7f) << 8) + (m_file->read_byte(m_pc + 2) ^ 1), m_file->read_byte(m_pc + 3));
 				else
-					m_io16->write_byte(A_SCSP_0 + ((offset & 0x7f) << 8) + (m_file->read_byte(m_pc + 2) ^ 1), m_file->read_byte(m_pc + 3));
+					m_io16be->write_byte(A_SCSP_0 + ((offset & 0x7f) << 8) + (m_file->read_byte(m_pc + 2) ^ 1), m_file->read_byte(m_pc + 3));
 				m_pc += 4;
 				break;
 			}
@@ -1884,9 +1915,9 @@ void vgmplay_device::execute_run()
 				uint32_t addr = ((offset & 0x7f) << 8) + m_file->read_byte(m_pc + 2);
 				uint16_t data = (m_file->read_byte(m_pc + 3) << 8) + m_file->read_byte(m_pc + 4);
 				if (offset & 0x80)
-					m_io16->write_word(A_C352_1 + (addr << 1), data);
+					m_io16le->write_word(A_C352_1 + (addr << 1), data);
 				else
-					m_io16->write_word(A_C352_0 + (addr << 1), data);
+					m_io16le->write_word(A_C352_0 + (addr << 1), data);
 				m_pc += 5;
 				break;
 			}
@@ -1923,7 +1954,8 @@ device_memory_interface::space_config_vector vgmplay_device::memory_space_config
 	{
 		std::make_pair(AS_PROGRAM, &m_file_config),
 		std::make_pair(AS_IO,      &m_io_config),
-		std::make_pair(AS_IO16,    &m_io16_config),
+		std::make_pair(AS_IO16LE,  &m_io16le_config),
+		std::make_pair(AS_IO16BE,  &m_io16be_config),
 	};
 }
 
@@ -2398,55 +2430,55 @@ uint8_t vgmplay_device::rom_r(int index, uint8_t type, offs_t offset)
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::segapcm_rom_r)
+uint8_t vgmplay_device::segapcm_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x80, offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::ym2608_rom_r)
+uint8_t vgmplay_device::ym2608_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x81, offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::ym2610_adpcm_a_rom_r)
+uint8_t vgmplay_device::ym2610_adpcm_a_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x82, offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::ym2610_adpcm_b_rom_r)
+uint8_t vgmplay_device::ym2610_adpcm_b_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x83, offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::ymf278b_rom_r)
+uint8_t vgmplay_device::ymf278b_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x84, offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::ymf271_rom_r)
+uint8_t vgmplay_device::ymf271_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x85, offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::ymz280b_rom_r)
+uint8_t vgmplay_device::ymz280b_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x86, offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::y8950_rom_r)
+uint8_t vgmplay_device::y8950_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x88, offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::multipcm_rom_r)
+uint8_t vgmplay_device::multipcm_rom_r(offs_t offset)
 {
 	if (m_multipcm_banked[Index] == 1)
 	{
@@ -2474,13 +2506,13 @@ READ8_MEMBER(vgmplay_device::multipcm_rom_r)
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::upd7759_rom_r)
+uint8_t vgmplay_device::upd7759_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x8a, m_upd7759_bank[Index] | offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::okim6295_rom_r)
+uint8_t vgmplay_device::okim6295_rom_r(offs_t offset)
 {
 	if (m_okim6295_nmk112_enable[Index])
 	{
@@ -2501,49 +2533,71 @@ READ8_MEMBER(vgmplay_device::okim6295_rom_r)
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::k054539_rom_r)
+uint8_t vgmplay_device::k054539_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x8c, offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::c140_rom_r)
+uint16_t vgmplay_device::c140_rom_r(offs_t offset)
 {
-	return rom_r(Index, 0x8d, offset);
+	switch (m_c140_bank[Index])
+	{
+	case C140_SYSTEM2:
+		offset = ((offset & 0x200000) >> 2) | (offset & 0x7ffff);
+		return rom_r(Index, 0x8d, offset) << 8; // high 8 bit only
+	case C140_SYSTEM21:
+		offset = ((offset & 0x300000) >> 1) | (offset & 0x7ffff);
+		return rom_r(Index, 0x8d, offset) << 8; // high 8 bit only
+	case C140_ASIC219:
+		return 0; // c140 not used in this mode
+	default:
+		return (rom_r(Index, 0x8d, offset * 2 + 1) << 8) | rom_r(Index, 0x8d, offset * 2); // 8 bit sample
+	}
+	return 0;
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::k053260_rom_r)
+uint16_t vgmplay_device::c219_rom_r(offs_t offset)
+{
+	if (m_c140_bank[Index] == C140_ASIC219)
+		return (rom_r(Index, 0x8d, offset * 2 + 1) << 8) | rom_r(Index, 0x8d, offset * 2); // 8 bit sample
+
+	return 0;
+}
+
+template<int Index>
+uint8_t vgmplay_device::k053260_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x8e, offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::qsound_rom_r)
+uint8_t vgmplay_device::qsound_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x8f, offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::es5505_rom_r)
+uint8_t vgmplay_device::es5505_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x90, offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::x1_010_rom_r)
+uint8_t vgmplay_device::x1_010_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x91, offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::c352_rom_r)
+uint8_t vgmplay_device::c352_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x92, offset);
 }
 
 template<int Index>
-READ8_MEMBER(vgmplay_device::ga20_rom_r)
+uint8_t vgmplay_device::ga20_rom_r(offs_t offset)
 {
 	return rom_r(Index, 0x93, offset);
 }
@@ -2583,6 +2637,7 @@ vgmplay_state::vgmplay_state(const machine_config &mconfig, device_type type, co
 	, m_k054539(*this, "k054539.%d", 0)
 	, m_huc6280(*this, "huc6280.%d", 0)
 	, m_c140(*this, "c140.%d", 0)
+	, m_c219(*this, "c219.%d", 0)
 	, m_k053260(*this, "k053260.%d", 0)
 	, m_pokey(*this, "pokey.%d", 0)
 	, m_qsound(*this, "qsound")
@@ -2599,6 +2654,11 @@ vgmplay_state::vgmplay_state(const machine_config &mconfig, device_type type, co
 	std::fill(std::begin(m_upd7759_md), std::end(m_upd7759_md), 0);
 	std::fill(std::begin(m_upd7759_reset), std::end(m_upd7759_drq), 0);
 	std::fill(std::begin(m_upd7759_drq), std::end(m_upd7759_drq), 0);
+}
+
+void vgmplay_state::machine_start()
+{
+	save_item(NAME(m_held_clock));
 }
 
 uint32_t vgmplay_state::r32(int off) const
@@ -2629,28 +2689,33 @@ static const uint8_t vgm_ay8910_flags(uint8_t vgm_flags)
 	return flags;
 }
 
-static const c140_device::C140_TYPE c140_bank_type(uint8_t vgm_type)
+static const C140_TYPE c140_bank_type(uint8_t vgm_type)
 {
 	switch (vgm_type)
 	{
 	case 0:
 	default:
-		return c140_device::C140_TYPE::SYSTEM2;
+		return C140_SYSTEM2;
 	case 1:
-		return c140_device::C140_TYPE::SYSTEM21;
+		return C140_SYSTEM21;
 	case 2:
-		return c140_device::C140_TYPE::ASIC219;
+		return C140_ASIC219;
 	}
+}
+
+void vgmplay_device::set_c140_bank_type(int index, C140_TYPE type)
+{
+	m_c140_bank[index] = type;
 }
 
 QUICKLOAD_LOAD_MEMBER(vgmplay_state::load_file)
 {
 	m_vgmplay->stop();
 
-	m_file_data.resize(quickload_size);
+	m_file_data.resize(image.length());
 
-	if (!quickload_size ||
-		image.fread(&m_file_data[0], quickload_size) != quickload_size)
+	if (image.length() == 0 ||
+		image.fread(&m_file_data[0], image.length()) != image.length())
 	{
 		m_file_data.clear();
 		return image_init_result::FAIL;
@@ -2861,8 +2926,9 @@ QUICKLOAD_LOAD_MEMBER(vgmplay_state::load_file)
 		m_k054539[0]->init_flags(version >= 0x161 && header_size >= 0x96 ? r8(0x95) : 0);
 		m_k054539[1]->init_flags(version >= 0x161 && header_size >= 0x96 ? r8(0x95) : 0);
 
-		m_c140[0]->set_bank_type(c140_bank_type(version >= 0x161 && header_size >= 0x96 ? r8(0x96) : 0));
-		m_c140[1]->set_bank_type(c140_bank_type(version >= 0x161 && header_size >= 0x96 ? r8(0x96) : 0));
+		C140_TYPE c140_type = c140_bank_type(version >= 0x161 && header_size >= 0x96 ? r8(0x96) : 0);
+		m_vgmplay->set_c140_bank_type(0, c140_type);
+		m_vgmplay->set_c140_bank_type(1, c140_type);
 
 		m_okim6295_pin7[0] = setup_device(*m_okim6295[0], 0, CT_OKIM6295, 0x98, 0x161);
 		m_okim6295_pin7[1] = setup_device(*m_okim6295[1], 1, CT_OKIM6295, 0x98, 0x161);
@@ -2888,8 +2954,16 @@ QUICKLOAD_LOAD_MEMBER(vgmplay_state::load_file)
 
 		setup_device(*m_huc6280[0], 0, CT_C6280, 0xa4, 0x161);
 		setup_device(*m_huc6280[1], 1, CT_C6280, 0xa4, 0x161);
-		setup_device(*m_c140[0], 0, CT_C140, 0xa8, 0x161);
-		setup_device(*m_c140[1], 1, CT_C140, 0xa8, 0x161);
+		if (c140_type == C140_ASIC219)
+		{
+			setup_device(*m_c219[0], 0, CT_C140, 0xa8, 0x161);
+			setup_device(*m_c219[1], 1, CT_C140, 0xa8, 0x161);
+		}
+		else
+		{
+			setup_device(*m_c140[0], 0, CT_C140, 0xa8, 0x161);
+			setup_device(*m_c140[1], 1, CT_C140, 0xa8, 0x161);
+		}
 		setup_device(*m_k053260[0], 0, CT_K053260, 0xac, 0x161);
 		setup_device(*m_k053260[1], 1, CT_K053260, 0xac, 0x161);
 		setup_device(*m_pokey[0], 0, CT_POKEY, 0xb0, 0x161);
@@ -2950,21 +3024,21 @@ QUICKLOAD_LOAD_MEMBER(vgmplay_state::load_file)
 	}
 }
 
-READ8_MEMBER(vgmplay_state::file_r)
+uint8_t vgmplay_state::file_r(offs_t offset)
 {
 	if (offset < m_file_data.size())
 		return m_file_data[offset];
 	return 0;
 }
 
-READ8_MEMBER(vgmplay_state::file_size_r)
+uint8_t vgmplay_state::file_size_r(offs_t offset)
 {
 	uint32_t size = m_file_data.size();
 	return size >> (8 * offset);
 }
 
 template<int Index>
-WRITE8_MEMBER(vgmplay_device::multipcm_bank_hi_w)
+void vgmplay_device::multipcm_bank_hi_w(offs_t offset, uint8_t data)
 {
 	if (offset & 1)
 		m_multipcm_bank_l[Index] = (m_multipcm_bank_l[Index] & 0xff) | (data << 16);
@@ -2973,7 +3047,7 @@ WRITE8_MEMBER(vgmplay_device::multipcm_bank_hi_w)
 }
 
 template<int Index>
-WRITE8_MEMBER(vgmplay_device::multipcm_bank_lo_w)
+void vgmplay_device::multipcm_bank_lo_w(offs_t offset, uint8_t data)
 {
 	if (offset & 1)
 		m_multipcm_bank_l[Index] = (m_multipcm_bank_l[Index] & 0xff00) | data;
@@ -2984,7 +3058,7 @@ WRITE8_MEMBER(vgmplay_device::multipcm_bank_lo_w)
 }
 
 template<int Index>
-WRITE8_MEMBER(vgmplay_state::upd7759_reset_w)
+void vgmplay_state::upd7759_reset_w(uint8_t data)
 {
 	int reset = data != 0;
 
@@ -3000,7 +3074,7 @@ WRITE8_MEMBER(vgmplay_state::upd7759_reset_w)
 }
 
 template<int Index>
-WRITE8_MEMBER(vgmplay_state::upd7759_data_w)
+void vgmplay_state::upd7759_data_w(uint8_t data)
 {
 	if (!m_upd7759_md[Index] && !m_upd7759_drq[Index])
 	{
@@ -3031,14 +3105,14 @@ WRITE_LINE_MEMBER(vgmplay_state::upd7759_drq_w)
 }
 
 template<int Index>
-WRITE8_MEMBER(vgmplay_device::upd7759_bank_w)
+void vgmplay_device::upd7759_bank_w(uint8_t data)
 {
 	// TODO: upd7759 update stream
 	m_upd7759_bank[Index] = data * 0x20000;
 }
 
 template<int Index>
-WRITE8_MEMBER(vgmplay_state::okim6258_clock_w)
+void vgmplay_state::okim6258_clock_w(offs_t offset, uint8_t data, uint8_t mem_mask)
 {
 	int shift = ((offset & 3) << 3);
 	uint32_t c = (m_okim6258[Index]->unscaled_clock() & ~(mem_mask << shift)) | ((data & mem_mask) << shift);
@@ -3047,7 +3121,7 @@ WRITE8_MEMBER(vgmplay_state::okim6258_clock_w)
 }
 
 template<int Index>
-WRITE8_MEMBER(vgmplay_state::okim6258_divider_w)
+void vgmplay_state::okim6258_divider_w(offs_t offset, uint8_t data, uint8_t mem_mask)
 {
 	if ((data & mem_mask) != (m_okim6258_divider[Index] & mem_mask))
 	{
@@ -3057,7 +3131,7 @@ WRITE8_MEMBER(vgmplay_state::okim6258_divider_w)
 }
 
 template<int Index>
-WRITE8_MEMBER(vgmplay_state::okim6295_clock_w)
+void vgmplay_state::okim6295_clock_w(offs_t offset, uint8_t data, uint8_t mem_mask)
 {
 	int shift = ((offset & 3) << 3);
 	uint32_t c = (m_okim6295[Index]->unscaled_clock() & ~(mem_mask << shift)) | ((data & mem_mask) << shift);
@@ -3066,7 +3140,7 @@ WRITE8_MEMBER(vgmplay_state::okim6295_clock_w)
 }
 
 template<int Index>
-WRITE8_MEMBER(vgmplay_state::okim6295_pin7_w)
+void vgmplay_state::okim6295_pin7_w(offs_t offset, uint8_t data, uint8_t mem_mask)
 {
 	if ((data & mem_mask) != (m_okim6295_pin7[Index] & mem_mask))
 	{
@@ -3076,13 +3150,13 @@ WRITE8_MEMBER(vgmplay_state::okim6295_pin7_w)
 }
 
 template<int Index>
-WRITE8_MEMBER(vgmplay_device::okim6295_nmk112_enable_w)
+void vgmplay_device::okim6295_nmk112_enable_w(offs_t offset, uint8_t data, uint8_t mem_mask)
 {
 	COMBINE_DATA(&m_okim6295_nmk112_enable[Index]);
 }
 
 template<int Index>
-WRITE8_MEMBER(vgmplay_device::okim6295_bank_w)
+void vgmplay_device::okim6295_bank_w(offs_t offset, uint8_t data, uint8_t mem_mask)
 {
 	if ((data & mem_mask) != (m_okim6295_bank[Index] & mem_mask))
 	{
@@ -3091,7 +3165,7 @@ WRITE8_MEMBER(vgmplay_device::okim6295_bank_w)
 }
 
 template<int Index>
-WRITE8_MEMBER(vgmplay_device::okim6295_nmk112_bank_w)
+void vgmplay_device::okim6295_nmk112_bank_w(offs_t offset, uint8_t data, uint8_t mem_mask)
 {
 	offset &= 3;
 	if ((data & mem_mask) != (m_okim6295_nmk112_bank[Index][offset] & mem_mask))
@@ -3101,7 +3175,7 @@ WRITE8_MEMBER(vgmplay_device::okim6295_nmk112_bank_w)
 }
 
 template<int Index>
-WRITE8_MEMBER(vgmplay_state::scc_w)
+void vgmplay_state::scc_w(offs_t offset, uint8_t data)
 {
 	switch (offset & 1)
 	{
@@ -3134,13 +3208,21 @@ WRITE8_MEMBER(vgmplay_state::scc_w)
 	}
 }
 
+template<int Index>
+void vgmplay_state::c140_c219_w(offs_t offset, uint8_t data)
+{
+	if (m_vgmplay->c140_bank(Index) == C140_ASIC219)
+		m_c219[Index]->c219_w(offset, data);
+	else
+		m_c140[Index]->c140_w(offset, data);
+}
+
 INPUT_CHANGED_MEMBER(vgmplay_state::key_pressed)
 {
-	if (!newval)
+	if (!newval && param != VGMPLAY_HOLD)
 		return;
 
-	int val = (uint8_t)param;
-	switch (val)
+	switch (param)
 	{
 	case VGMPLAY_STOP:
 		m_vgmplay->stop();
@@ -3160,17 +3242,40 @@ INPUT_CHANGED_MEMBER(vgmplay_state::key_pressed)
 	case VGMPLAY_VIZ:
 		m_mixer->cycle_viz_mode();
 		break;
+	case VGMPLAY_RATE_DOWN:
+		m_vgmplay->set_unscaled_clock((uint32_t)(m_vgmplay->clock() * 0.95f));
+		break;
+	case VGMPLAY_RATE_UP:
+		m_vgmplay->set_unscaled_clock((uint32_t)(m_vgmplay->clock() / 0.95f));
+		break;
+	case VGMPLAY_RATE_RST:
+		m_vgmplay->set_unscaled_clock(44100);
+		break;
+	case VGMPLAY_HOLD:
+		if (newval)
+		{
+			m_held_clock = m_vgmplay->clock();
+			m_vgmplay->set_unscaled_clock(0);
+		}
+		else
+		{
+			m_vgmplay->set_unscaled_clock(m_held_clock);
+		}
 	}
 }
 
 static INPUT_PORTS_START( vgmplay )
 	PORT_START("CONTROLS")
-	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_STOP)        PORT_NAME("Stop")
-	PORT_BIT(0x0002, IP_ACTIVE_HIGH, IPT_BUTTON2) PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_PAUSE)       PORT_NAME("Pause")
-	PORT_BIT(0x0004, IP_ACTIVE_HIGH, IPT_BUTTON3) PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_PLAY)        PORT_NAME("Play")
-	PORT_BIT(0x0008, IP_ACTIVE_HIGH, IPT_BUTTON4) PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_RESTART)     PORT_NAME("Restart")
-	PORT_BIT(0x0010, IP_ACTIVE_HIGH, IPT_BUTTON5) PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_LOOP)        PORT_NAME("Loop")
-	PORT_BIT(0x0020, IP_ACTIVE_HIGH, IPT_BUTTON6) PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_VIZ)         PORT_NAME("Visualization Mode")
+	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_BUTTON1)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_STOP)        PORT_NAME("Stop")
+	PORT_BIT(0x0002, IP_ACTIVE_HIGH, IPT_BUTTON2)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_PAUSE)       PORT_NAME("Pause")
+	PORT_BIT(0x0004, IP_ACTIVE_HIGH, IPT_BUTTON3)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_PLAY)        PORT_NAME("Play")
+	PORT_BIT(0x0008, IP_ACTIVE_HIGH, IPT_BUTTON4)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_RESTART)     PORT_NAME("Restart")
+	PORT_BIT(0x0010, IP_ACTIVE_HIGH, IPT_BUTTON5)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_LOOP)        PORT_NAME("Loop")
+	PORT_BIT(0x0020, IP_ACTIVE_HIGH, IPT_BUTTON6)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_VIZ)         PORT_NAME("Visualization Mode")
+	PORT_BIT(0x0040, IP_ACTIVE_HIGH, IPT_BUTTON7)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_RATE_DOWN)   PORT_CODE(KEYCODE_R) PORT_NAME("Rate Down")
+	PORT_BIT(0x0080, IP_ACTIVE_HIGH, IPT_BUTTON8)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_RATE_UP)     PORT_CODE(KEYCODE_T) PORT_NAME("Rate Up")
+	PORT_BIT(0x0100, IP_ACTIVE_HIGH, IPT_BUTTON9)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_RATE_RST)    PORT_CODE(KEYCODE_Y) PORT_NAME("Rate Reset")
+	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_BUTTON10) PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_HOLD)        PORT_CODE(KEYCODE_U) PORT_NAME("Rate Hold")
 INPUT_PORTS_END
 
 void vgmplay_state::file_map(address_map &map)
@@ -3271,17 +3376,13 @@ void vgmplay_state::soundchips_map(address_map &map)
 	map(vgmplay_device::A_K054539_1, vgmplay_device::A_K054539_1 + 0x22f).w(m_k054539[1], FUNC(k054539_device::write));
 	map(vgmplay_device::A_C6280_0, vgmplay_device::A_C6280_0 + 0xf).w("huc6280.0:psg", FUNC(c6280_device::c6280_w));
 	map(vgmplay_device::A_C6280_1, vgmplay_device::A_C6280_1 + 0xf).w("huc6280.1:psg", FUNC(c6280_device::c6280_w));
-	map(vgmplay_device::A_C140_0, vgmplay_device::A_C140_0 + 0x1ff).w(m_c140[0], FUNC(c140_device::c140_w));
-	map(vgmplay_device::A_C140_1, vgmplay_device::A_C140_1 + 0x1ff).w(m_c140[1], FUNC(c140_device::c140_w));
+	map(vgmplay_device::A_C140_0, vgmplay_device::A_C140_0 + 0x1ff).w(FUNC(vgmplay_state::c140_c219_w<0>));
+	map(vgmplay_device::A_C140_1, vgmplay_device::A_C140_1 + 0x1ff).w(FUNC(vgmplay_state::c140_c219_w<1>));
 	map(vgmplay_device::A_K053260_0, vgmplay_device::A_K053260_0 + 0x2f).w(m_k053260[0], FUNC(k053260_device::write));
 	map(vgmplay_device::A_K053260_1, vgmplay_device::A_K053260_1 + 0x2f).w(m_k053260[1], FUNC(k053260_device::write));
 	map(vgmplay_device::A_POKEY_0, vgmplay_device::A_POKEY_0 + 0xf).w(m_pokey[0], FUNC(pokey_device::write));
 	map(vgmplay_device::A_POKEY_1, vgmplay_device::A_POKEY_1 + 0xf).w(m_pokey[1], FUNC(pokey_device::write));
 	map(vgmplay_device::A_QSOUND, vgmplay_device::A_QSOUND + 0x2).w(m_qsound, FUNC(qsound_device::qsound_w));
-	map(vgmplay_device::A_WSWAN_0, vgmplay_device::A_WSWAN_0 + 0xff).w(m_wswan[0], FUNC(wswan_sound_device::port_w));
-	map(vgmplay_device::A_WSWAN_1, vgmplay_device::A_WSWAN_1 + 0xff).w(m_wswan[1], FUNC(wswan_sound_device::port_w));
-	map(vgmplay_device::A_WSWAN_RAM_0, vgmplay_device::A_WSWAN_RAM_0 + 0x3fff).ram().share("wswan_ram.0");
-	map(vgmplay_device::A_WSWAN_RAM_1, vgmplay_device::A_WSWAN_RAM_1 + 0x3fff).ram().share("wswan_ram.1");
 	map(vgmplay_device::A_VSU_VUE_0, vgmplay_device::A_VSU_VUE_0 + 0x5ff).w(m_vsu_vue[0], FUNC(vboysnd_device::write));
 	map(vgmplay_device::A_VSU_VUE_1, vgmplay_device::A_VSU_VUE_1 + 0x5ff).w(m_vsu_vue[1], FUNC(vboysnd_device::write));
 	map(vgmplay_device::A_SAA1099_0, vgmplay_device::A_SAA1099_0 + 1).w(m_saa1099[0], FUNC(saa1099_device::write));
@@ -3297,15 +3398,23 @@ void vgmplay_state::soundchips_map(address_map &map)
 	map(vgmplay_device::A_GA20_1, vgmplay_device::A_GA20_1 + 0x1f).w(m_ga20[1], FUNC(iremga20_device::write));
 }
 
-void vgmplay_state::soundchips16_map(address_map &map)
+void vgmplay_state::soundchips16le_map(address_map &map)
 {
 	map(vgmplay_device::A_32X_PWM, vgmplay_device::A_32X_PWM + 0xf).w(m_sega32x, FUNC(sega_32x_device::pwm_w));
+	map(vgmplay_device::A_C352_0, vgmplay_device::A_C352_0 + 0x7fff).w(m_c352[0], FUNC(c352_device::write));
+	map(vgmplay_device::A_C352_1, vgmplay_device::A_C352_1 + 0x7fff).w(m_c352[1], FUNC(c352_device::write));
+	map(vgmplay_device::A_WSWAN_0, vgmplay_device::A_WSWAN_0 + 0xff).w(m_wswan[0], FUNC(wswan_sound_device::port_w));
+	map(vgmplay_device::A_WSWAN_1, vgmplay_device::A_WSWAN_1 + 0xff).w(m_wswan[1], FUNC(wswan_sound_device::port_w));
+	map(vgmplay_device::A_WSWAN_RAM_0, vgmplay_device::A_WSWAN_RAM_0 + 0x3fff).ram().share("wswan_ram.0");
+	map(vgmplay_device::A_WSWAN_RAM_1, vgmplay_device::A_WSWAN_RAM_1 + 0x3fff).ram().share("wswan_ram.1");
+}
+
+void vgmplay_state::soundchips16be_map(address_map &map)
+{
 	map(vgmplay_device::A_SCSP_0, vgmplay_device::A_SCSP_0 + 0xfff).w(m_scsp[0], FUNC(scsp_device::write));
 	map(vgmplay_device::A_SCSP_1, vgmplay_device::A_SCSP_1 + 0xfff).w(m_scsp[1], FUNC(scsp_device::write));
 	map(vgmplay_device::A_SCSP_RAM_0, vgmplay_device::A_SCSP_RAM_0 + 0xfffff).ram().share("scsp_ram.0");
 	map(vgmplay_device::A_SCSP_RAM_1, vgmplay_device::A_SCSP_RAM_1 + 0xfffff).ram().share("scsp_ram.1");
-	map(vgmplay_device::A_C352_0, vgmplay_device::A_C352_0 + 0x7fff).w(m_c352[0], FUNC(c352_device::write));
-	map(vgmplay_device::A_C352_1, vgmplay_device::A_C352_1 + 0x7fff).w(m_c352[1], FUNC(c352_device::write));
 }
 
 template<int Index>
@@ -3395,7 +3504,13 @@ void vgmplay_state::k054539_map(address_map &map)
 template<int Index>
 void vgmplay_state::c140_map(address_map &map)
 {
-	map(0, 0x1fffff).r("vgmplay", FUNC(vgmplay_device::c140_rom_r<Index>));
+	map(0, 0x1ffffff).r("vgmplay", FUNC(vgmplay_device::c140_rom_r<Index>));
+}
+
+template<int Index>
+void vgmplay_state::c219_map(address_map &map)
+{
+	map(0, 0x07ffff).r("vgmplay", FUNC(vgmplay_device::c219_rom_r<Index>));
 }
 
 template<int Index>
@@ -3463,7 +3578,8 @@ void vgmplay_state::vgmplay(machine_config &config)
 	VGMPLAY(config, m_vgmplay, 44100);
 	m_vgmplay->set_addrmap(AS_PROGRAM, &vgmplay_state::file_map);
 	m_vgmplay->set_addrmap(AS_IO, &vgmplay_state::soundchips_map);
-	m_vgmplay->set_addrmap(AS_IO16, &vgmplay_state::soundchips16_map);
+	m_vgmplay->set_addrmap(AS_IO16LE, &vgmplay_state::soundchips16le_map);
+	m_vgmplay->set_addrmap(AS_IO16BE, &vgmplay_state::soundchips16be_map);
 
 	quickload_image_device &quickload(QUICKLOAD(config, "quickload", "vgm,vgz"));
 	quickload.set_load_callback(FUNC(vgmplay_state::load_file));
@@ -3635,13 +3751,13 @@ void vgmplay_state::vgmplay(machine_config &config)
 	// TODO: prevent error.log spew
 	YMZ280B(config, m_ymz280b[0], 0);
 	m_ymz280b[0]->set_addrmap(0, &vgmplay_state::ymz280b_map<0>);
-	m_ymz280b[0]->add_route(0, m_mixer, 0.25, AUTO_ALLOC_INPUT, 0);
-	m_ymz280b[0]->add_route(1, m_mixer, 0.25, AUTO_ALLOC_INPUT, 1);
+	m_ymz280b[0]->add_route(0, m_mixer, 0.50, AUTO_ALLOC_INPUT, 0);
+	m_ymz280b[0]->add_route(1, m_mixer, 0.50, AUTO_ALLOC_INPUT, 1);
 
 	YMZ280B(config, m_ymz280b[1], 0);
 	m_ymz280b[1]->set_addrmap(0, &vgmplay_state::ymz280b_map<1>);
-	m_ymz280b[1]->add_route(0, m_mixer, 0.25, AUTO_ALLOC_INPUT, 0);
-	m_ymz280b[1]->add_route(1, m_mixer, 0.25, AUTO_ALLOC_INPUT, 1);
+	m_ymz280b[1]->add_route(0, m_mixer, 0.50, AUTO_ALLOC_INPUT, 0);
+	m_ymz280b[1]->add_route(1, m_mixer, 0.50, AUTO_ALLOC_INPUT, 1);
 
 	RF5C164(config, m_rf5c164, 0);
 	m_rf5c164->set_addrmap(0, &vgmplay_state::rf5c164_map<0>);
@@ -3769,6 +3885,16 @@ void vgmplay_state::vgmplay(machine_config &config)
 	m_c140[1]->add_route(0, m_mixer, 0.50, AUTO_ALLOC_INPUT, 0);
 	m_c140[1]->add_route(1, m_mixer, 0.50, AUTO_ALLOC_INPUT, 1);
 
+	C219(config, m_c219[0], 0);
+	m_c219[0]->set_addrmap(0, &vgmplay_state::c219_map<0>);
+	m_c219[0]->add_route(0, m_mixer, 0.50, AUTO_ALLOC_INPUT, 0);
+	m_c219[0]->add_route(1, m_mixer, 0.50, AUTO_ALLOC_INPUT, 1);
+
+	C219(config, m_c219[1], 0);
+	m_c219[1]->set_addrmap(0, &vgmplay_state::c219_map<1>);
+	m_c219[1]->add_route(0, m_mixer, 0.50, AUTO_ALLOC_INPUT, 0);
+	m_c219[1]->add_route(1, m_mixer, 0.50, AUTO_ALLOC_INPUT, 1);
+
 	K053260(config, m_k053260[0], 0);
 	m_k053260[0]->set_addrmap(0, &vgmplay_state::k053260_map<0>);
 	m_k053260[0]->add_route(0, m_mixer, 1, AUTO_ALLOC_INPUT, 0);
@@ -3821,12 +3947,12 @@ void vgmplay_state::vgmplay(machine_config &config)
 	m_vsu_vue[1]->add_route(1, m_mixer, 1.0, AUTO_ALLOC_INPUT, 1);
 
 	SAA1099(config, m_saa1099[0], 0);
-	m_saa1099[0]->add_route(ALL_OUTPUTS, m_mixer, 0.5, AUTO_ALLOC_INPUT, 0);
-	m_saa1099[0]->add_route(ALL_OUTPUTS, m_mixer, 0.5, AUTO_ALLOC_INPUT, 1);
+	m_saa1099[0]->add_route(0, m_mixer, 1.0, AUTO_ALLOC_INPUT, 0);
+	m_saa1099[0]->add_route(1, m_mixer, 1.0, AUTO_ALLOC_INPUT, 1);
 
 	SAA1099(config, m_saa1099[1], 0);
-	m_saa1099[1]->add_route(ALL_OUTPUTS, m_mixer, 0.5, AUTO_ALLOC_INPUT, 0);
-	m_saa1099[1]->add_route(ALL_OUTPUTS, m_mixer, 0.5, AUTO_ALLOC_INPUT, 1);
+	m_saa1099[1]->add_route(0, m_mixer, 1.0, AUTO_ALLOC_INPUT, 0);
+	m_saa1099[1]->add_route(1, m_mixer, 1.0, AUTO_ALLOC_INPUT, 1);
 
 	ES5503(config, m_es5503[0], 0);
 	m_es5503[0]->set_channels(2);
@@ -3842,12 +3968,14 @@ void vgmplay_state::vgmplay(machine_config &config)
 
 	ES5505(config, m_es5505[0], 0);
 	// TODO m_es5505[0]->set_addrmap(0, &vgmplay_state::es5505_map<0>);
+	// TODO m_es5505[0]->set_addrmap(1, &vgmplay_state::es5505_map<0>);
 	m_es5505[0]->set_channels(1);
 	m_es5505[0]->add_route(0, m_mixer, 0.5, AUTO_ALLOC_INPUT, 0);
 	m_es5505[0]->add_route(1, m_mixer, 0.5, AUTO_ALLOC_INPUT, 1);
 
 	ES5505(config, m_es5505[1], 0);
 	// TODO m_es5505[1]->set_addrmap(0, &vgmplay_state::es5505_map<1>);
+	// TODO m_es5505[1]->set_addrmap(1, &vgmplay_state::es5505_map<1>);
 	m_es5505[1]->set_channels(1);
 	m_es5505[1]->add_route(0, m_mixer, 0.5, AUTO_ALLOC_INPUT, 0);
 	m_es5505[1]->add_route(1, m_mixer, 0.5, AUTO_ALLOC_INPUT, 1);

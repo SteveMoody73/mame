@@ -120,10 +120,10 @@ public:
 	dreamwld_state(const machine_config &mconfig, device_type type, const char *tag)
 		: driver_device(mconfig, type, tag)
 		, m_spriteram(*this, "spriteram")
-		, m_vram(*this, "vram_%u", 0U, u8(32))
+		, m_vram(*this, "vram_%u", 0U, 0x2000U, ENDIANNESS_BIG)
 		, m_vregs(*this, "vregs")
 		, m_workram(*this, "workram")
-		, m_lineram(*this, "lineram", 32)
+		, m_lineram(*this, "lineram", 0x400U, ENDIANNESS_BIG)
 		, m_spritelut(*this, "spritelut")
 		, m_okibank(*this, "oki%ubank", 1)
 		, m_dsw(*this, "DSW")
@@ -146,10 +146,10 @@ protected:
 private:
 	/* memory pointers */
 	required_shared_ptr<u32> m_spriteram;
-	required_shared_ptr_array<u16, 2> m_vram;
+	memory_share_array_creator<u16, 2> m_vram;
 	required_shared_ptr<u32> m_vregs;
 	required_shared_ptr<u32> m_workram;
-	required_shared_ptr<u16> m_lineram;
+	memory_share_creator<u16> m_lineram;
 	required_memory_region m_spritelut;
 	optional_memory_bank_array<2> m_okibank;
 	required_ioport m_dsw;
@@ -175,11 +175,11 @@ private:
 	required_device<gfxdecode_device> m_gfxdecode;
 	required_device<palette_device> m_palette;
 
-	DECLARE_WRITE8_MEMBER(prot_p1_w);
-	DECLARE_WRITE8_MEMBER(prot_p2_w);
-	DECLARE_READ8_MEMBER(prot_p2_r);
+	void prot_p1_w(uint8_t data);
+	void prot_p2_w(uint8_t data);
+	uint8_t prot_p2_r();
 
-	DECLARE_WRITE32_MEMBER(to_prot_w);
+	void to_prot_w(uint32_t data);
 
 
 	template<int Layer> u16 vram_r(offs_t offset);
@@ -417,9 +417,9 @@ void dreamwld_state::baryon_map(address_map &map)
 
 	map(0x400000, 0x401fff).ram().share("spriteram");
 	map(0x600000, 0x601fff).ram().w(m_palette, FUNC(palette_device::write32)).share("palette");
-	map(0x800000, 0x801fff).rw(FUNC(dreamwld_state::vram_r<0>), FUNC(dreamwld_state::vram_w<0>)).share("vram_0");
-	map(0x802000, 0x803fff).rw(FUNC(dreamwld_state::vram_r<1>), FUNC(dreamwld_state::vram_w<1>)).share("vram_1");
-	map(0x804000, 0x8043ff).rw(FUNC(dreamwld_state::lineram_r), FUNC(dreamwld_state::lineram_w)).share("lineram");  // linescroll
+	map(0x800000, 0x801fff).rw(FUNC(dreamwld_state::vram_r<0>), FUNC(dreamwld_state::vram_w<0>));
+	map(0x802000, 0x803fff).rw(FUNC(dreamwld_state::vram_r<1>), FUNC(dreamwld_state::vram_w<1>));
+	map(0x804000, 0x8043ff).rw(FUNC(dreamwld_state::lineram_r), FUNC(dreamwld_state::lineram_w));  // linescroll
 	map(0x804400, 0x805fff).ram().share("vregs");
 
 	map(0xc00000, 0xc00003).portr("INPUTS");
@@ -741,13 +741,13 @@ void dreamwld_state::machine_reset()
 	m_protlatch = 0;
 }
 
-WRITE8_MEMBER(dreamwld_state::prot_p1_w)
+void dreamwld_state::prot_p1_w(uint8_t data)
 {
 	logerror("%s:prot_p1_w %02x\n", machine().describe_context(), data);
 	m_port1_data = data;
 }
 
-WRITE8_MEMBER(dreamwld_state::prot_p2_w)
+void dreamwld_state::prot_p2_w(uint8_t data)
 {
 	logerror("%s:prot_p2_w %02x\n", machine().describe_context(), data);
 
@@ -776,7 +776,7 @@ WRITE8_MEMBER(dreamwld_state::prot_p2_w)
 	m_port2_data = data;
 }
 
-READ8_MEMBER(dreamwld_state::prot_p2_r)
+uint8_t dreamwld_state::prot_p2_r()
 {
 	// bit 2 is waited on before reading from port 0
 	// bit 3 is waited on after writing a byte
@@ -786,7 +786,7 @@ READ8_MEMBER(dreamwld_state::prot_p2_r)
 	return m_port2_data;
 }
 
-WRITE32_MEMBER(dreamwld_state::to_prot_w)
+void dreamwld_state::to_prot_w(uint32_t data)
 {
 	m_port2_data &= 0xfb; // lower bit 0x04 to indicate data sent?
 	logerror("%s:to_prot_w %08x\n", machine().describe_context(), data);

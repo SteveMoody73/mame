@@ -401,30 +401,30 @@ void mips3_device::device_start()
 	{
 		if (m_data_bits == 32)
 		{
-			auto cache = m_program->cache<2, 0, ENDIANNESS_LITTLE>();
-			m_pr32 = [cache](offs_t address) -> u32 { return cache->read_dword(address); };
-			m_prptr = [cache](offs_t address) -> const void * { return cache->read_ptr(address); };
+			m_program->cache(m_cache32le);
+			m_pr32 = [this](offs_t address) -> u32 { return m_cache32le.read_dword(address); };
+			m_prptr = [this](offs_t address) -> const void * { return m_cache32le.read_ptr(address); };
 		}
 		else
 		{
-			auto cache = m_program->cache<3, 0, ENDIANNESS_LITTLE>();
-			m_pr32 = [cache](offs_t address) -> u32 { return cache->read_dword(address); };
-			m_prptr = [cache](offs_t address) -> const void * { return cache->read_ptr(address); };
+			m_program->cache(m_cache64le);
+			m_pr32 = [this](offs_t address) -> u32 { return m_cache64le.read_dword(address); };
+			m_prptr = [this](offs_t address) -> const void * { return m_cache64le.read_ptr(address); };
 		}
 	}
 	else
 	{
 		if (m_data_bits == 32)
 		{
-			auto cache = m_program->cache<2, 0, ENDIANNESS_BIG>();
-			m_pr32 = [cache](offs_t address) -> u32 { return cache->read_dword(address); };
-			m_prptr = [cache](offs_t address) -> const void * { return cache->read_ptr(address); };
+			m_program->cache(m_cache32be);
+			m_pr32 = [this](offs_t address) -> u32 { return m_cache32be.read_dword(address); };
+			m_prptr = [this](offs_t address) -> const void * { return m_cache32be.read_ptr(address); };
 		}
 		else
 		{
-			auto cache = m_program->cache<3, 0, ENDIANNESS_BIG>();
-			m_pr32 = [cache](offs_t address) -> u32 { return cache->read_dword(address); };
-			m_prptr = [cache](offs_t address) -> const void * { return cache->read_ptr(address); };
+			m_program->cache(m_cache64be);
+			m_pr32 = [this](offs_t address) -> u32 { return m_cache64be.read_dword(address); };
+			m_prptr = [this](offs_t address) -> const void * { return m_cache64be.read_ptr(address); };
 		}
 	}
 
@@ -3561,11 +3561,11 @@ void mips3_device::handle_special(uint32_t op)
 			m_core->icount -= 35;
 			break;
 		case 0x1c:  /* DMULT */
-			LOVAL64 = mul_64x64(RSVAL64, RTVAL64, reinterpret_cast<s64 *>(&HIVAL64));
+			LOVAL64 = mul_64x64(RSVAL64, RTVAL64, *reinterpret_cast<s64 *>(&HIVAL64));
 			m_core->icount -= 7;
 			break;
 		case 0x1d:  /* DMULTU */
-			LOVAL64 = mulu_64x64(RSVAL64, RTVAL64, &HIVAL64);
+			LOVAL64 = mulu_64x64(RSVAL64, RTVAL64, HIVAL64);
 			m_core->icount -= 7;
 			break;
 		case 0x1e:  /* DDIV */
@@ -5044,11 +5044,6 @@ void r5900le_device::handle_sdc2(uint32_t op)
 	}
 }
 
-void mips3_device::burn_cycles(int32_t cycles)
-{
-	execute_burn(cycles);
-}
-
 #if ENABLE_O2_DPRINTF
 #include "o2dprintf.hxx"
 #endif
@@ -5216,6 +5211,7 @@ void mips3_device::execute_run()
 						machine().debug_break();
 					break;
 				}
+				[[fallthrough]];
 			case 0x31:  /* LWC1 */
 				if (!(SR & SR_COP1))
 				{
@@ -5238,16 +5234,17 @@ void mips3_device::execute_run()
 						machine().debug_break();
 					break;
 				}
+				[[fallthrough]];
 			case 0x35:  /* LDC1 */
-			if (!(SR & SR_COP1))
-			{
-				m_badcop_value = 1;
-				generate_exception(EXCEPTION_BADCOP, 1);
+				if (!(SR & SR_COP1))
+				{
+					m_badcop_value = 1;
+					generate_exception(EXCEPTION_BADCOP, 1);
+					break;
+				}
+				if (RDOUBLE(SIMMVAL+RSVAL32, &temp64))
+					set_cop1_reg64(RTREG, temp64);
 				break;
-			}
-			if (RDOUBLE(SIMMVAL+RSVAL32, &temp64))
-				set_cop1_reg64(RTREG, temp64);
-			break;
 			case 0x36:  handle_ldc2(op); break;
 			case 0x37:  /* LD */        if (RDOUBLE(SIMMVAL+RSVAL32, &temp64) && RTREG) RTVAL64 = temp64;       break;
 			case 0x38:  /* SC */

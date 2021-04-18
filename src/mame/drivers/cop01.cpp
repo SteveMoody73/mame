@@ -59,11 +59,10 @@ Mighty Guy board layout:
 
 #include "cpu/z80/z80.h"
 #include "sound/ay8910.h"
-#include "sound/3526intf.h"
+#include "sound/ym3526.h"
 #include "screen.h"
 #include "speaker.h"
 #include "sound/dac.h"
-#include "sound/volt_reg.h"
 
 
 #define MIGHTGUY_HACK    0
@@ -78,13 +77,13 @@ Mighty Guy board layout:
  *
  *************************************/
 
-WRITE8_MEMBER(cop01_state::cop01_sound_command_w)
+void cop01_state::cop01_sound_command_w(uint8_t data)
 {
 	m_soundlatch->write(data);
 	m_audiocpu->set_input_line(0, ASSERT_LINE);
 }
 
-READ8_MEMBER(cop01_state::cop01_sound_command_r)
+uint8_t cop01_state::cop01_sound_command_r()
 {
 	int res = (m_soundlatch->read() & 0x7f) << 1;
 
@@ -109,12 +108,12 @@ READ_LINE_MEMBER(cop01_state::mightguy_area_r)
 	return (ioport("FAKE")->read() & Mask) ? 1 : 0;
 }
 
-WRITE8_MEMBER(cop01_state::cop01_irq_ack_w)
+void cop01_state::cop01_irq_ack_w(uint8_t data)
 {
 	m_maincpu->set_input_line(0, CLEAR_LINE );
 }
 
-READ8_MEMBER(cop01_state::cop01_sound_irq_ack_w)
+uint8_t cop01_state::cop01_sound_irq_ack_w()
 {
 	m_audiocpu->set_input_line(0, CLEAR_LINE );
 	return 0;
@@ -519,9 +518,6 @@ void mightguy_state::mightguy(machine_config &config)
 	YM3526(config, "ymsnd", AUDIOCPU_CLOCK/2).add_route(ALL_OUTPUTS, "mono", 1.0); /* unknown divider */
 
 	DAC_8BIT_R2R(config, "dac", 0).add_route(ALL_OUTPUTS, "mono", 0.5); // unknown DAC
-	voltage_regulator_device &vref(VOLTAGE_REGULATOR(config, "vref"));
-	vref.add_route(0, "dac", 1.0, DAC_VREF_POS_INPUT);
-	vref.add_route(0, "dac", -1.0, DAC_VREF_NEG_INPUT);
 }
 
 

@@ -92,36 +92,6 @@
 #define INVALID_KEYROW  -1          /* no keyrow selected */
 #define NO_KEY_PRESSED  0x7F        /* returned by hardware if no key pressed */
 
-// Info for bank switcher
-struct bank_info_entry
-{
-	void (dgn_beta_state::*func)(address_space &, offs_t, u8, u8);  // pointer to write handler
-	char const *name;                                               // write handler name
-	offs_t start;                                                   // offset of start of block
-	offs_t end;                                                     // offset of end of block
-};
-
-static const struct bank_info_entry bank_info[] =
-{
-	{ FUNC(dgn_beta_state::dgnbeta_ram_b0_w), 0x0000, 0x0fff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_b1_w), 0x1000, 0x1fff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_b2_w), 0x2000, 0x2fff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_b3_w), 0x3000, 0x3fff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_b4_w), 0x4000, 0x4fff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_b5_w), 0x5000, 0x5fff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_b6_w), 0x6000, 0x6fff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_b7_w), 0x7000, 0x7fff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_b8_w), 0x8000, 0x8fff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_b9_w), 0x9000, 0x9fff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_bA_w), 0xA000, 0xAfff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_bB_w), 0xB000, 0xBfff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_bC_w), 0xC000, 0xCfff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_bD_w), 0xD000, 0xDfff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_bE_w), 0xE000, 0xEfff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_bF_w), 0xF000, 0xFBff },
-	{ FUNC(dgn_beta_state::dgnbeta_ram_bG_w), 0xFF00, 0xFfff }
-};
-
 #define is_last_page(page)  (((page==LastPage) || (page==LastPage+1)) ? 1 : 0)
 
 //
@@ -155,8 +125,8 @@ void dgn_beta_state::UpdateBanks(int first, int last)
 	{
 		sprintf(page_num,"bank%d",Page+1);
 
-		bank_start  = bank_info[Page].start;
-		bank_end    = bank_info[Page].end;
+		bank_start  = Page < 16 ? Page * 0x1000 : 0xff00;
+		bank_end    = Page < 15 ? bank_start + 0xfff : Page == 15 ? 0xfbff : 0xffff;
 
 		// bank16 and bank17 are mapped to the same page with a hole for the IO memory
 		if (!is_last_page(Page))
@@ -169,39 +139,39 @@ void dgn_beta_state::UpdateBanks(int first, int last)
 		//
 		if ((MapPage*4) < ((m_ram->size() / 1024)-1))     // Block is ram
 		{
+			uint8_t *base;
 			if (!is_last_page(Page))
 			{
-				readbank = &m_ram->pointer()[MapPage*RamPageSize];
+				base = &m_ram->pointer()[MapPage*RamPageSize];
 				if(m_LogDatWrites)
 					machine().debugger().console().printf("Mapping page %X, pageno=%X, mess_ram)[%X]\n",Page,MapPage,(MapPage*RamPageSize));
 			}
 			else
 			{
-				readbank = &m_ram->pointer()[(MapPage*RamPageSize)-256];
+				base = &m_ram->pointer()[(MapPage*RamPageSize)-256];
 				logerror("Error RAM in Last page !\n");
 			}
-			write8_delegate func(*this, bank_info[Page].func, bank_info[Page].name);
-			space_0.install_write_handler(bank_start, bank_end, func);
-			space_1.install_write_handler(bank_start, bank_end, func);
+			space_0.install_ram(bank_start, bank_end, base);
+			space_1.install_ram(bank_start, bank_end, base);
 		}
 		else                    // Block is rom, or undefined
 		{
+			uint8_t *base;
 			if (MapPage>0xfB)
 			{
 				if (Page!=IOPage+1)
-					readbank=&m_system_rom[(MapPage-0xFC)*0x1000];
+					base=&m_system_rom[(MapPage-0xFC)*0x1000];
 				else
-					readbank=&m_system_rom[0x3F00];
+					base=&m_system_rom[0x3F00];
 			}
 			else
-				readbank=m_system_rom;
+				base=m_system_rom;
 
+			space_0.install_rom(bank_start, bank_end, base);
+			space_1.install_rom(bank_start, bank_end, base);
 			space_0.unmap_write(bank_start, bank_end);
 			space_1.unmap_write(bank_start, bank_end);
 		}
-
-		m_PageRegs[m_TaskReg][Page].memory=readbank;
-		membank(page_num)->set_base(readbank);
 
 		LOG_BANK_UPDATE(("UpdateBanks:MapPage=$%02X readbank=$%X\n",MapPage,(int)(uintptr_t)readbank));
 		LOG_BANK_UPDATE(("PageRegsSet Task=%X Page=%x\n",m_TaskReg,Page));
@@ -214,7 +184,6 @@ void dgn_beta_state::UpdateBanks(int first, int last)
 //
 void dgn_beta_state::SetDefaultTask()
 {
-//  uint8_t *videoram = m_videoram;
 	int     Idx;
 
 	LOG_DEFAULT_TASK(("SetDefaultTask()\n"));
@@ -249,7 +218,7 @@ void dgn_beta_state::SetDefaultTask()
 }
 
 // Return the value of a page register
-READ8_MEMBER(dgn_beta_state::dgn_beta_page_r)
+uint8_t dgn_beta_state::dgn_beta_page_r(offs_t offset)
 {
 	return m_PageRegs[m_PIATaskReg][offset].value;
 }
@@ -258,7 +227,7 @@ READ8_MEMBER(dgn_beta_state::dgn_beta_page_r)
 // if memory banking is active, if it is, it calls UpdateBanks, to actually
 // setup the mappings.
 
-WRITE8_MEMBER(dgn_beta_state::dgn_beta_page_w )
+void dgn_beta_state::dgn_beta_page_w(offs_t offset, uint8_t data)
 {
 	m_PageRegs[m_PIATaskReg][offset].value=data;
 
@@ -272,97 +241,6 @@ WRITE8_MEMBER(dgn_beta_state::dgn_beta_page_w )
 	}
 }
 
-/*********************** Memory bank write handlers ************************/
-/* These actually write the data to the memory, and not to the page regs ! */
-void dgn_beta_state::dgn_beta_bank_memory(int offset, int data, int bank)
-{
-	m_PageRegs[m_TaskReg][bank].memory[offset]=data;
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_b0_w )
-{
-	dgn_beta_bank_memory(offset,data,0);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_b1_w )
-{
-	dgn_beta_bank_memory(offset,data,1);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_b2_w )
-{
-	dgn_beta_bank_memory(offset,data,2);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_b3_w )
-{
-	dgn_beta_bank_memory(offset,data,3);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_b4_w )
-{
-	dgn_beta_bank_memory(offset,data,4);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_b5_w )
-{
-	dgn_beta_bank_memory(offset,data,5);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_b6_w )
-{
-	dgn_beta_bank_memory(offset,data,6);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_b7_w )
-{
-	dgn_beta_bank_memory(offset,data,7);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_b8_w )
-{
-	dgn_beta_bank_memory(offset,data,8);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_b9_w )
-{
-	dgn_beta_bank_memory(offset,data,9);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_bA_w )
-{
-	dgn_beta_bank_memory(offset,data,10);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_bB_w )
-{
-	dgn_beta_bank_memory(offset,data,11);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_bC_w )
-{
-	dgn_beta_bank_memory(offset,data,12);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_bD_w )
-{
-	dgn_beta_bank_memory(offset,data,13);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_bE_w )
-{
-	dgn_beta_bank_memory(offset,data,14);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_bF_w )
-{
-	dgn_beta_bank_memory(offset,data,15);
-}
-
-WRITE8_MEMBER(dgn_beta_state::dgnbeta_ram_bG_w )
-{
-	dgn_beta_bank_memory(offset,data,16);
-}
 
 /*
 The keyrow being scanned for any key is the lest significant bit
@@ -436,17 +314,17 @@ int dgn_beta_state::GetKeyRow(dgn_beta_state *state, int RowNo)
         CB1 I36/39/6845(Horz Sync)
         CB2 Keyboard (out) Low loads input shift reg
 */
-READ8_MEMBER(dgn_beta_state::d_pia0_pa_r)
+uint8_t dgn_beta_state::d_pia0_pa_r()
 {
 	// The hardware has pullup resistors on port A.
 	return 0xff;
 }
 
-WRITE8_MEMBER(dgn_beta_state::d_pia0_pa_w)
+void dgn_beta_state::d_pia0_pa_w(uint8_t data)
 {
 }
 
-READ8_MEMBER(dgn_beta_state::d_pia0_pb_r)
+uint8_t dgn_beta_state::d_pia0_pb_r()
 {
 	int RetVal;
 	int Idx;
@@ -487,7 +365,7 @@ READ8_MEMBER(dgn_beta_state::d_pia0_pb_r)
 	return RetVal;
 }
 
-WRITE8_MEMBER(dgn_beta_state::d_pia0_pb_w)
+void dgn_beta_state::d_pia0_pb_w(uint8_t data)
 {
 	int InClkState;
 	//int   OutClkState;
@@ -557,13 +435,13 @@ WRITE_LINE_MEMBER(dgn_beta_state::d_pia0_irq_b)
         Baud rate               PB1..PB5 ????
 */
 
-READ8_MEMBER(dgn_beta_state::d_pia1_pa_r)
+uint8_t dgn_beta_state::d_pia1_pa_r()
 {
 	// The hardware has pullup resistors on port A.
 	return 0xff;
 }
 
-WRITE8_MEMBER(dgn_beta_state::d_pia1_pa_w)
+void dgn_beta_state::d_pia1_pa_w(uint8_t data)
 {
 	int HALT_DMA;
 
@@ -609,12 +487,12 @@ WRITE8_MEMBER(dgn_beta_state::d_pia1_pa_w)
 	LOG_DISK(("Set density %s\n", BIT(data, 6) ? "low" : "high"));
 }
 
-READ8_MEMBER(dgn_beta_state::d_pia1_pb_r)
+uint8_t dgn_beta_state::d_pia1_pb_r()
 {
 	return 0;
 }
 
-WRITE8_MEMBER(dgn_beta_state::d_pia1_pb_w)
+void dgn_beta_state::d_pia1_pb_w(uint8_t data)
 {
 	int HALT_CPU;
 
@@ -657,13 +535,13 @@ WRITE_LINE_MEMBER(dgn_beta_state::d_pia1_irq_b)
         Graphics control PB0..PB7 ???
         VSYNC interrupt CB2
 */
-READ8_MEMBER(dgn_beta_state::d_pia2_pa_r)
+uint8_t dgn_beta_state::d_pia2_pa_r()
 {
 	// The hardware has pullup resistors on port A.
 	return 0xff;
 }
 
-WRITE8_MEMBER(dgn_beta_state::d_pia2_pa_w)
+void dgn_beta_state::d_pia2_pa_w(uint8_t data)
 {
 	int OldTask;
 	int OldEnableMap;
@@ -728,12 +606,12 @@ WRITE8_MEMBER(dgn_beta_state::d_pia2_pa_w)
 	LOG_TASK(("TaskReg=$%02X PIATaskReg=$%02X\n", m_TaskReg, m_PIATaskReg));
 }
 
-READ8_MEMBER(dgn_beta_state::d_pia2_pb_r)
+uint8_t dgn_beta_state::d_pia2_pb_r()
 {
 	return 0;
 }
 
-WRITE8_MEMBER(dgn_beta_state::d_pia2_pb_w)
+void dgn_beta_state::d_pia2_pb_w(uint8_t data)
 {
 	/* Update top video address lines */
 	dgnbeta_vid_set_gctrl(data);
@@ -812,12 +690,12 @@ WRITE_LINE_MEMBER( dgn_beta_state::dgnbeta_fdc_drq_w )
 	cpu1_recalc_firq(state);
 }
 
-READ8_MEMBER( dgn_beta_state::dgnbeta_wd2797_r )
+uint8_t dgn_beta_state::dgnbeta_wd2797_r(offs_t offset)
 {
 	return m_fdc->read(offset & 0x03);
 }
 
-WRITE8_MEMBER( dgn_beta_state::dgnbeta_wd2797_w )
+void dgn_beta_state::dgnbeta_wd2797_w(offs_t offset, uint8_t data)
 {
 	m_wd2797_written = 1;
 	m_fdc->write(offset & 0x03, data);
@@ -891,8 +769,6 @@ void dgn_beta_state::machine_reset()
 {
 	logerror("dgn_beta_state::machine_reset()\n");
 
-	m_system_rom = memregion(MAINCPU_TAG)->base();
-
 	/* Make sure CPU 1 is started out halted ! */
 	m_dmacpu->set_input_line(INPUT_LINE_HALT, ASSERT_LINE);
 
@@ -918,8 +794,6 @@ void dgn_beta_state::machine_reset()
 	m_DMA_NMI_LAST = 0x80;       /* start with DMA NMI inactive, as pulled up */
 //  DMA_NMI = CLEAR_LINE;       /* start with DMA NMI inactive */
 
-	m_videoram.set_target(m_ram->pointer(),m_videoram.bytes());     /* Point video ram at the start of physical ram */
-
 	m_wd2797_written=0;
 
 	m_maincpu->reset();
@@ -937,6 +811,7 @@ void dgn_beta_state::machine_start()
 		machine().debugger().console().register_command("beta_key_dump", CMDFLAG_NONE, 0, 0, 0, std::bind(&dgn_beta_state::execute_beta_key_dump, this, _1, _2));
 	}
 	m_LogDatWrites = false;
+	m_wd2797_written = 0;
 }
 
 

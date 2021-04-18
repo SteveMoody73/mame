@@ -29,7 +29,7 @@ const char *acorn_ssd_format::extensions() const
 	return "ssd,bbc,img";
 }
 
-int acorn_ssd_format::find_size(io_generic *io, uint32_t form_factor)
+int acorn_ssd_format::find_size(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
 	uint8_t cat[8];
 	uint32_t sectors0, sectors2;
@@ -50,6 +50,18 @@ int acorn_ssd_format::find_size(io_generic *io, uint32_t form_factor)
 		if (memcmp(cat, "\x00\x28\x43\x29\x4a\x47\x48\x00", 4) == 0 && size == (uint64_t)compute_track_size(f) * f.track_count * f.head_count)
 			return i;
 
+		// test for Kenda SD - offset &0962 = 0 SD/1 DD, offset &0963 = disk size blocks / 4 (block size = 1K, ie. 0x400 bytes), reserved tracks = 3, ie. 0x1e00 bytes, soft stagger = 2 sectors, ie. 0x200 bytes
+		io_generic_read(io, cat, 0x0960, 8);
+		if (cat[2] == 0 && ((uint64_t)cat[3] * 4 * 0x400 + 0x2000) == size && size == (uint64_t)compute_track_size(f) * f.track_count * f.head_count)
+		{
+			// valid blocks for single sided
+			if (f.head_count == 1 && (cat[3] == 0x17 || cat[3] == 0x30))
+				return i;
+			// valid blocks for double sided
+			if (f.head_count == 2 && (cat[3] == 0x2f || cat[3] == 0x62))
+				return i;
+		}
+
 		// read sector count from side 0 catalogue
 		io_generic_read(io, cat, 0x100, 8);
 		sectors0 = ((cat[6] & 3) << 8) + cat[7];
@@ -59,7 +71,7 @@ int acorn_ssd_format::find_size(io_generic *io, uint32_t form_factor)
 			if (f.head_count == 2)
 			{
 				// read sector count from side 2 catalogue
-				io_generic_read(io, cat, compute_track_size(f) * f.track_count + 0x100, 8); // sequential
+				io_generic_read(io, cat, (uint64_t)compute_track_size(f) * f.track_count + 0x100, 8); // sequential
 				sectors2 = ((cat[6] & 3) << 8) + cat[7];
 
 				// exception case for Acorn CP/M System Disc 1
@@ -81,9 +93,9 @@ int acorn_ssd_format::find_size(io_generic *io, uint32_t form_factor)
 	return -1;
 }
 
-int acorn_ssd_format::identify(io_generic *io, uint32_t form_factor)
+int acorn_ssd_format::identify(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
-	int type = find_size(io, form_factor);
+	int type = find_size(io, form_factor, variants);
 
 	if(type != -1)
 		return 90;
@@ -159,7 +171,7 @@ const char *acorn_dsd_format::extensions() const
 	return "dsd";
 }
 
-int acorn_dsd_format::find_size(io_generic *io, uint32_t form_factor)
+int acorn_dsd_format::find_size(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
 	uint8_t cat[8];
 	uint32_t sectors0, sectors2;
@@ -204,9 +216,9 @@ int acorn_dsd_format::find_size(io_generic *io, uint32_t form_factor)
 	return -1;
 }
 
-int acorn_dsd_format::identify(io_generic *io, uint32_t form_factor)
+int acorn_dsd_format::identify(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
-	int type = find_size(io, form_factor);
+	int type = find_size(io, form_factor, variants);
 
 	if (type != -1)
 		return 90;
@@ -262,7 +274,7 @@ const char *opus_ddos_format::extensions() const
 	return "dds";
 }
 
-int opus_ddos_format::find_size(io_generic *io, uint32_t form_factor)
+int opus_ddos_format::find_size(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
 	uint8_t cat[8];
 	uint32_t sectors0, sectors2;
@@ -282,7 +294,7 @@ int opus_ddos_format::find_size(io_generic *io, uint32_t form_factor)
 			if (f.head_count == 2)
 			{
 				// read sector count from side 2 catalogue
-				io_generic_read(io, cat, compute_track_size(f) * f.track_count + 0x1000, 8); // sequential
+				io_generic_read(io, cat, (uint64_t)compute_track_size(f) * f.track_count + 0x1000, 8); // sequential
 				sectors2 = (cat[1] << 8) + cat[2];
 				LOG_FORMATS("ddos: sector count 2: %d %s\n", sectors2, sectors2 % 18 != 0 ? "invalid" : "");
 			}
@@ -299,9 +311,9 @@ int opus_ddos_format::find_size(io_generic *io, uint32_t form_factor)
 	return -1;
 }
 
-int opus_ddos_format::identify(io_generic *io, uint32_t form_factor)
+int opus_ddos_format::identify(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
-	int type = find_size(io, form_factor);
+	int type = find_size(io, form_factor, variants);
 
 	if (type != -1)
 		return 90;
@@ -357,7 +369,7 @@ const char *acorn_adfs_old_format::extensions() const
 	return "adf,ads,adm,adl";
 }
 
-int acorn_adfs_old_format::find_size(io_generic *io, uint32_t form_factor)
+int acorn_adfs_old_format::find_size(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
 	uint8_t map[3];
 	uint32_t sectors;
@@ -387,9 +399,9 @@ int acorn_adfs_old_format::find_size(io_generic *io, uint32_t form_factor)
 	return -1;
 }
 
-int acorn_adfs_old_format::identify(io_generic *io, uint32_t form_factor)
+int acorn_adfs_old_format::identify(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
-	int type = find_size(io, form_factor);
+	int type = find_size(io, form_factor, variants);
 
 	if(type != -1)
 		return 100;
@@ -453,7 +465,7 @@ const char *acorn_adfs_new_format::extensions() const
 	return "adf";
 }
 
-int acorn_adfs_new_format::find_size(io_generic *io, uint32_t form_factor)
+int acorn_adfs_new_format::find_size(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
 	uint8_t dform[4];
 	uint8_t eform[4];
@@ -484,9 +496,9 @@ int acorn_adfs_new_format::find_size(io_generic *io, uint32_t form_factor)
 	return -1;
 }
 
-int acorn_adfs_new_format::identify(io_generic *io, uint32_t form_factor)
+int acorn_adfs_new_format::identify(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
-	int type = find_size(io, form_factor);
+	int type = find_size(io, form_factor, variants);
 
 	if (type != -1)
 		return 100;
@@ -534,7 +546,7 @@ const char *acorn_dos_format::extensions() const
 	return "img";
 }
 
-int acorn_dos_format::find_size(io_generic *io, uint32_t form_factor)
+int acorn_dos_format::find_size(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
 	uint8_t type;
 
@@ -555,9 +567,9 @@ int acorn_dos_format::find_size(io_generic *io, uint32_t form_factor)
 	return -1;
 }
 
-int acorn_dos_format::identify(io_generic *io, uint32_t form_factor)
+int acorn_dos_format::identify(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
-	int type = find_size(io, form_factor);
+	int type = find_size(io, form_factor, variants);
 
 	if(type != -1)
 		return 90;
@@ -606,7 +618,7 @@ bool opus_ddcpm_format::supports_save() const
 	return false;
 }
 
-int opus_ddcpm_format::identify(io_generic *io, uint32_t form_factor)
+int opus_ddcpm_format::identify(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
 	uint8_t h[8];
 
@@ -618,7 +630,7 @@ int opus_ddcpm_format::identify(io_generic *io, uint32_t form_factor)
 	return 0;
 }
 
-bool opus_ddcpm_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
+bool opus_ddcpm_format::load(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants, floppy_image *image)
 {
 // Double density discs formatted with DDCPM :
 //
@@ -665,7 +677,7 @@ bool opus_ddcpm_format::load(io_generic *io, uint32_t form_factor, floppy_image 
 	return true;
 }
 
-bool opus_ddcpm_format::save(io_generic *io, floppy_image *image)
+bool opus_ddcpm_format::save(io_generic *io, const std::vector<uint32_t> &variants, floppy_image *image)
 {
 	return false;
 }

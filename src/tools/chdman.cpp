@@ -7,14 +7,15 @@
 ****************************************************************************/
 #include <stdio.h> // must be stdio.h and here otherwise issues with I64FMT in MINGW
 
-#include "osdcore.h"
-#include "corefile.h"
-#include "chdcd.h"
-#include "aviio.h"
+// lib/util
 #include "avhuff.h"
+#include "aviio.h"
 #include "bitmap.h"
-#include "md5.h"
+#include "chdcd.h"
+#include "corefile.h"
 #include "hashing.h"
+#include "md5.h"
+#include "strformat.h"
 #include "vbiparse.h"
 
 #include <cassert>
@@ -30,13 +31,15 @@
 #include <new>
 #include <unordered_map>
 
+using util::string_format;
+
 
 
 //**************************************************************************
 //  CONSTANTS & DEFINES
 //**************************************************************************
-/* MINGW has adopted the MSVC formatting for 64-bit ints as of gcc 4.4 */
-#if defined(WIN32)
+// MINGW has adopted the MSVC formatting for 64-bit ints as of GCC 4.4 and deprecated it as of GCC 9.3
+#if defined(WIN32) && defined(__GNUC__) && ((__GNUC__ < 9) || ((__GNUC__ == 9) && (__GNUC_MINOR__ < 3)))
 #define I64FMT   "I64"
 #elif !defined(__APPLE__) && defined(__LP64__)
 #define I64FMT   "l"
@@ -111,23 +114,23 @@ const int MODE_GDI = 2;
 //  FUNCTION PROTOTYPES
 //**************************************************************************
 
-typedef std::unordered_map<std::string,std::string *> parameters_t;
+typedef std::unordered_map<std::string, std::string *> parameters_map;
 
 template <typename Format, typename... Params> static void report_error(int error, Format &&fmt, Params &&...args);
-static void do_info(parameters_t &params);
-static void do_verify(parameters_t &params);
-static void do_create_raw(parameters_t &params);
-static void do_create_hd(parameters_t &params);
-static void do_create_cd(parameters_t &params);
-static void do_create_ld(parameters_t &params);
-static void do_copy(parameters_t &params);
-static void do_extract_raw(parameters_t &params);
-static void do_extract_cd(parameters_t &params);
-static void do_extract_ld(parameters_t &params);
-static void do_add_metadata(parameters_t &params);
-static void do_del_metadata(parameters_t &params);
-static void do_dump_metadata(parameters_t &params);
-static void do_list_templates(parameters_t &params);
+static void do_info(parameters_map &params);
+static void do_verify(parameters_map &params);
+static void do_create_raw(parameters_map &params);
+static void do_create_hd(parameters_map &params);
+static void do_create_cd(parameters_map &params);
+static void do_create_ld(parameters_map &params);
+static void do_copy(parameters_map &params);
+static void do_extract_raw(parameters_map &params);
+static void do_extract_cd(parameters_map &params);
+static void do_extract_ld(parameters_map &params);
+static void do_add_metadata(parameters_map &params);
+static void do_del_metadata(parameters_map &params);
+static void do_dump_metadata(parameters_map &params);
+static void do_list_templates(parameters_map &params);
 
 
 
@@ -151,7 +154,7 @@ struct option_description
 struct command_description
 {
 	const char *name;
-	void (*handler)(parameters_t &);
+	void (*handler)(parameters_map &);
 	const char *description;
 	const char *valid_options[16];
 };
@@ -392,10 +395,27 @@ public:
 				uint64_t src_track_start = m_info.track[tracknum].offset;
 				uint64_t src_track_end = src_track_start + bytesperframe * (uint64_t)trackinfo.frames;
 				uint64_t pad_track_start = src_track_end - ((uint64_t)m_toc.tracks[tracknum].padframes * bytesperframe);
+				uint64_t split_track_start = pad_track_start - ((uint64_t)m_toc.tracks[tracknum].splitframes * bytesperframe);
+
+				// dont split when split-bin read not required
+				if ((uint64_t)m_toc.tracks[tracknum].splitframes == 0L)
+					split_track_start = UINT64_MAX;
+
 				while (length_remaining != 0 && offset < endoffs)
 				{
 					// determine start of current frame
 					uint64_t src_frame_start = src_track_start + ((offset - startoffs) / CD_FRAME_SIZE) * bytesperframe;
+
+					// auto-advance next track for split-bin read
+					if (src_frame_start == split_track_start && m_lastfile.compare(m_info.track[tracknum+1].fname)!=0)
+					{
+						m_file.reset();
+						m_lastfile = m_info.track[tracknum+1].fname;
+						osd_file::error filerr = util::core_file::open(m_lastfile, OPEN_FLAG_READ, m_file);
+						if (filerr != osd_file::error::NONE)
+							report_error(1, "Error opening input file (%s)'", m_lastfile.c_str());
+					}
+
 					if (src_frame_start < src_track_end)
 					{
 						// read it in, or pad if we're into the padframes
@@ -405,7 +425,9 @@ public:
 						}
 						else
 						{
-							m_file->seek(src_frame_start, SEEK_SET);
+							m_file->seek((src_frame_start >= split_track_start)
+								? src_frame_start - split_track_start
+								: src_frame_start, SEEK_SET);
 							uint32_t count = m_file->read(dest, bytesperframe);
 							if (count != bytesperframe)
 								report_error(1, "Error reading input file (%s)'", m_lastfile.c_str());
@@ -482,8 +504,8 @@ public:
 				uint32_t samples = (uint64_t(m_info.rate) * uint64_t(effframe + 1) * uint64_t(1000000) + m_info.fps_times_1million - 1) / uint64_t(m_info.fps_times_1million) - first_sample;
 
 				// loop over channels and read the samples
-				int channels = unsigned((std::min<std::size_t>)(m_info.channels, ARRAY_LENGTH(m_audio)));
-				EQUIVALENT_ARRAY(m_audio, int16_t *) samplesptr;
+				int channels = unsigned((std::min<std::size_t>)(m_info.channels, std::size(m_audio)));
+				int16_t *samplesptr[std::size(m_audio)];
 				for (int chnum = 0; chnum < channels; chnum++)
 				{
 					// read the sound samples
@@ -504,7 +526,7 @@ public:
 				if (m_info.height == 524/2 || m_info.height == 624/2)
 				{
 					vbi_metadata vbi;
-					vbi_parse_all(&subbitmap.pix16(0), subbitmap.rowpixels(), subbitmap.width(), 8, &vbi);
+					vbi_parse_all(&subbitmap.pix(0), subbitmap.rowpixels(), subbitmap.width(), 8, &vbi);
 					vbi_metadata_pack(&m_ldframedata[framenum * VBI_PACKED_BYTES], framenum, &vbi);
 				}
 
@@ -832,7 +854,7 @@ template <typename Format, typename... Params> static void progress(bool forceit
 //  print_help - print help for all the commands
 //-------------------------------------------------
 
-static int print_help(const char *argv0, const char *error = nullptr)
+static int print_help(const std::string &argv0, const char *error = nullptr)
 {
 	// print the error message first
 	if (error != nullptr)
@@ -842,10 +864,10 @@ static int print_help(const char *argv0, const char *error = nullptr)
 	printf("Usage:\n");
 	for (auto & desc : s_commands)
 	{
-		printf("   %s %s%s\n", argv0, desc.name, desc.description);
+		printf("   %s %s%s\n", argv0.c_str(), desc.name, desc.description);
 	}
 	printf("\nFor help with any command, run:\n");
-	printf("   %s %s <command>\n", argv0, COMMAND_HELP);
+	printf("   %s %s <command>\n", argv0.c_str(), COMMAND_HELP);
 	return 1;
 }
 
@@ -855,7 +877,7 @@ static int print_help(const char *argv0, const char *error = nullptr)
 //  command
 //-------------------------------------------------
 
-static int print_help(const char *argv0, const command_description &desc, const char *error = nullptr)
+static int print_help(const std::string &argv0, const command_description &desc, const char *error = nullptr)
 {
 	// print the error message first
 	if (error != nullptr)
@@ -863,8 +885,8 @@ static int print_help(const char *argv0, const command_description &desc, const 
 
 	// print usage for this command
 	printf("Usage:\n");
-	printf("   %s %s [options], where valid options are:\n", argv0, desc.name);
-	for (int valid = 0; valid < ARRAY_LENGTH(desc.valid_options); valid++)
+	printf("   %s %s [options], where valid options are:\n", argv0.c_str(), desc.name);
+	for (int valid = 0; valid < std::size(desc.valid_options); valid++)
 	{
 		// determine whether we are required
 		const char *option = desc.valid_options[valid];
@@ -999,7 +1021,7 @@ static void guess_chs(std::string *filename, uint64_t filesize, int sectorsize, 
 //  standard set of input CHD parameters
 //-------------------------------------------------
 
-static void parse_input_chd_parameters(const parameters_t &params, chd_file &input_chd, chd_file &input_parent_chd, bool writeable = false)
+static void parse_input_chd_parameters(const parameters_map &params, chd_file &input_chd, chd_file &input_parent_chd, bool writeable = false)
 {
 	// process input parent file
 	auto input_chd_parent_str = params.find(OPTION_INPUT_PARENT);
@@ -1026,7 +1048,7 @@ static void parse_input_chd_parameters(const parameters_t &params, chd_file &inp
 //  parameters in a standard way
 //-------------------------------------------------
 
-static void parse_input_start_end(const parameters_t &params, uint64_t logical_size, uint32_t hunkbytes, uint32_t framebytes, uint64_t &input_start, uint64_t &input_end)
+static void parse_input_start_end(const parameters_map &params, uint64_t logical_size, uint32_t hunkbytes, uint32_t framebytes, uint64_t &input_start, uint64_t &input_end)
 {
 	// process start/end if we were provided an input CHD
 	input_start = 0;
@@ -1067,7 +1089,7 @@ static void parse_input_start_end(const parameters_t &params, uint64_t logical_s
 //  unless --force is specified
 //-------------------------------------------------
 
-static void check_existing_output_file(const parameters_t &params, const char *filename)
+static void check_existing_output_file(const parameters_map &params, const char *filename)
 {
 	if (params.find(OPTION_OUTPUT_FORCE) == params.end())
 	{
@@ -1087,7 +1109,7 @@ static void check_existing_output_file(const parameters_t &params, const char *f
 //  standard set of output CHD parameters
 //-------------------------------------------------
 
-static std::string *parse_output_chd_parameters(const parameters_t &params, chd_file &output_parent_chd)
+static std::string *parse_output_chd_parameters(const parameters_map &params, chd_file &output_parent_chd)
 {
 	// process output parent file
 	auto output_chd_parent_str = params.find(OPTION_OUTPUT_PARENT);
@@ -1111,7 +1133,7 @@ static std::string *parse_output_chd_parameters(const parameters_t &params, chd_
 //  parameter in a standard way
 //-------------------------------------------------
 
-static void parse_hunk_size(const parameters_t &params, uint32_t required_granularity, uint32_t &hunk_size)
+static void parse_hunk_size(const parameters_map &params, uint32_t required_granularity, uint32_t &hunk_size)
 {
 	auto hunk_size_str = params.find(OPTION_HUNK_SIZE);
 	if (hunk_size_str != params.end())
@@ -1130,7 +1152,7 @@ static void parse_hunk_size(const parameters_t &params, uint32_t required_granul
 //  compression parameter string
 //-------------------------------------------------
 
-static void parse_compression(const parameters_t &params, chd_codec_type compression[4])
+static void parse_compression(const parameters_map &params, chd_codec_type compression[4])
 {
 	// see if anything was specified
 	auto compression_str = params.find(OPTION_COMPRESSION);
@@ -1171,7 +1193,7 @@ static void parse_compression(const parameters_t &params, chd_codec_type compres
 //  command
 //-------------------------------------------------
 
-static void parse_numprocessors(const parameters_t &params)
+static void parse_numprocessors(const parameters_map &params)
 {
 	auto numprocessors_str = params.find(OPTION_NUMPROCESSORS);
 	if (numprocessors_str == params.end())
@@ -1248,7 +1270,7 @@ static void compress_common(chd_file_compressor &chd)
 //  to a CUE file
 //-------------------------------------------------
 
-void output_track_metadata(int mode, util::core_file &file, int tracknum, const cdrom_track_info &info, const char *filename, uint32_t frameoffs, uint64_t discoffs)
+void output_track_metadata(int mode, util::core_file &file, int tracknum, const cdrom_track_info &info, const std::string &filename, uint32_t frameoffs, uint64_t discoffs)
 {
 	if (mode == MODE_GDI)
 	{
@@ -1296,8 +1318,9 @@ void output_track_metadata(int mode, util::core_file &file, int tracknum, const 
 				size = 2352;
 				break;
 		}
-		bool needquote = strchr(filename, ' ') != nullptr;
-		file.printf("%d %d %d %d %s%s%s %d\n", tracknum+1, frameoffs, mode, size, needquote?"\"":"", filename, needquote?"\"":"", discoffs);
+		const bool needquote = filename.find(' ') != std::string::npos;
+		const char *const quotestr = needquote ? "\"" : "";
+		file.printf("%d %d %d %d %s%s%s %d\n", tracknum+1, frameoffs, mode, size, quotestr, filename, quotestr, discoffs);
 	}
 	else if (mode == MODE_CUEBIN)
 	{
@@ -1400,7 +1423,7 @@ void output_track_metadata(int mode, util::core_file &file, int tracknum, const 
 //  a drive image
 //-------------------------------------------------
 
-static void do_info(parameters_t &params)
+static void do_info(parameters_map &params)
 {
 	bool verbose = params.find(OPTION_VERBOSE) != params.end();
 	// parse out input files
@@ -1504,8 +1527,8 @@ static void do_info(parameters_t &params)
 						codec = CHD_CODEC_MINI + 1 + comptype;
 						break;
 					}
-			if (codec > ARRAY_LENGTH(compression_types))
-				codec = ARRAY_LENGTH(compression_types) - 1;
+			if (codec >= std::size(compression_types))
+				codec = std::size(compression_types) - 1;
 
 			// count stats
 			compression_types[codec]++;
@@ -1515,7 +1538,7 @@ static void do_info(parameters_t &params)
 		printf("\n");
 		printf("     Hunks  Percent  Name\n");
 		printf("----------  -------  ------------------------------------\n");
-		for (int comptype = 0; comptype < ARRAY_LENGTH(compression_types); comptype++)
+		for (int comptype = 0; comptype < std::size(compression_types); comptype++)
 			if (compression_types[comptype] != 0)
 			{
 				// determine the name
@@ -1547,7 +1570,7 @@ static void do_info(parameters_t &params)
 //  do_verify - validate the SHA1 on a CHD
 //-------------------------------------------------
 
-static void do_verify(parameters_t &params)
+static void do_verify(parameters_map &params)
 {
 	// parse out input files
 	chd_file input_parent_chd;
@@ -1627,7 +1650,7 @@ static void do_verify(parameters_t &params)
 //  image from a raw file
 //-------------------------------------------------
 
-static void do_create_raw(parameters_t &params)
+static void do_create_raw(parameters_map &params)
 {
 	// process input file
 	util::core_file::ptr input_file;
@@ -1720,7 +1743,7 @@ static void do_create_raw(parameters_t &params)
 //  disk image from a raw file
 //-------------------------------------------------
 
-static void do_create_hd(parameters_t &params)
+static void do_create_hd(parameters_map &params)
 {
 	// process input file
 	util::core_file::ptr input_file;
@@ -1824,7 +1847,7 @@ static void do_create_hd(parameters_t &params)
 	{
 		uint32_t id = parse_number(template_str->second->c_str());
 
-		if (id >= ARRAY_LENGTH(s_hd_templates))
+		if (id >= std::size(s_hd_templates))
 			report_error(1, "Template '%d' is invalid\n", id);
 
 		cylinders = s_hd_templates[id].cylinders;
@@ -1928,7 +1951,7 @@ static void do_create_hd(parameters_t &params)
 //  image from a raw file
 //-------------------------------------------------
 
-static void do_create_cd(parameters_t &params)
+static void do_create_cd(parameters_map &params)
 {
 	// process input file
 	chdcd_track_input_info track_info;
@@ -2019,7 +2042,7 @@ static void do_create_cd(parameters_t &params)
 //  input AVI file and metadata
 //-------------------------------------------------
 
-static void do_create_ld(parameters_t &params)
+static void do_create_ld(parameters_map &params)
 {
 	// process input file
 	avi_file::ptr input_file;
@@ -2145,7 +2168,7 @@ static void do_create_ld(parameters_t &params)
 //  another CHD
 //-------------------------------------------------
 
-static void do_copy(parameters_t &params)
+static void do_copy(parameters_map &params)
 {
 	// parse out input files
 	chd_file input_parent_chd;
@@ -2280,7 +2303,7 @@ static void do_copy(parameters_t &params)
 //  CHD image
 //-------------------------------------------------
 
-static void do_extract_raw(parameters_t &params)
+static void do_extract_raw(parameters_map &params)
 {
 	// parse out input files
 	chd_file input_parent_chd;
@@ -2358,7 +2381,7 @@ static void do_extract_raw(parameters_t &params)
 //  CHD image
 //-------------------------------------------------
 
-static void do_extract_cd(parameters_t &params)
+static void do_extract_cd(parameters_map &params)
 {
 	// parse out input files
 	chd_file input_parent_chd;
@@ -2469,11 +2492,11 @@ static void do_extract_cd(parameters_t &params)
 			const cdrom_track_info &trackinfo = toc->tracks[tracknum];
 			if (mode == MODE_GDI)
 			{
-				output_track_metadata(mode, *output_toc_file, tracknum, trackinfo, core_filename_extract_base(trackbin_name).c_str(), discoffs, outputoffs);
+				output_track_metadata(mode, *output_toc_file, tracknum, trackinfo, std::string(core_filename_extract_base(trackbin_name)), discoffs, outputoffs);
 			}
 			else
 			{
-				output_track_metadata(mode, *output_toc_file, tracknum, trackinfo, core_filename_extract_base(*output_bin_file_str).c_str(), discoffs, outputoffs);
+				output_track_metadata(mode, *output_toc_file, tracknum, trackinfo, std::string(core_filename_extract_base(*output_bin_file_str)), discoffs, outputoffs);
 			}
 
 			// If this is bin/cue output and the CHD contains subdata, warn the user and don't include
@@ -2555,7 +2578,7 @@ static void do_extract_cd(parameters_t &params)
 //  CHD image
 //-------------------------------------------------
 
-static void do_extract_ld(parameters_t &params)
+static void do_extract_ld(parameters_map &params)
 {
 	// parse out input files
 	chd_file input_parent_chd;
@@ -2638,12 +2661,14 @@ static void do_extract_ld(parameters_t &params)
 			report_error(1, "Unable to open file (%s)", output_file_str->second->c_str());
 
 		// create the codec configuration
-		avhuff_decompress_config avconfig;
+		avhuff_decoder::config avconfig;
+		bitmap_yuy16 avvideo;
 		std::vector<int16_t> audio_data[16];
 		uint32_t actsamples;
+		avconfig.video = &avvideo;
 		avconfig.maxsamples = max_samples_per_frame;
 		avconfig.actsamples = &actsamples;
-		for (int chnum = 0; chnum < ARRAY_LENGTH(audio_data); chnum++)
+		for (int chnum = 0; chnum < std::size(audio_data); chnum++)
 		{
 			audio_data[chnum].resize(std::max(1U,max_samples_per_frame));
 			avconfig.audio[chnum] = &audio_data[chnum][0];
@@ -2656,7 +2681,7 @@ static void do_extract_ld(parameters_t &params)
 			progress(framenum == input_start, "Extracting, %.1f%% complete...  \r", 100.0 * double(framenum - input_start) / double(input_end - input_start));
 
 			// set up the fake bitmap for this frame
-			avconfig.video.wrap(&fullbitmap.pix(framenum % interlace_factor), fullbitmap.width(), fullbitmap.height() / interlace_factor, fullbitmap.rowpixels() * interlace_factor);
+			avvideo.wrap(&fullbitmap.pix(framenum % interlace_factor), fullbitmap.width(), fullbitmap.height() / interlace_factor, fullbitmap.rowpixels() * interlace_factor);
 			input_chd.codec_configure(CHD_CODEC_AVHUFF, AVHUFF_CODEC_DECOMPRESS_CONFIG, &avconfig);
 
 			// read the hunk into the buffers
@@ -2703,7 +2728,7 @@ static void do_extract_ld(parameters_t &params)
 //  file
 //-------------------------------------------------
 
-static void do_add_metadata(parameters_t &params)
+static void do_add_metadata(parameters_map &params)
 {
 	// parse out input files
 	chd_file input_parent_chd;
@@ -2782,7 +2807,7 @@ static void do_add_metadata(parameters_t &params)
 //  do_del_metadata - remove metadata from a CHD
 //-------------------------------------------------
 
-static void do_del_metadata(parameters_t &params)
+static void do_del_metadata(parameters_map &params)
 {
 	// parse out input files
 	chd_file input_parent_chd;
@@ -2822,7 +2847,7 @@ static void do_del_metadata(parameters_t &params)
 //  do_dump_metadata - dump metadata from a CHD
 //-------------------------------------------------
 
-static void do_dump_metadata(parameters_t &params)
+static void do_dump_metadata(parameters_map &params)
 {
 	// parse out input files
 	chd_file input_parent_chd;
@@ -2897,13 +2922,13 @@ static void do_dump_metadata(parameters_t &params)
 //  do_dump_metadata - dump metadata from a CHD
 //-------------------------------------------------
 
-static void do_list_templates(parameters_t &params)
+static void do_list_templates(parameters_map &params)
 {
 	printf("\n");
 	printf("ID  Manufacturer  Model           Cylinders  Heads  Sectors  Sector Size  Total Size\n");
 	printf("------------------------------------------------------------------------------------\n");
 
-	for (int id = 0; id < ARRAY_LENGTH(s_hd_templates); id++)
+	for (int id = 0; id < std::size(s_hd_templates); id++)
 	{
 		printf("%2d  %-13s %-15s %9d  %5d  %7d  %11d  %7d MB\n",
 			id,
@@ -2925,45 +2950,47 @@ static void do_list_templates(parameters_t &params)
 
 int CLIB_DECL main(int argc, char *argv[])
 {
+	const std::vector<std::string> args = osd_get_command_line(argc, argv);
+
 	// print the header
 	extern const char build_version[];
 	printf("chdman - MAME Compressed Hunks of Data (CHD) manager %s\n", build_version);
 
 	// handle help specially
-	if (argc < 2)
-		return print_help(argv[0]);
+	if (args.size() < 2)
+		return print_help(args[0]);
 	int argnum = 1;
-	const char *command = argv[argnum++];
-	bool help = (strcmp(command, COMMAND_HELP) == 0);
+	std::string command = args[argnum++];
+	bool help(command == COMMAND_HELP);
 	if (help)
 	{
-		if (argc <= 2)
-			return print_help(argv[0]);
-		command = argv[argnum++];
+		if (args.size() <= 2)
+			return print_help(args[0]);
+		command = args[argnum++];
 	}
 
 	// iterate over commands to find our match
 	for (auto & s_command : s_commands)
-		if (strcmp(command, s_command.name) == 0)
+		if (command == s_command.name)
 		{
 			const command_description &desc = s_command;
 
 			// print help if that was requested
 			if (help)
-				return print_help(argv[0], desc);
+				return print_help(args[0], desc);
 
 			// otherwise, verify the parameters
-			parameters_t parameters;
-			while (argnum < argc)
+			parameters_map parameters;
+			while (argnum < args.size())
 			{
 				// should be an option name
-				const char *arg = argv[argnum++];
-				if (arg[0] != '-')
-					return print_help(argv[0], desc, "Expected option, not parameter");
+				const std::string &arg = args[argnum++];
+				if (arg.empty() || (arg[0] != '-'))
+					return print_help(args[0], desc, "Expected option, not parameter");
 
 				// iterate over valid options
 				int valid;
-				for (valid = 0; valid < ARRAY_LENGTH(desc.valid_options); valid++)
+				for (valid = 0; valid < std::size(desc.valid_options); valid++)
 				{
 					// reduce to the option name
 					const char *validname = desc.valid_options[valid];
@@ -2974,10 +3001,10 @@ int CLIB_DECL main(int argc, char *argv[])
 
 					// find the matching option description
 					int optnum;
-					for (optnum = 0; optnum < ARRAY_LENGTH(s_options); optnum++)
+					for (optnum = 0; optnum < std::size(s_options); optnum++)
 						if (strcmp(s_options[optnum].name, validname) == 0)
 							break;
-					assert(optnum != ARRAY_LENGTH(s_options));
+					assert(optnum != std::size(s_options));
 
 					// do we match?
 					const option_description &odesc = s_options[optnum];
@@ -2988,31 +3015,31 @@ int CLIB_DECL main(int argc, char *argv[])
 						const char *param = "";
 						if (odesc.parameter)
 						{
-							if (argnum >= argc || argv[argnum][0] == '-')
-								return print_help(argv[0], desc, "Option is missing parameter");
-							param = argv[argnum++];
+							if (argnum >= args.size() || (!args[argnum].empty() && args[argnum][0] == '-'))
+								return print_help(args[0], desc, "Option is missing parameter");
+							param = args[argnum++].c_str();
 						}
 
 						// add to the map
 						if (!parameters.insert(std::make_pair(odesc.name, new std::string(param))).second)
-							return print_help(argv[0], desc, "Multiple parameters of the same type specified");
+							return print_help(args[0], desc, "Multiple parameters of the same type specified");
 						break;
 					}
 				}
 
 				// if not valid, error
-				if (valid == ARRAY_LENGTH(desc.valid_options))
-					return print_help(argv[0], desc, "Option not valid for this command");
+				if (valid == std::size(desc.valid_options))
+					return print_help(args[0], desc, "Option not valid for this command");
 			}
 
 			// make sure we got all our required parameters
-			for (int valid = 0; valid < ARRAY_LENGTH(desc.valid_options); valid++)
+			for (int valid = 0; valid < std::size(desc.valid_options); valid++)
 			{
 				const char *validname = desc.valid_options[valid];
 				if (validname == nullptr)
 					break;
 				if (*validname == REQUIRED[0] && parameters.find(++validname) == parameters.end())
-					return print_help(argv[0], desc, "Required parameters missing");
+					return print_help(args[0], desc, "Required parameters missing");
 			}
 
 			// all clear, run the command
@@ -3039,5 +3066,5 @@ int CLIB_DECL main(int argc, char *argv[])
 		}
 
 	// print generic help if nothing found
-	return print_help(argv[0]);
+	return print_help(args[0]);
 }

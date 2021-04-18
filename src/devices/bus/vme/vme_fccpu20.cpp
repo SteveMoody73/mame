@@ -246,7 +246,6 @@ void vme_fccpu20_device::cpu20_mem(address_map &map)
 static DEVICE_INPUT_DEFAULTS_START( terminal )
 	DEVICE_INPUT_DEFAULTS( "RS232_RXBAUD", 0xff, RS232_BAUD_9600 )
 	DEVICE_INPUT_DEFAULTS( "RS232_TXBAUD", 0xff, RS232_BAUD_9600 )
-	DEVICE_INPUT_DEFAULTS( "RS232_STARTBITS", 0xff, RS232_STARTBITS_1 )
 	DEVICE_INPUT_DEFAULTS( "RS232_DATABITS", 0xff, RS232_DATABITS_7 )
 	DEVICE_INPUT_DEFAULTS( "RS232_PARITY", 0xff, RS232_PARITY_NONE )
 	DEVICE_INPUT_DEFAULTS( "RS232_STOPBITS", 0xff, RS232_STOPBITS_2 )
@@ -496,17 +495,17 @@ void vme_fccpu20_device::device_timer (emu_timer &timer, device_timer_id id, int
 }
 
 /* Boot vector handler, the PCB hardwires the first 8 bytes from 0xff800000 to 0x0 at reset*/
-READ32_MEMBER (vme_fccpu20_device::bootvect_r)
+uint32_t vme_fccpu20_device::bootvect_r(offs_t offset)
 {
 	LOG("%s\n", FUNCNAME);
 	return m_sysrom[offset];
 }
 
-WRITE32_MEMBER (vme_fccpu20_device::bootvect_w)
+void vme_fccpu20_device::bootvect_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	LOG("%s\n", FUNCNAME);
-	m_sysram[offset % ARRAY_LENGTH(m_sysram)] &= ~mem_mask;
-	m_sysram[offset % ARRAY_LENGTH(m_sysram)] |= (data & mem_mask);
+	m_sysram[offset % std::size(m_sysram)] &= ~mem_mask;
+	m_sysram[offset % std::size(m_sysram)] |= (data & mem_mask);
 	m_sysrom = &m_sysram[0]; // redirect all upcoming accesses to masking RAM until reset.
 }
 
@@ -558,14 +557,14 @@ void vme_fccpu20_device::update_irq_to_maincpu()
 #define BR8N38400  0x08
 #define FORCEBUG   0x30
 
-READ8_MEMBER (vme_fccpu20_device::pita_r)
+uint8_t vme_fccpu20_device::pita_r()
 {
 	LOG("%s\n", FUNCNAME);
 	return FORCEBUG | BR7N9600;
 }
 
 /* Enabling/Disabling of VME IRQ 1-7 */
-READ8_MEMBER (vme_fccpu20_device::pitb_r)
+uint8_t vme_fccpu20_device::pitb_r()
 {
 	LOG("%s\n", FUNCNAME);
 	return 0xff;
@@ -573,7 +572,7 @@ READ8_MEMBER (vme_fccpu20_device::pitb_r)
 
 /* VME board ID bit and bus release software settings (output) (ROR, RAT, RATAR, RATBCLR, RORAT, RORRAT */
 /* Bit 4 is bus available */
-READ8_MEMBER (vme_fccpu20_device::pitc_r)
+uint8_t vme_fccpu20_device::pitc_r()
 {
 	uint8_t board_id = 0;
 

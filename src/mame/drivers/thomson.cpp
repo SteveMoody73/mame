@@ -86,7 +86,6 @@
 #include "machine/clock.h"
 #include "machine/ram.h"
 #include "machine/wd_fdc.h"
-#include "sound/volt_reg.h"
 
 #include "softlist.h"
 #include "speaker.h"
@@ -617,9 +616,11 @@ static const floppy_interface thomson_floppy_interface =
 	"thom_flop"
 };
 
-FLOPPY_FORMATS_MEMBER( thomson_state::cd90_640_formats )
-	FLOPPY_CD90_640_FORMAT
-FLOPPY_FORMATS_END
+void thomson_state::cd90_640_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_CD90_640_FORMAT);
+}
 
 static void cd90_640_floppies(device_slot_interface &device)
 {
@@ -655,16 +656,11 @@ void thomson_state::to7_base(machine_config &config)
 	m_screen->set_palette("palette");
 
 	PALETTE(config, "palette", FUNC(thomson_state::thom_palette), 4097); // 12-bit color + transparency
-	MCFG_VIDEO_START_OVERRIDE( thomson_state, thom )
 
 /* sound */
 	SPEAKER(config, "speaker").front_center();
 	DAC_1BIT(config, "buzzer", 0).add_route(ALL_OUTPUTS, "speaker", 0.5);
 	DAC_6BIT_R2R(config, m_dac, 0).add_route(ALL_OUTPUTS, "speaker", 0.5); // 6-bit game extension R-2R DAC (R=10K)
-	voltage_regulator_device &vref(VOLTAGE_REGULATOR(config, "vref"));
-	vref.add_route(0, "buzzer", 1.0, DAC_VREF_POS_INPUT);
-	vref.add_route(0, "dac", 1.0, DAC_VREF_POS_INPUT);
-	vref.add_route(0, "dac", -1.0, DAC_VREF_NEG_INPUT);
 
 /* speech synthesis */
 	MEA8000(config, m_mea8000, 3840000).add_route(ALL_OUTPUTS, "speaker", 1.0);

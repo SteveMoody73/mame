@@ -75,12 +75,12 @@ public:
 
 private:
 
-	DECLARE_FLOPPY_FORMATS( floppy_formats );
+	static void floppy_formats(format_registration &fr);
 
-	DECLARE_WRITE8_MEMBER(mirage_via_write_porta);
-	DECLARE_WRITE8_MEMBER(mirage_via_write_portb);
+	void mirage_via_write_porta(uint8_t data);
+	void mirage_via_write_portb(uint8_t data);
 	DECLARE_WRITE_LINE_MEMBER(mirage_doc_irq);
-	DECLARE_READ8_MEMBER(mirage_adc_read);
+	uint8_t mirage_adc_read();
 
 	void mirage_map(address_map &map);
 
@@ -95,9 +95,11 @@ private:
 	int last_sndram_bank;
 };
 
-FLOPPY_FORMATS_MEMBER( enmirage_state::floppy_formats )
-	FLOPPY_ESQ8IMG_FORMAT
-FLOPPY_FORMATS_END
+void enmirage_state::floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_ESQ8IMG_FORMAT);
+}
 
 static void ensoniq_floppies(device_slot_interface &device)
 {
@@ -109,7 +111,7 @@ WRITE_LINE_MEMBER(enmirage_state::mirage_doc_irq)
 //    m_maincpu->set_input_line(M6809_IRQ_LINE, state);
 }
 
-READ8_MEMBER(enmirage_state::mirage_adc_read)
+uint8_t enmirage_state::mirage_adc_read()
 {
 	return 0x00;
 }
@@ -137,7 +139,7 @@ void enmirage_state::mirage_map(address_map &map)
 // bits 0-2: column select from 0-7
 // bits 3/4 = right and left LED enable
 // bits 5/6/7 keypad rows 0/1/2 return
-WRITE8_MEMBER(enmirage_state::mirage_via_write_porta)
+void enmirage_state::mirage_via_write_porta(uint8_t data)
 {
 	u8 segdata = data & 7;
 	m_display->matrix(((data >> 3) & 3) ^ 3, (1<<segdata));
@@ -151,7 +153,7 @@ WRITE8_MEMBER(enmirage_state::mirage_via_write_porta)
 //  bit 1: OUT upper/lower bank (64k halves)
 //  bit 0: OUT bank 0/bank 1 (32k halves)
 
-WRITE8_MEMBER(enmirage_state::mirage_via_write_portb)
+void enmirage_state::mirage_via_write_portb(uint8_t data)
 {
 	int bank = 0;
 
@@ -179,7 +181,7 @@ void enmirage_state::mirage(machine_config &config)
 	es5503.add_route(0, "lspeaker", 1.0);
 	es5503.add_route(1, "rspeaker", 1.0);
 
-	VIA6522(config, m_via, 1000000);
+	MOS6522(config, m_via, 1000000);
 	m_via->writepa_handler().set(FUNC(enmirage_state::mirage_via_write_porta));
 	m_via->writepb_handler().set(FUNC(enmirage_state::mirage_via_write_portb));
 	m_via->irq_handler().set_inputline(m_maincpu, M6809_IRQ_LINE);

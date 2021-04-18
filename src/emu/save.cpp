@@ -2,7 +2,7 @@
 // copyright-holders:Aaron Giles
 /***************************************************************************
 
-    save.c
+    save.cpp
 
     Save state management functions.
 
@@ -190,13 +190,13 @@ void save_manager::save_memory(device_t *device, const char *module, const char 
 
 	// create the full name
 	std::string totalname;
-	if (tag != nullptr)
+	if (tag)
 		totalname = string_format("%s/%s/%X/%s", module, tag, index, name);
 	else
 		totalname = string_format("%s/%X/%s", module, index, name);
 
 	// insert us into the list
-	m_entry_list.emplace_back(std::make_unique<state_entry>(val, totalname.c_str(), device, module, tag ? tag : "", index, valsize, valcount, blockcount, stride));
+	m_entry_list.emplace_back(std::make_unique<state_entry>(val, std::move(totalname), device, module, tag ? tag : "", index, valsize, valcount, blockcount, stride));
 }
 
 
@@ -416,7 +416,7 @@ inline save_error save_manager::do_write(T check_space, U write_block, V start_h
 	{
 		const u32 blocksize = entry->m_typesize * entry->m_typecount;
 		const u8 *data = reinterpret_cast<const u8 *>(entry->m_data);
-		for (u32 b = 0; entry->m_blockcount > b; ++b, data += (entry->m_typesize * entry->m_stride))
+		for (u32 b = 0; entry->m_blockcount > b; ++b, data += entry->m_stride)
 			if (!write_block(data, blocksize))
 				return STATERR_WRITE_ERROR;
 	}
@@ -460,7 +460,7 @@ inline save_error save_manager::do_read(T check_length, U read_block, V start_he
 	{
 		const u32 blocksize = entry->m_typesize * entry->m_typecount;
 		u8 *data = reinterpret_cast<u8 *>(entry->m_data);
-		for (u32 b = 0; entry->m_blockcount > b; ++b, data += (entry->m_typesize * entry->m_stride))
+		for (u32 b = 0; entry->m_blockcount > b; ++b, data += entry->m_stride)
 			if (!read_block(data, blocksize))
 				return STATERR_READ_ERROR;
 
@@ -644,7 +644,7 @@ save_error ram_state::load()
 		return STATERR_ILLEGAL_REGISTRATIONS;
 
 	// get the save manager to load state
-	return m_save.write_stream(m_data);
+	return m_save.read_stream(m_data);
 }
 
 
@@ -961,12 +961,15 @@ void rewinder::report_error(save_error error, rewind_operation operation)
 //  state_entry - constructor
 //-------------------------------------------------
 
-save_manager::state_entry::state_entry(void *data, const char *name, device_t *device, const char *module, const char *tag, int index, u8 size, u32 valcount, u32 blockcount, u32 stride)
+save_manager::state_entry::state_entry(
+		void *data,
+		std::string &&name, device_t *device, std::string &&module, std::string &&tag, int index,
+		u8 size, u32 valcount, u32 blockcount, u32 stride)
 	: m_data(data)
-	, m_name(name)
+	, m_name(std::move(name))
 	, m_device(device)
-	, m_module(module)
-	, m_tag(tag)
+	, m_module(std::move(module))
+	, m_tag(std::move(tag))
 	, m_index(index)
 	, m_typesize(size)
 	, m_typecount(valcount)
@@ -984,7 +987,7 @@ save_manager::state_entry::state_entry(void *data, const char *name, device_t *d
 void save_manager::state_entry::flip_data()
 {
 	u8 *data = reinterpret_cast<u8 *>(m_data);
-	for (u32 b = 0; m_blockcount > b; ++b, data += (m_typesize * m_stride))
+	for (u32 b = 0; m_blockcount > b; ++b, data += m_stride)
 	{
 		u16 *data16;
 		u32 *data32;

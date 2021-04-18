@@ -7,7 +7,6 @@
 
  ***********************************************************************************************************/
 
-
 #include "emu.h"
 #include "slot.h"
 
@@ -112,9 +111,9 @@ static const vectrex_slot slot_list[] =
 #if 0
 static int vectrex_get_pcb_id(const char *slot)
 {
-	for (int i = 0; i < ARRAY_LENGTH(slot_list); i++)
+	for (int i = 0; i < std::size(slot_list); i++)
 	{
-		if (!core_stricmp(slot_list[i].slot_option, slot))
+		if (!strcmp(slot_list[i].slot_option, slot))
 			return slot_list[i].pcb_id;
 	}
 
@@ -225,10 +224,10 @@ std::string vectrex_cart_slot_device::get_default_card_software(get_default_card
  read_rom
  -------------------------------------------------*/
 
-READ8_MEMBER(vectrex_cart_slot_device::read_rom)
+uint8_t vectrex_cart_slot_device::read_rom(offs_t offset)
 {
 	if (m_cart)
-		return m_cart->read_rom(space, offset);
+		return m_cart->read_rom(offset);
 	else
 		return 0xff;
 }
@@ -237,18 +236,18 @@ READ8_MEMBER(vectrex_cart_slot_device::read_rom)
  write_ram
  -------------------------------------------------*/
 
-WRITE8_MEMBER(vectrex_cart_slot_device::write_ram)
+void vectrex_cart_slot_device::write_ram(offs_t offset, uint8_t data)
 {
 	if (m_cart)
-		m_cart->write_ram(space, offset, data);
+		m_cart->write_ram(offset, data);
 }
 
 /*-------------------------------------------------
  write_bank
  -------------------------------------------------*/
 
-WRITE8_MEMBER(vectrex_cart_slot_device::write_bank)
+void vectrex_cart_slot_device::write_bank(uint8_t data)
 {
 	if (m_cart)
-		m_cart->write_bank(space, offset, data);
+		m_cart->write_bank(data);
 }

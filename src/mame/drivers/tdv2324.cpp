@@ -108,18 +108,18 @@
 #include "softlist.h"
 
 
-READ8_MEMBER( tdv2324_state::tdv2324_main_io_30 )
+uint8_t tdv2324_state::tdv2324_main_io_30()
 {
 	return 0xff;
 }
 
 // Not sure what this is for, i/o read at 0xE6 on maincpu, post fails if it does not return bit 4 set
-READ8_MEMBER( tdv2324_state::tdv2324_main_io_e6 )
+uint8_t tdv2324_state::tdv2324_main_io_e6()
 {
 	return 0x10; // TODO: this should actually return something meaningful, for now is enough to pass early boot test
 }
 
-WRITE8_MEMBER( tdv2324_state::tdv2324_main_io_e2 )
+void tdv2324_state::tdv2324_main_io_e2(uint8_t data)
 {
 	printf("%c\n", data);
 }
@@ -267,9 +267,10 @@ static void tdv2324_floppies(device_slot_interface &device)
 void tdv2324_state::tdv2324(machine_config &config)
 {
 	// basic system hardware
-	I8085A(config, m_maincpu, 8700000/2); // ???
-	m_maincpu->set_addrmap(AS_PROGRAM, &tdv2324_state::tdv2324_mem);
-	m_maincpu->set_addrmap(AS_IO, &tdv2324_state::tdv2324_io);
+	i8085a_cpu_device &maincpu(I8085A(config, m_maincpu, 8700000/2)); // ???
+	maincpu.set_addrmap(AS_PROGRAM, &tdv2324_state::tdv2324_mem);
+	maincpu.set_addrmap(AS_IO, &tdv2324_state::tdv2324_io);
+	maincpu.in_inta_func().set(P8259A_TAG, FUNC(pic8259_device::acknowledge));
 
 	I8085A(config, m_subcpu, 8000000/2); // ???
 	m_subcpu->set_addrmap(AS_PROGRAM, &tdv2324_state::tdv2324_sub_mem);
@@ -300,8 +301,8 @@ void tdv2324_state::tdv2324(machine_config &config)
 	Z80SIO(config, MK3887N4_TAG, 8000000/2);
 
 	FD1797(config, FD1797PL02_TAG, 8000000/4);
-	FLOPPY_CONNECTOR(config, FD1797PL02_TAG":0", tdv2324_floppies, "8dsdd", floppy_image_device::default_floppy_formats);
-	FLOPPY_CONNECTOR(config, FD1797PL02_TAG":1", tdv2324_floppies, "8dsdd", floppy_image_device::default_floppy_formats);
+	FLOPPY_CONNECTOR(config, FD1797PL02_TAG":0", tdv2324_floppies, "8dsdd", floppy_image_device::default_mfm_floppy_formats);
+	FLOPPY_CONNECTOR(config, FD1797PL02_TAG":1", tdv2324_floppies, "8dsdd", floppy_image_device::default_mfm_floppy_formats);
 
 	// internal ram
 	RAM(config, RAM_TAG).set_default_size("64K");

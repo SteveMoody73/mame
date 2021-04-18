@@ -3,26 +3,27 @@
 // thanks-to:Sean Riddle
 /***************************************************************************
 
-  National Semiconductor COP400 MCU handhelds or other simple devices,
-  mostly LED electronic games/toys.
+National Semiconductor COPS(COP400 MCU series) handhelds or other simple
+devices, mostly LED electronic games/toys.
 
-  TODO:
-  - why does h2hbaskbc(and clones) need a workaround on writing L pins?
-  - plus1: which sensor position is which colour?
-  - vidchal: Add screen and gun cursor with brightness detection callback,
-    and softwarelist for the video tapes. We'd also need a VHS player device.
-    The emulated lightgun itself appears to be working fine(eg. add a 30hz
-    timer to IN.3 to score +100)
+TODO:
+- why does h2hbaskbc(and clones) need a workaround on writing L pins?
+- plus1: which sensor position is which colour?
+- vidchal: Add screen and gun cursor with brightness detection callback,
+  and softwarelist for the video tapes. We'd also need a VHS player device.
+  The emulated lightgun itself appears to be working fine(eg. add a 30hz
+  timer to IN.3 to score +100)
 
 ***************************************************************************/
 
 #include "emu.h"
+
 #include "cpu/cop400/cop400.h"
 #include "video/pwm.h"
 #include "machine/timer.h"
 #include "sound/spkrdev.h"
 #include "sound/dac.h"
-#include "sound/volt_reg.h"
+
 #include "screen.h"
 #include "speaker.h"
 
@@ -31,7 +32,8 @@
 #include "ctstein.lh" // clickable
 #include "einvaderc.lh"
 #include "funjacks.lh" // clickable
-#include "funrlgl.lh"
+#include "funrlgl.lh" // clickable
+#include "funtag.lh" // clickable
 #include "h2hbaskbc.lh"
 #include "h2hhockeyc.lh"
 #include "h2hsoccerc.lh"
@@ -161,27 +163,27 @@ public:
 		hh_cop400_state(mconfig, type, tag)
 	{ }
 
-	DECLARE_WRITE8_MEMBER(write_g);
-	DECLARE_WRITE8_MEMBER(write_l);
-	DECLARE_READ8_MEMBER(read_l);
+	void write_g(u8 data);
+	void write_l(u8 data);
+	u8 read_l();
 	void ctstein(machine_config &config);
 };
 
 // handlers
 
-WRITE8_MEMBER(ctstein_state::write_g)
+void ctstein_state::write_g(u8 data)
 {
 	// G0-G2: input mux
 	m_inp_mux = data & 7;
 }
 
-WRITE8_MEMBER(ctstein_state::write_l)
+void ctstein_state::write_l(u8 data)
 {
 	// L0-L3: button lamps
 	m_display->matrix(1, data & 0xf);
 }
 
-READ8_MEMBER(ctstein_state::read_l)
+u8 ctstein_state::read_l()
 {
 	// L4-L7: multiplexed inputs
 	return read_inputs(3, 0xf) << 4 | 0xf;
@@ -263,10 +265,10 @@ public:
 		hh_cop400_state(mconfig, type, tag)
 	{ }
 
-	DECLARE_WRITE8_MEMBER(write_d);
-	DECLARE_WRITE8_MEMBER(write_g);
-	DECLARE_WRITE8_MEMBER(write_l);
-	DECLARE_READ8_MEMBER(read_in);
+	void write_d(u8 data);
+	void write_g(u8 data);
+	void write_l(u8 data);
+	u8 read_in();
 	void h2hsoccerc(machine_config &config);
 	void h2hbaskbc(machine_config &config);
 	void h2hhockeyc(machine_config &config);
@@ -274,20 +276,20 @@ public:
 
 // handlers
 
-WRITE8_MEMBER(h2hbaskbc_state::write_d)
+void h2hbaskbc_state::write_d(u8 data)
 {
 	// D: led select
 	m_d = data & 0xf;
 }
 
-WRITE8_MEMBER(h2hbaskbc_state::write_g)
+void h2hbaskbc_state::write_g(u8 data)
 {
 	// G: led select, input mux
 	m_inp_mux = data;
 	m_g = data & 0xf;
 }
 
-WRITE8_MEMBER(h2hbaskbc_state::write_l)
+void h2hbaskbc_state::write_l(u8 data)
 {
 	// D2,D3 double as multiplexer
 	u16 mask = ((m_d >> 2 & 1) * 0x00ff) | ((m_d >> 3 & 1) * 0xff00);
@@ -298,7 +300,7 @@ WRITE8_MEMBER(h2hbaskbc_state::write_l)
 	m_display->matrix(sel, data);
 }
 
-READ8_MEMBER(h2hbaskbc_state::read_in)
+u8 h2hbaskbc_state::read_in()
 {
 	// IN: multiplexed inputs
 	return read_inputs(4, 7) | (m_inputs[4]->read() & 8);
@@ -421,11 +423,11 @@ public:
 	{ }
 
 	void update_display();
-	DECLARE_WRITE8_MEMBER(write_d);
-	DECLARE_WRITE8_MEMBER(write_g);
+	void write_d(u8 data);
+	void write_g(u8 data);
 	DECLARE_WRITE_LINE_MEMBER(write_sk);
 	DECLARE_WRITE_LINE_MEMBER(write_so);
-	DECLARE_WRITE8_MEMBER(write_l);
+	void write_l(u8 data);
 	void einvaderc(machine_config &config);
 };
 
@@ -439,14 +441,14 @@ void einvaderc_state::update_display()
 	m_display->matrix(grid, l);
 }
 
-WRITE8_MEMBER(einvaderc_state::write_d)
+void einvaderc_state::write_d(u8 data)
 {
 	// D: led grid 0-3 (D0-D2 are 7segs)
 	m_d = data;
 	update_display();
 }
 
-WRITE8_MEMBER(einvaderc_state::write_g)
+void einvaderc_state::write_g(u8 data)
 {
 	// G: led grid 4-7
 	m_g = data;
@@ -468,7 +470,7 @@ WRITE_LINE_MEMBER(einvaderc_state::write_so)
 	update_display();
 }
 
-WRITE8_MEMBER(einvaderc_state::write_l)
+void einvaderc_state::write_l(u8 data)
 {
 	// L: led state/segment
 	m_l = data;
@@ -550,12 +552,11 @@ public:
 	{ }
 
 	void update_display();
-	DECLARE_WRITE8_MEMBER(write_g);
-	DECLARE_WRITE8_MEMBER(write_d);
-	DECLARE_WRITE8_MEMBER(write_l);
-	DECLARE_READ8_MEMBER(read_l);
+	void write_g(u8 data);
+	void write_d(u8 data);
+	void write_l(u8 data);
+	u8 read_l();
 
-	DECLARE_INPUT_CHANGED_MEMBER(position_changed) { update_display(); }
 	void unkeinv(machine_config &config);
 };
 
@@ -563,37 +564,32 @@ public:
 
 void unkeinv_state::update_display()
 {
-	m_display->matrix(m_l, m_g << 4 | m_d, false);
-
-	// positional led row is on L6,L7
-	u16 wand = m_display->read_row(7) << 8 | m_display->read_row(6);
-	m_display->write_row(8 + m_inputs[1]->read(), wand);
-	m_display->update();
+	m_display->matrix(m_g << 4 | m_d, m_l);
 }
 
-WRITE8_MEMBER(unkeinv_state::write_g)
+void unkeinv_state::write_g(u8 data)
 {
-	// G0-G3: led select part
+	// G0,G1: led select part
 	// G2,G3: input mux
 	m_g = ~data & 0xf;
 	update_display();
 }
 
-WRITE8_MEMBER(unkeinv_state::write_d)
+void unkeinv_state::write_d(u8 data)
 {
 	// D0-D3: led select part
 	m_d = ~data & 0xf;
 	update_display();
 }
 
-WRITE8_MEMBER(unkeinv_state::write_l)
+void unkeinv_state::write_l(u8 data)
 {
 	// L0-L7: led data
 	m_l = ~data & 0xff;
 	update_display();
 }
 
-READ8_MEMBER(unkeinv_state::read_l)
+u8 unkeinv_state::read_l()
 {
 	u8 ret = 0xff;
 
@@ -619,7 +615,7 @@ static INPUT_PORTS_START( unkeinv )
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_BUTTON1 )
 
 	PORT_START("IN.1")
-	PORT_BIT( 0x0f, 0x00, IPT_POSITIONAL ) PORT_POSITIONS(12) PORT_SENSITIVITY(10) PORT_KEYDELTA(1) PORT_CENTERDELTA(0) PORT_CHANGED_MEMBER(DEVICE_SELF, unkeinv_state, position_changed, 0)
+	PORT_BIT( 0x0f, 0x00, IPT_POSITIONAL ) PORT_POSITIONS(12) PORT_SENSITIVITY(10) PORT_KEYDELTA(1) PORT_CENTERDELTA(0)
 INPUT_PORTS_END
 
 void unkeinv_state::unkeinv(machine_config &config)
@@ -635,7 +631,7 @@ void unkeinv_state::unkeinv(machine_config &config)
 	m_maincpu->write_so().set(m_speaker, FUNC(speaker_sound_device::level_w));
 
 	/* video hardware */
-	PWM_DISPLAY(config, m_display).set_size(8+12, 8+8);
+	PWM_DISPLAY(config, m_display).set_size(6, 8);
 	config.set_default_layout(layout_unkeinv);
 
 	/* sound hardware */
@@ -663,7 +659,7 @@ ROM_END
   This toy includes 4 games: Tic Tac Toe, Chicken Sez, and Total Recall I/II.
 
   known releases:
-  - USA: I Took a Lickin' From a Chicken
+  - USA: I Took a Lickin' From a Chicken, published by LJN
   - Japan: Professor Chicken's Genius Classroom 「にわとり博士の天才教室」, published by Bandai
     (not sure if it's the same ROM, or just licensed the outer shell)
 
@@ -680,10 +676,10 @@ public:
 	TIMER_DEVICE_CALLBACK_MEMBER(motor_sim_tick);
 	DECLARE_READ_LINE_MEMBER(motor_switch_r);
 
-	DECLARE_WRITE8_MEMBER(write_l);
-	DECLARE_WRITE8_MEMBER(write_d);
-	DECLARE_WRITE8_MEMBER(write_g);
-	DECLARE_READ8_MEMBER(read_g);
+	void write_l(u8 data);
+	void write_d(u8 data);
+	void write_g(u8 data);
+	u8 read_g();
 	DECLARE_WRITE_LINE_MEMBER(write_so);
 	DECLARE_READ_LINE_MEMBER(read_si);
 	void lchicken(machine_config &config);
@@ -717,7 +713,7 @@ TIMER_DEVICE_CALLBACK_MEMBER(lchicken_state::motor_sim_tick)
 	}
 }
 
-WRITE8_MEMBER(lchicken_state::write_l)
+void lchicken_state::write_l(u8 data)
 {
 	// L0-L3: led data
 	// L4-L6: led select
@@ -725,7 +721,7 @@ WRITE8_MEMBER(lchicken_state::write_l)
 	m_display->matrix(data >> 4 & 7, ~data & 0xf);
 }
 
-WRITE8_MEMBER(lchicken_state::write_d)
+void lchicken_state::write_d(u8 data)
 {
 	// D0-D3: input mux
 	// D3: motor on
@@ -733,12 +729,12 @@ WRITE8_MEMBER(lchicken_state::write_d)
 	output().set_value("motor_on", ~data >> 3 & 1);
 }
 
-WRITE8_MEMBER(lchicken_state::write_g)
+void lchicken_state::write_g(u8 data)
 {
 	m_g = data;
 }
 
-READ8_MEMBER(lchicken_state::read_g)
+u8 lchicken_state::read_g()
 {
 	// G0-G3: multiplexed inputs
 	return read_inputs(4, m_g);
@@ -821,7 +817,7 @@ ROM_END
 
 /***************************************************************************
 
-  Mattel Funtronics: Jacks
+  Mattel Funtronics: Jacks (model 1603)
   * COP410L MCU bonded directly to PCB (die label COP410L/B NGS)
   * 8 LEDs, 1-bit sound
 
@@ -835,11 +831,11 @@ public:
 	{ }
 
 	void update_display();
-	DECLARE_WRITE8_MEMBER(write_d);
-	DECLARE_WRITE8_MEMBER(write_l);
-	DECLARE_WRITE8_MEMBER(write_g);
-	DECLARE_READ8_MEMBER(read_l);
-	DECLARE_READ8_MEMBER(read_g);
+	void write_d(u8 data);
+	void write_l(u8 data);
+	void write_g(u8 data);
+	u8 read_l();
+	u8 read_g();
 	void funjacks(machine_config &config);
 };
 
@@ -850,7 +846,7 @@ void funjacks_state::update_display()
 	m_display->matrix(m_d, m_l);
 }
 
-WRITE8_MEMBER(funjacks_state::write_d)
+void funjacks_state::write_d(u8 data)
 {
 	// D: led grid + input mux
 	m_inp_mux = data;
@@ -858,27 +854,27 @@ WRITE8_MEMBER(funjacks_state::write_d)
 	update_display();
 }
 
-WRITE8_MEMBER(funjacks_state::write_l)
+void funjacks_state::write_l(u8 data)
 {
 	// L0,L1: led state
 	m_l = data & 3;
 	update_display();
 }
 
-WRITE8_MEMBER(funjacks_state::write_g)
+void funjacks_state::write_g(u8 data)
 {
 	// G1: speaker out
 	m_speaker->level_w(data >> 1 & 1);
 	m_g = data;
 }
 
-READ8_MEMBER(funjacks_state::read_l)
+u8 funjacks_state::read_l()
 {
 	// L4,L5: multiplexed inputs
 	return read_inputs(3, 0x30) | m_l;
 }
 
-READ8_MEMBER(funjacks_state::read_g)
+u8 funjacks_state::read_g()
 {
 	// G1: speaker out state
 	// G2,G3: inputs
@@ -888,32 +884,32 @@ READ8_MEMBER(funjacks_state::read_g)
 // config
 
 static INPUT_PORTS_START( funjacks )
-	PORT_START("IN.0") // D0 port G
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON3 )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON2 )
+	PORT_START("IN.0") // D0 port L
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON2 )
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON3 )
 
-	PORT_START("IN.1") // D1 port G
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON4 )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON5 )
+	PORT_START("IN.1") // D1 port L
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON5 )
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON4 )
 
-	PORT_START("IN.2") // D2 port G
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON6 )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON1 ) // positioned at 1 o'clock on panel, increment clockwise
+	PORT_START("IN.2") // D2 port L
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON1 ) // positioned at 1 o'clock on panel, increment clockwise
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON6 )
 
 	PORT_START("IN.3") // port G
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_UNUSED )
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_CUSTOM ) // speaker
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_START )
-	PORT_CONFNAME( 0x08, 0x00, DEF_STR( Players ) )
-	PORT_CONFSETTING(    0x00, "1" )
-	PORT_CONFSETTING(    0x08, "2" )
+	PORT_CONFNAME( 0x08, 0x08, DEF_STR( Difficulty ) )
+	PORT_CONFSETTING(    0x08, "1" )
+	PORT_CONFSETTING(    0x00, "2" )
 INPUT_PORTS_END
 
 void funjacks_state::funjacks(machine_config &config)
 {
 	/* basic machine hardware */
-	COP410(config, m_maincpu, 750000); // approximation - RC osc. R=47K, C=56pF
-	m_maincpu->set_config(COP400_CKI_DIVISOR_8, COP400_CKO_OSCILLATOR_OUTPUT, false); // guessed
+	COP410(config, m_maincpu, 850000); // approximation - RC osc. R=47K, C=56pF
+	m_maincpu->set_config(COP400_CKI_DIVISOR_16, COP400_CKO_OSCILLATOR_OUTPUT, false); // guessed
 	m_maincpu->write_d().set(FUNC(funjacks_state::write_d));
 	m_maincpu->write_l().set(FUNC(funjacks_state::write_l));
 	m_maincpu->write_g().set(FUNC(funjacks_state::write_g));
@@ -942,13 +938,13 @@ ROM_END
 
 /***************************************************************************
 
-  Mattel Funtronics: Red Light Green Light
+  Mattel Funtronics: Red Light Green Light (model 1604)
   * COP410L MCU bonded directly to PCB (die label COP410L/B NHZ)
   * 14 LEDs, 1-bit sound
 
   known releases:
-  - USA: Funtronics: Red Light Green Light
-  - USA(rerelease): Funtronics: Hot Wheels Drag Race
+  - USA: Funtronics: Red Light Green Light, published by Mattel
+  - USA(rerelease): Funtronics: Hot Wheels Drag Race, published by Mattel
 
 ***************************************************************************/
 
@@ -960,9 +956,9 @@ public:
 	{ }
 
 	void update_display();
-	DECLARE_WRITE8_MEMBER(write_d);
-	DECLARE_WRITE8_MEMBER(write_l);
-	DECLARE_WRITE8_MEMBER(write_g);
+	void write_d(u8 data);
+	void write_l(u8 data);
+	void write_g(u8 data);
 	void funrlgl(machine_config &config);
 };
 
@@ -973,14 +969,14 @@ void funrlgl_state::update_display()
 	m_display->matrix(m_d, m_l);
 }
 
-WRITE8_MEMBER(funrlgl_state::write_d)
+void funrlgl_state::write_d(u8 data)
 {
 	// D: led grid
 	m_d = ~data & 0xf;
 	update_display();
 }
 
-WRITE8_MEMBER(funrlgl_state::write_l)
+void funrlgl_state::write_l(u8 data)
 {
 	// L0-L3: led state
 	// L4-L7: N/C
@@ -988,7 +984,7 @@ WRITE8_MEMBER(funrlgl_state::write_l)
 	update_display();
 }
 
-WRITE8_MEMBER(funrlgl_state::write_g)
+void funrlgl_state::write_g(u8 data)
 {
 	// G3: speaker out
 	m_speaker->level_w(data >> 3 & 1);
@@ -1012,8 +1008,8 @@ INPUT_PORTS_END
 void funrlgl_state::funrlgl(machine_config &config)
 {
 	/* basic machine hardware */
-	COP410(config, m_maincpu, 750000); // approximation - RC osc. R=51K, C=91pF
-	m_maincpu->set_config(COP400_CKI_DIVISOR_8, COP400_CKO_OSCILLATOR_OUTPUT, false); // guessed
+	COP410(config, m_maincpu, 800000); // approximation - RC osc. R=51K, C=91pF
+	m_maincpu->set_config(COP400_CKI_DIVISOR_16, COP400_CKO_OSCILLATOR_OUTPUT, false); // guessed
 	m_maincpu->write_d().set(FUNC(funrlgl_state::write_d));
 	m_maincpu->write_l().set(FUNC(funrlgl_state::write_l));
 	m_maincpu->read_l_tristate().set_constant(0xff);
@@ -1022,7 +1018,7 @@ void funrlgl_state::funrlgl(machine_config &config)
 
 	/* video hardware */
 	PWM_DISPLAY(config, m_display).set_size(4, 4);
-	m_display->set_bri_levels(0.01, 0.1); // top led is brighter
+	m_display->set_bri_levels(0.005, 0.1); // top led is brighter
 	config.set_default_layout(layout_funrlgl);
 
 	/* sound hardware */
@@ -1035,6 +1031,126 @@ void funrlgl_state::funrlgl(machine_config &config)
 ROM_START( funrlgl )
 	ROM_REGION( 0x0200, "maincpu", 0 )
 	ROM_LOAD( "cop410l_b_nhz", 0x0000, 0x0200, CRC(4065c3ce) SHA1(f0bc8125d922949e0d7ab1ba89c805a836d20e09) )
+ROM_END
+
+
+
+
+
+/***************************************************************************
+
+  Mattel Funtronics: Tag (model 1497)
+  * COP410L MCU bonded directly to PCB (die label COP410L/B GTJ)
+  * 7 LEDs, 7 buttons, 1-bit sound
+
+***************************************************************************/
+
+class funtag_state : public hh_cop400_state
+{
+public:
+	funtag_state(const machine_config &mconfig, device_type type, const char *tag) :
+		hh_cop400_state(mconfig, type, tag)
+	{ }
+
+	void update_display();
+	void write_d(u8 data);
+	void write_l(u8 data);
+	void write_g(u8 data);
+	u8 read_l();
+	u8 read_g();
+	void funtag(machine_config &config);
+};
+
+// handlers
+
+void funtag_state::update_display()
+{
+	m_display->matrix(m_d, m_l);
+}
+
+void funtag_state::write_d(u8 data)
+{
+	// D: led grid + input mux
+	m_inp_mux = data;
+	m_d = ~data & 0xf;
+	update_display();
+}
+
+void funtag_state::write_l(u8 data)
+{
+	// L0,L1: led state
+	m_l = data & 3;
+	update_display();
+}
+
+void funtag_state::write_g(u8 data)
+{
+	// G2: speaker out
+	m_speaker->level_w(data >> 2 & 1);
+}
+
+u8 funtag_state::read_l()
+{
+	// L2: difficulty switch
+	return m_inputs[4]->read() | 8;
+}
+
+u8 funtag_state::read_g()
+{
+	// G0,G1: multiplexed inputs
+	// G3: start button
+	return read_inputs(3, 3) | m_inputs[3]->read() | 4;
+}
+
+// config
+
+static INPUT_PORTS_START( funtag )
+	PORT_START("IN.0") // D0 port G
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_BUTTON1 )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON4 )
+
+	PORT_START("IN.1") // D1 port G
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_BUTTON2 )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON5 )
+
+	PORT_START("IN.2") // D2 port G
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_BUTTON3 )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON6 )
+
+	PORT_START("IN.3") // port G
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_START )
+
+	PORT_START("IN.4") // port L
+	PORT_CONFNAME( 0x04, 0x04, DEF_STR( Difficulty ) )
+	PORT_CONFSETTING(    0x04, "1" )
+	PORT_CONFSETTING(    0x00, "2" )
+INPUT_PORTS_END
+
+void funtag_state::funtag(machine_config &config)
+{
+	/* basic machine hardware */
+	COP410(config, m_maincpu, 1000000); // approximation - RC osc. R=47K, C=91pF
+	m_maincpu->set_config(COP400_CKI_DIVISOR_16, COP400_CKO_OSCILLATOR_OUTPUT, false); // guessed
+	m_maincpu->write_d().set(FUNC(funtag_state::write_d));
+	m_maincpu->write_l().set(FUNC(funtag_state::write_l));
+	m_maincpu->write_g().set(FUNC(funtag_state::write_g));
+	m_maincpu->read_l().set(FUNC(funtag_state::read_l));
+	m_maincpu->read_g().set(FUNC(funtag_state::read_g));
+
+	/* video hardware */
+	PWM_DISPLAY(config, m_display).set_size(4, 2);
+	config.set_default_layout(layout_funtag);
+
+	/* sound hardware */
+	SPEAKER(config, "mono").front_center();
+	SPEAKER_SOUND(config, m_speaker).add_route(ALL_OUTPUTS, "mono", 0.25);
+}
+
+// roms
+
+ROM_START( funtag )
+	ROM_REGION( 0x0200, "maincpu", 0 )
+	ROM_LOAD( "cop410l_b_gtj", 0x0000, 0x0200, CRC(ce565da6) SHA1(34e5f39e32f220007d353c93787c1a6d117592c1) )
 ROM_END
 
 
@@ -1059,10 +1175,10 @@ public:
 	{ }
 
 	void update_display();
-	DECLARE_WRITE8_MEMBER(write_l);
-	DECLARE_WRITE8_MEMBER(write_d);
-	DECLARE_WRITE8_MEMBER(write_g);
-	DECLARE_READ8_MEMBER(read_in);
+	void write_l(u8 data);
+	void write_d(u8 data);
+	void write_g(u8 data);
+	u8 read_in();
 	void mdallas(machine_config &config);
 };
 
@@ -1073,22 +1189,22 @@ void mdallas_state::update_display()
 	m_display->matrix(~(m_d << 4 | m_g), m_l);
 }
 
-WRITE8_MEMBER(mdallas_state::write_l)
+void mdallas_state::write_l(u8 data)
 {
 	// L: digit segment data
 	m_l = data;
 	update_display();
 }
 
-WRITE8_MEMBER(mdallas_state::write_d)
+void mdallas_state::write_d(u8 data)
 {
 	// D: select digit, input mux high
-	m_inp_mux = (m_inp_mux & 0xf) | (data << 4 & 3);
+	m_inp_mux = (m_inp_mux & 0xf) | (data << 4 & 0x30);
 	m_d = data & 0xf;
 	update_display();
 }
 
-WRITE8_MEMBER(mdallas_state::write_g)
+void mdallas_state::write_g(u8 data)
 {
 	// G: select digit, input mux low
 	m_inp_mux = (m_inp_mux & 0x30) | (data & 0xf);
@@ -1096,7 +1212,7 @@ WRITE8_MEMBER(mdallas_state::write_g)
 	update_display();
 }
 
-READ8_MEMBER(mdallas_state::read_in)
+u8 mdallas_state::read_in()
 {
 	// IN: multiplexed inputs
 	return read_inputs(6, 0xf);
@@ -1202,26 +1318,26 @@ public:
 		hh_cop400_state(mconfig, type, tag)
 	{ }
 
-	DECLARE_WRITE8_MEMBER(write_d);
-	DECLARE_WRITE8_MEMBER(write_l);
-	DECLARE_READ8_MEMBER(read_l);
+	void write_d(u8 data);
+	void write_l(u8 data);
+	u8 read_l();
 	void plus1(machine_config &config);
 };
 
 // handlers
 
-WRITE8_MEMBER(plus1_state::write_d)
+void plus1_state::write_d(u8 data)
 {
 	// D0?: speaker out
 	m_speaker->level_w(data & 1);
 }
 
-WRITE8_MEMBER(plus1_state::write_l)
+void plus1_state::write_l(u8 data)
 {
 	m_l = data;
 }
 
-READ8_MEMBER(plus1_state::read_l)
+u8 plus1_state::read_l()
 {
 	// L: IN.1, mask with output
 	return m_inputs[1]->read() & m_l;
@@ -1301,9 +1417,9 @@ public:
 
 	void update_display();
 	DECLARE_WRITE_LINE_MEMBER(write_so);
-	DECLARE_WRITE8_MEMBER(write_d);
-	DECLARE_WRITE8_MEMBER(write_l);
-	DECLARE_READ8_MEMBER(read_g);
+	void write_d(u8 data);
+	void write_l(u8 data);
+	u8 read_g();
 	void lightfgt(machine_config &config);
 };
 
@@ -1322,14 +1438,14 @@ WRITE_LINE_MEMBER(lightfgt_state::write_so)
 	update_display();
 }
 
-WRITE8_MEMBER(lightfgt_state::write_d)
+void lightfgt_state::write_d(u8 data)
 {
 	// D: led grid 1-4 (and input mux)
 	m_d = data;
 	update_display();
 }
 
-WRITE8_MEMBER(lightfgt_state::write_l)
+void lightfgt_state::write_l(u8 data)
 {
 	// L0-L4: led state
 	// L5-L7: N/C
@@ -1337,7 +1453,7 @@ WRITE8_MEMBER(lightfgt_state::write_l)
 	update_display();
 }
 
-READ8_MEMBER(lightfgt_state::read_g)
+u8 lightfgt_state::read_g()
 {
 	// G: multiplexed inputs
 	m_inp_mux = m_d << 1 | m_so;
@@ -1425,28 +1541,36 @@ public:
 		hh_cop400_state(mconfig, type, tag)
 	{ }
 
-	DECLARE_WRITE8_MEMBER(write_d);
-	DECLARE_READ8_MEMBER(read_l);
-	DECLARE_READ8_MEMBER(read_in);
+	void write_d(u8 data);
+	void write_g(u8 data);
+	u8 read_l();
+	u8 read_in();
 	DECLARE_WRITE_LINE_MEMBER(write_so);
 	void bship82(machine_config &config);
 };
 
 // handlers
 
-WRITE8_MEMBER(bship82_state::write_d)
+void bship82_state::write_d(u8 data)
 {
 	// D: input mux
 	m_inp_mux = data;
 }
 
-READ8_MEMBER(bship82_state::read_l)
+void bship82_state::write_g(u8 data)
+{
+	// G0-G2: speaker out via 3.9K, 2.2K, 1.0K resistor
+	// G3: enable speaker
+	m_speaker->level_w((data & 8) ? (data & 7) : 0);
+}
+
+u8 bship82_state::read_l()
 {
 	// L: multiplexed inputs
 	return read_inputs(4, 0xff);
 }
 
-READ8_MEMBER(bship82_state::read_in)
+u8 bship82_state::read_in()
 {
 	// IN: multiplexed inputs
 	return read_inputs(4, 0xf00) >> 8;
@@ -1521,31 +1645,13 @@ static INPUT_PORTS_START( bship82 )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_TOGGLE PORT_CODE(KEYCODE_F1) PORT_NAME("Load/Go") // switch
 INPUT_PORTS_END
 
-/*
-
-http://www.seanriddle.com/bship82.txt
-
-21 G0     3.9K resistor to speaker transistor base
-22 G1     2.2K resistor to speaker transistor base
-23 G2     1.0K resistor to speaker transistor base
-24 G3     speaker transistor base tied high 4.7K
-
-speaker connection
-2N3904 transistor:
-emitter to 10ohm resistor to ground
-collector to 68ohm resistor to speaker (other speaker terminal to VCC)
-base pulled high with 4.7K resistor, connects directly to G3, 1K resistor to G2,
-2.2K resistor to G1, 3.9K resistor to G0
-
-*/
-
 void bship82_state::bship82(machine_config &config)
 {
 	/* basic machine hardware */
 	COP420(config, m_maincpu, 750000); // approximation - RC osc. R=14K, C=100pF
 	m_maincpu->set_config(COP400_CKI_DIVISOR_4, COP400_CKO_OSCILLATOR_OUTPUT, false); // guessed
 	m_maincpu->write_d().set(FUNC(bship82_state::write_d));
-	m_maincpu->write_g().set("dac", FUNC(dac_byte_interface::data_w));
+	m_maincpu->write_g().set(FUNC(bship82_state::write_g));
 	m_maincpu->read_l().set(FUNC(bship82_state::read_l));
 	m_maincpu->read_in().set(FUNC(bship82_state::read_in));
 	m_maincpu->write_so().set(FUNC(bship82_state::write_so));
@@ -1557,10 +1663,10 @@ void bship82_state::bship82(machine_config &config)
 
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();
-	DAC_4BIT_BINARY_WEIGHTED_SIGN_MAGNITUDE(config, "dac").add_route(ALL_OUTPUTS, "mono", 0.125); // see above
-	voltage_regulator_device &vref(VOLTAGE_REGULATOR(config, "vref"));
-	vref.add_route(0, "dac", 1.0, DAC_VREF_POS_INPUT);
-	vref.add_route(0, "dac", -1.0, DAC_VREF_NEG_INPUT);
+	SPEAKER_SOUND(config, m_speaker);
+	static const double speaker_levels[8] = { 0.0, 1.0/7.0, 2.0/7.0, 3.0/7.0, 4.0/7.0, 5.0/7.0, 6.0/7.0, 1.0 };
+	m_speaker->set_levels(8, speaker_levels);
+	m_speaker->add_route(ALL_OUTPUTS, "mono", 0.25);
 }
 
 // roms
@@ -1580,7 +1686,8 @@ ROM_END
   * COP420 MCU label COP420-NPG/N
   * 8-digit 7seg led display(1 custom digit), 1 green led, no sound
 
-  This is the COP420 version, the first release was on a MM5799 MCU.
+  This is the COP420 version, they removed support for the link cable.
+  The first release was on a MM5799 MCU, see hh_cops1.cpp.
 
 ***************************************************************************/
 
@@ -1592,10 +1699,10 @@ public:
 	{ }
 
 	void update_display();
-	DECLARE_WRITE8_MEMBER(write_d);
-	DECLARE_WRITE8_MEMBER(write_g);
-	DECLARE_WRITE8_MEMBER(write_l);
-	DECLARE_READ8_MEMBER(read_in);
+	void write_d(u8 data);
+	void write_g(u8 data);
+	void write_l(u8 data);
+	u8 read_in();
 	DECLARE_WRITE_LINE_MEMBER(write_sk);
 	void qkracer(machine_config &config);
 };
@@ -1607,30 +1714,30 @@ void qkracer_state::update_display()
 	m_display->matrix(~(m_d | m_g << 4 | m_sk << 8), m_l);
 }
 
-WRITE8_MEMBER(qkracer_state::write_d)
+void qkracer_state::write_d(u8 data)
 {
-	// D: select digit, D3: input mux high bit
-	m_inp_mux = (m_inp_mux & 0xf) | (data << 1 & 0x10);
+	// D: select digit, D3: input mux low bit
+	m_inp_mux = (m_inp_mux & ~1) | (data >> 3 & 1);
 	m_d = data & 0xf;
 	update_display();
 }
 
-WRITE8_MEMBER(qkracer_state::write_g)
+void qkracer_state::write_g(u8 data)
 {
 	// G: select digit, input mux
-	m_inp_mux = (m_inp_mux & 0x10) | (data & 0xf);
+	m_inp_mux = (m_inp_mux & 1) | (data << 1 & 0x1e);
 	m_g = data & 0xf;
 	update_display();
 }
 
-WRITE8_MEMBER(qkracer_state::write_l)
+void qkracer_state::write_l(u8 data)
 {
 	// L0-L6: digit segment data
 	m_l = data & 0x7f;
 	update_display();
 }
 
-READ8_MEMBER(qkracer_state::read_in)
+u8 qkracer_state::read_in()
 {
 	// IN: multiplexed inputs
 	return read_inputs(5, 0xf);
@@ -1646,42 +1753,42 @@ WRITE_LINE_MEMBER(qkracer_state::write_sk)
 // config
 
 static INPUT_PORTS_START( qkracer )
-	PORT_START("IN.0") // G0 port IN
+	PORT_START("IN.0") // D3 port IN
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_Q) PORT_NAME("Amateur")
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_W) PORT_NAME("Pro")
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_E) PORT_NAME("Complex")
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_R) PORT_NAME("Tables")
+
+	PORT_START("IN.1") // G0 port IN
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_7) PORT_CODE(KEYCODE_7_PAD) PORT_NAME("7")
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_8) PORT_CODE(KEYCODE_8_PAD) PORT_NAME("8")
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_9) PORT_CODE(KEYCODE_9_PAD) PORT_NAME("9")
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_SLASH_PAD) PORT_NAME(UTF8_DIVIDE)
 
-	PORT_START("IN.1") // G1 port IN
+	PORT_START("IN.2") // G1 port IN
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_4) PORT_CODE(KEYCODE_4_PAD) PORT_NAME("4")
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_5) PORT_CODE(KEYCODE_5_PAD) PORT_NAME("5")
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_6) PORT_CODE(KEYCODE_6_PAD) PORT_NAME("6")
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_ASTERISK) PORT_NAME(UTF8_MULTIPLY)
 
-	PORT_START("IN.2") // G2 port IN
+	PORT_START("IN.3") // G2 port IN
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_1) PORT_CODE(KEYCODE_1_PAD) PORT_NAME("1")
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_2) PORT_CODE(KEYCODE_2_PAD) PORT_NAME("2")
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_3) PORT_CODE(KEYCODE_3_PAD) PORT_NAME("3")
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_MINUS_PAD) PORT_NAME("-")
 
-	PORT_START("IN.3") // G3 port IN
+	PORT_START("IN.4") // G3 port IN
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_MINUS) PORT_NAME("Slow")
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_EQUALS) PORT_NAME("Fast")
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_0) PORT_CODE(KEYCODE_0_PAD) PORT_NAME("0")
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_PLUS_PAD) PORT_NAME("+")
-
-	PORT_START("IN.4") // D3 port IN
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_Q) PORT_NAME("Amateur")
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_W) PORT_NAME("Pro")
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_E) PORT_NAME("Complex")
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYPAD ) PORT_CODE(KEYCODE_R) PORT_NAME("Tables")
 INPUT_PORTS_END
 
 void qkracer_state::qkracer(machine_config &config)
 {
 	/* basic machine hardware */
-	COP420(config, m_maincpu, 1000000); // approximation - RC osc. R=47K, C=100pF
-	m_maincpu->set_config(COP400_CKI_DIVISOR_32, COP400_CKO_OSCILLATOR_OUTPUT, false); // guessed
+	COP420(config, m_maincpu, 950000); // approximation - RC osc. R=47K, C=100pF
+	m_maincpu->set_config(COP400_CKI_DIVISOR_16, COP400_CKO_OSCILLATOR_OUTPUT, false); // guessed
 	m_maincpu->write_d().set(FUNC(qkracer_state::write_d));
 	m_maincpu->write_g().set(FUNC(qkracer_state::write_g));
 	m_maincpu->write_l().set(FUNC(qkracer_state::write_l));
@@ -1733,8 +1840,8 @@ public:
 	{ }
 
 	void update_display();
-	DECLARE_WRITE8_MEMBER(write_d);
-	DECLARE_WRITE8_MEMBER(write_l);
+	void write_d(u8 data);
+	void write_l(u8 data);
 	DECLARE_WRITE_LINE_MEMBER(write_sk);
 	void vidchal(machine_config &config);
 };
@@ -1746,14 +1853,14 @@ void vidchal_state::update_display()
 	m_display->matrix(m_d | m_sk << 6, m_l);
 }
 
-WRITE8_MEMBER(vidchal_state::write_d)
+void vidchal_state::write_d(u8 data)
 {
 	// D: CD4028BE to digit select
 	m_d = 1 << data & 0x3f;
 	update_display();
 }
 
-WRITE8_MEMBER(vidchal_state::write_l)
+void vidchal_state::write_l(u8 data)
 {
 	// L: digit segment data
 	m_l = bitswap<8>(data,0,3,1,5,4,7,2,6);
@@ -1796,9 +1903,6 @@ void vidchal_state::vidchal(machine_config &config)
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();
 	DAC_4BIT_BINARY_WEIGHTED_SIGN_MAGNITUDE(config, "dac").add_route(ALL_OUTPUTS, "mono", 0.125); // unknown DAC
-	voltage_regulator_device &vref(VOLTAGE_REGULATOR(config, "vref"));
-	vref.add_route(0, "dac", 1.0, DAC_VREF_POS_INPUT);
-	vref.add_route(0, "dac", -1.0, DAC_VREF_NEG_INPUT);
 }
 
 // roms
@@ -1832,16 +1936,17 @@ CONS( 1980, unkeinv,    0,         0, unkeinv,    unkeinv,    unkeinv_state,   e
 CONS( 1980, lchicken,   0,         0, lchicken,   lchicken,   lchicken_state,  empty_init, "LJN", "I Took a Lickin' From a Chicken", MACHINE_SUPPORTS_SAVE | MACHINE_CLICKABLE_ARTWORK | MACHINE_MECHANICAL )
 
 CONS( 1979, funjacks,   0,         0, funjacks,   funjacks,   funjacks_state,  empty_init, "Mattel", "Funtronics: Jacks", MACHINE_SUPPORTS_SAVE | MACHINE_CLICKABLE_ARTWORK )
-CONS( 1979, funrlgl,    0,         0, funrlgl,    funrlgl,    funrlgl_state,   empty_init, "Mattel", "Funtronics: Red Light Green Light", MACHINE_SUPPORTS_SAVE )
+CONS( 1979, funrlgl,    0,         0, funrlgl,    funrlgl,    funrlgl_state,   empty_init, "Mattel", "Funtronics: Red Light Green Light", MACHINE_SUPPORTS_SAVE | MACHINE_CLICKABLE_ARTWORK )
+CONS( 1980, funtag,     0,         0, funtag,     funtag,     funtag_state,    empty_init, "Mattel", "Funtronics: Tag", MACHINE_SUPPORTS_SAVE | MACHINE_CLICKABLE_ARTWORK )
 CONS( 1981, mdallas,    0,         0, mdallas,    mdallas,    mdallas_state,   empty_init, "Mattel", "Dalla$ (J.R. handheld)", MACHINE_SUPPORTS_SAVE ) // ***
 
 CONS( 1980, plus1,      0,         0, plus1,      plus1,      plus1_state,     empty_init, "Milton Bradley", "Plus One", MACHINE_SUPPORTS_SAVE | MACHINE_IMPERFECT_CONTROLS ) // ***
 CONS( 1981, lightfgt,   0,         0, lightfgt,   lightfgt,   lightfgt_state,  empty_init, "Milton Bradley", "Electronic Lightfight - The Games of Dueling Lights", MACHINE_SUPPORTS_SAVE | MACHINE_CLICKABLE_ARTWORK )
 CONS( 1982, bship82,    bship,     0, bship82,    bship82,    bship82_state,   empty_init, "Milton Bradley", "Electronic Battleship (1982 version)", MACHINE_SUPPORTS_SAVE | MACHINE_CLICKABLE_ARTWORK ) // ***
 
-CONS( 1978, qkracer,    0,         0, qkracer,    qkracer,    qkracer_state,   empty_init, "National Semiconductor", "QuizKid Racer (COP420 version)", MACHINE_SUPPORTS_SAVE | MACHINE_NO_SOUND_HW )
+CONS( 1979, qkracer,    0,         0, qkracer,    qkracer,    qkracer_state,   empty_init, "National Semiconductor", "QuizKid Racer (COP420 version)", MACHINE_SUPPORTS_SAVE | MACHINE_NO_SOUND_HW )
 
 CONS( 1987, vidchal,    0,         0, vidchal,    vidchal,    vidchal_state,   empty_init, "Select Merchandise", "Video Challenger", MACHINE_SUPPORTS_SAVE | MACHINE_NOT_WORKING )
 
 // ***: As far as MAME is concerned, the game is emulated fine. But for it to be playable, it requires interaction
-// with other, unemulatable, things eg. game board/pieces, playing cards, pen & paper, etc.
+// with other, unemulatable, things eg. game board/pieces, book, playing cards, pen & paper, etc.

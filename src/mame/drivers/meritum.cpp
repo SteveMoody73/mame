@@ -12,7 +12,7 @@ Meritum III hires graphics mode added; only pre-production units were made.
 Split from trs80.cpp on 2018-07-15
 
 It is quite similar to the TRS80 Model 1 Level II, however instead of the
-external interface, Intel pheripheral chips were used (i8251, i8253, i8255),
+external interface, Intel peripheral chips were used (i8251, i8253, i8255),
 and 2KB of ROM with new subroutines.
 
 Model II has an additional 8255 to act as a floppy interface, plus it has more
@@ -38,15 +38,16 @@ This does not work for model 1 (no parallel printer support in ROM).
 Status:
 - Starts up, runs Basic. Cassette works. Quickload mostly works.
 - Some quickloads have corrupt text due to no lowercase.
-- Some quickloads don't run at all. Some may crash the emulator.
+- Some quickloads don't run at all.
 - Intel chips need adding, along with the peripherals they control.
 - A speaker has been included (which works), but real machine might not have
-  one at that address. To be checked.
+    one at that address. To be checked.
 - On meritum1, type SYSTEM then /12288 to enter the Monitor.
 - On meritum_net, type NET to activate the networking features.
 - Add Reset key and 2 blank keys.
 - Need software specific to test the hardware.
 - Need boot disks (MER-DOS, CP/M 2.2)
+- Due to faster CPU clock, no TRS-80 cassettes can be loaded.
 
 For Model III:
 - Add 4-colour mode, 4 shades of grey mode, and 512x192 monochrome.
@@ -85,14 +86,14 @@ public:
 	void meritum2(machine_config &config);
 
 private:
-	DECLARE_WRITE8_MEMBER(port_ff_w);
-	DECLARE_READ8_MEMBER(port_ff_r);
-	DECLARE_READ8_MEMBER(keyboard_r);
+	void port_ff_w(u8 data);
+	u8 port_ff_r();
+	u8 keyboard_r(offs_t offset);
 
 	TIMER_CALLBACK_MEMBER(cassette_data_callback);
 	DECLARE_QUICKLOAD_LOAD_MEMBER(quickload_cb);
-	uint32_t screen_update_meritum1(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
-	uint32_t screen_update_meritum2(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
+	u32 screen_update_meritum1(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
+	u32 screen_update_meritum2(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
 	void mem_map(address_map &map);
 	void io_map(address_map &map);
@@ -104,8 +105,8 @@ private:
 	bool m_cassette_data;
 	emu_timer *m_cassette_data_timer;
 	double m_old_cassette_val;
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
+	void machine_start() override;
+	void machine_reset() override;
 	required_device<cpu_device> m_maincpu;
 	required_device<screen_device> m_screen;
 	required_region_ptr<u8> m_p_chargen;
@@ -226,13 +227,12 @@ static INPUT_PORTS_START( meritum )
 	PORT_BIT(0x01, 0x01, IPT_KEYBOARD) PORT_NAME("NMI") PORT_CODE(KEYCODE_BACKSPACE) PORT_WRITE_LINE_DEVICE_MEMBER("nmigate", input_merger_device, in_w<1>)
 INPUT_PORTS_END
 
-uint32_t meritum_state::screen_update_meritum1(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
-/* lores characters are in the character generator. Each character is 6x12 (basic characters are 6x7 excluding descenders/ascenders). */
+u32 meritum_state::screen_update_meritum1(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
-	uint8_t y,ra,chr,gfx;
-	uint16_t sy=0,ma=0,x;
-	uint8_t cols = m_mode ? 32 : 64;
-	uint8_t skip = m_mode ? 2 : 1;
+	// lores characters are in the character generator. Each character is 6x12 (basic characters are 6x7 excluding descenders/ascenders).
+	u16 sy=0,ma=0;
+	const u8 cols = m_mode ? 32 : 64;
+	const u8 skip = m_mode ? 2 : 1;
 
 	if (m_mode != m_size_store)
 	{
@@ -240,28 +240,28 @@ uint32_t meritum_state::screen_update_meritum1(screen_device &screen, bitmap_ind
 		screen.set_visible_area(0, cols*6-1, 0, 16*12-1);
 	}
 
-	for (y = 0; y < 16; y++)
+	for (u8 y = 0; y < 16; y++)
 	{
-		for (ra = 0; ra < 12; ra++)
+		for (u8 ra = 0; ra < 12; ra++)
 		{
-			uint16_t *p = &bitmap.pix16(sy++);
+			u16 *p = &bitmap.pix(sy++);
 
-			for (x = ma; x < ma + 64; x+=skip)
+			for (u16 x = ma; x < ma + 64; x+=skip)
 			{
-				chr = m_p_videoram[x] & 0xbf;
+				const u8 chr = m_p_videoram[x] & 0xbf;
+				u8 gfx;
 
 				// shift down comma and semicolon
 				// not sure Meritum I got the circuit for this (like TRS80)
 				// but position of ';' suggests most likely yes
 				if ((chr == 0x2c) && (ra >= 2))
 					gfx = m_p_chargen[0x2be + ra];
-				else
-				if ((chr == 0x3b) && (ra >= 1))
+				else if ((chr == 0x3b) && (ra >= 1))
 					gfx = m_p_chargen[0x3af + ra];
 				else
 					gfx = m_p_chargen[(chr<<4) | ra];
 
-				/* Display a scanline of a character (6 pixels) */
+				// Display a scanline of a character (6 pixels)
 				*p++ = BIT(gfx, 5);
 				*p++ = BIT(gfx, 4);
 				*p++ = BIT(gfx, 3);
@@ -275,12 +275,11 @@ uint32_t meritum_state::screen_update_meritum1(screen_device &screen, bitmap_ind
 	return 0;
 }
 
-uint32_t meritum_state::screen_update_meritum2(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
+u32 meritum_state::screen_update_meritum2(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
-	uint8_t y,ra,chr,gfx;
-	uint16_t sy=0,ma=0,x;
-	uint8_t cols = m_mode ? 32 : 64;
-	uint8_t skip = m_mode ? 2 : 1;
+	u16 sy=0,ma=0;
+	const u8 cols = m_mode ? 32 : 64;
+	const u8 skip = m_mode ? 2 : 1;
 
 	if (m_mode != m_size_store)
 	{
@@ -288,20 +287,20 @@ uint32_t meritum_state::screen_update_meritum2(screen_device &screen, bitmap_ind
 		screen.set_visible_area(0, cols*6-1, 0, 16*12-1);
 	}
 
-	for (y = 0; y < 16; y++)
+	for (u8 y = 0; y < 16; y++)
 	{
-		for (ra = 0; ra < 12; ra++)
+		for (u8 ra = 0; ra < 12; ra++)
 		{
-			uint16_t *p = &bitmap.pix16(sy++);
+			u16 *p = &bitmap.pix(sy++);
 
-			for (x = ma; x < ma + 64; x+=skip)
+			for (u16 x = ma; x < ma + 64; x+=skip)
 			{
-				chr = m_p_videoram[x];
+				const u8 chr = m_p_videoram[x];
 
-				/* get pattern of pixels for that character scanline */
-				gfx = m_p_chargen[(chr<<4) | ra];
+				// get pattern of pixels for that character scanline
+				const u8 gfx = m_p_chargen[(chr<<4) | ra];
 
-				/* Display a scanline of a character (6 pixels) */
+				// Display a scanline of a character (6 pixels)
 				*p++ = BIT(gfx, 5);
 				*p++ = BIT(gfx, 4);
 				*p++ = BIT(gfx, 3);
@@ -326,7 +325,7 @@ TIMER_CALLBACK_MEMBER(meritum_state::cassette_data_callback)
 	m_old_cassette_val = new_val;
 }
 
-READ8_MEMBER( meritum_state::port_ff_r )
+u8 meritum_state::port_ff_r()
 {
 /* ModeSel and cassette data
     d7 cassette data from tape
@@ -335,7 +334,7 @@ READ8_MEMBER( meritum_state::port_ff_r )
 	return (m_mode ? 0 : 0x40) | (m_cassette_data ? 0x80 : 0) | 0x3f;
 }
 
-WRITE8_MEMBER( meritum_state::port_ff_w )
+void meritum_state::port_ff_w(u8 data)
 {
 /* Standard output port of Model I
     d3 ModeSel bit
@@ -343,23 +342,18 @@ WRITE8_MEMBER( meritum_state::port_ff_w )
     d1, d0 Cassette output */
 
 	static const double levels[4] = { 0.0, 1.0, -1.0, 0.0 };
-	static bool init = 0;
-
 	m_cassette->change_state(BIT(data, 2) ? CASSETTE_MOTOR_ENABLED : CASSETTE_MOTOR_DISABLED, CASSETTE_MASK_MOTOR );
 	m_cassette->output(levels[data & 3]);
 	m_cassette_data = false;
 
 	m_mode = BIT(data, 3);
 
-	if (!init)
-	{
-		init = 1;
-		static int16_t speaker_levels[4] = { 0, -32767, 0, 32767 };
-		m_speaker->set_levels(4, speaker_levels);
-	}
+	static double const speaker_levels[4] = { 0.0, -1.0, 0.0, 1.0 };
+	m_speaker->set_levels(4, speaker_levels);
+	m_speaker->level_w(data & 3); // see note about the speaker
 }
 
-READ8_MEMBER( meritum_state::keyboard_r )
+u8 meritum_state::keyboard_r(offs_t offset)
 {
 	u8 i, result = 0;
 
@@ -374,6 +368,10 @@ void meritum_state::machine_start()
 {
 	m_cassette_data_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(meritum_state::cassette_data_callback),this));
 	m_cassette_data_timer->adjust( attotime::zero, 0, attotime::from_hz(11025) );
+	save_item(NAME(m_mode));
+	save_item(NAME(m_size_store));
+	save_item(NAME(m_cassette_data));
+	save_item(NAME(m_old_cassette_val));
 }
 
 void meritum_state::machine_reset()
@@ -414,39 +412,49 @@ QUICKLOAD_LOAD_MEMBER(meritum_state::quickload_cb)
 		image.fread( &type, 1);
 		image.fread( &length, 1);
 
-		length -= 2;
-		int block_length = length ? length : 256;
-
 		switch (type)
 		{
-		case CMD_TYPE_OBJECT_CODE:
+			case CMD_TYPE_OBJECT_CODE:  // 01 - block of data
 			{
+				length -= 2;
+				u16 block_length = length ? length : 256;
 				image.fread( &addr, 2);
-				uint16_t address = (addr[1] << 8) | addr[0];
+				u16 address = (addr[1] << 8) | addr[0];
+				logerror("/CMD object code block: address %04x length %u\n", address, block_length);
+				if (address < 0x3c00)
+				{
+					image.message("Attempting to write outside of RAM");
+					return image_init_result::FAIL;
+				}
 				ptr = program.get_write_ptr(address);
 				image.fread( ptr, block_length);
 			}
 			break;
 
-		case CMD_TYPE_TRANSFER_ADDRESS:
+			case CMD_TYPE_TRANSFER_ADDRESS: // 02 - go address
 			{
 				image.fread( &addr, 2);
-				uint16_t address = (addr[1] << 8) | addr[0];
+				u16 address = (addr[1] << 8) | addr[0];
+				logerror("/CMD transfer address %04x\n", address);
 				m_maincpu->set_state_int(Z80_PC, address);
 			}
+			return image_init_result::PASS;
+
+		case CMD_TYPE_LOAD_MODULE_HEADER: // 05 - name
+			image.fread( &data, length);
+			logerror("/CMD load module header '%s'\n", data);
 			break;
 
-		case CMD_TYPE_LOAD_MODULE_HEADER:
-			image.fread( &data, block_length);
-			break;
-
-		case CMD_TYPE_COPYRIGHT_BLOCK:
-			image.fread( &data, block_length);
+		case CMD_TYPE_COPYRIGHT_BLOCK: // 1F - copyright info
+			image.fread( &data, length);
+			logerror("/CMD copyright block '%s'\n", data);
 			break;
 
 		default:
-			image.fread( &data, block_length);
+			image.fread( &data, length);
 			logerror("/CMD unsupported block type %u!\n", type);
+			image.message("Unsupported or invalid block type");
+			return image_init_result::FAIL;
 		}
 	}
 
@@ -455,7 +463,7 @@ QUICKLOAD_LOAD_MEMBER(meritum_state::quickload_cb)
 
 
 /**************************** F4 CHARACTER DISPLAYER ***********************************************************/
-static const gfx_layout meritum_charlayout =
+static const gfx_layout charlayout =
 {
 	6, 12,          /* 6 x 12 characters */
 	256,            /* 256 characters */
@@ -469,7 +477,7 @@ static const gfx_layout meritum_charlayout =
 };
 
 static GFXDECODE_START(gfx_meritum)
-	GFXDECODE_ENTRY( "chargen", 0, meritum_charlayout, 0, 1 )
+	GFXDECODE_ENTRY( "chargen", 0, charlayout, 0, 1 )
 GFXDECODE_END
 
 
@@ -587,6 +595,6 @@ ROM_END
 
 
 //    YEAR  NAME         PARENT    COMPAT    MACHINE   INPUT      CLASS          INIT             COMPANY              FULLNAME                FLAGS
-COMP( 1983, meritum1,    0,        trs80l2,  meritum1, meritum,   meritum_state, empty_init,  "Mera-Elzab", "Meritum I (Model 1)",             0 )
-COMP( 1985, meritum2,    meritum1, 0,        meritum2, meritum,   meritum_state, empty_init,  "Mera-Elzab", "Meritum I (Model 2)",             0 )
-COMP( 1985, meritum_net, meritum1, 0,        meritum2, meritum,   meritum_state, empty_init,  "Mera-Elzab", "Meritum I (Model 2) (network)",   0 )
+COMP( 1983, meritum1,    0,        trs80l2,  meritum1, meritum,   meritum_state, empty_init,  "Mera-Elzab", "Meritum I (Model 1)",           MACHINE_SUPPORTS_SAVE )
+COMP( 1985, meritum2,    meritum1, 0,        meritum2, meritum,   meritum_state, empty_init,  "Mera-Elzab", "Meritum I (Model 2)",           MACHINE_SUPPORTS_SAVE )
+COMP( 1985, meritum_net, meritum1, 0,        meritum2, meritum,   meritum_state, empty_init,  "Mera-Elzab", "Meritum I (Model 2) (network)", MACHINE_SUPPORTS_SAVE )

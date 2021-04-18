@@ -43,11 +43,11 @@ Manuals for both games define the controls as 4 push buttons:
 #include "cpu/m68000/m68000.h"
 #include "cpu/z80/z80.h"
 #include "sound/okim6295.h"
-#include "sound/3812intf.h"
+#include "sound/ym3812.h"
 #include "speaker.h"
 
 
-WRITE16_MEMBER(galspnbl_state::soundcommand_w)
+void galspnbl_state::soundcommand_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	if (ACCESSING_BITS_0_7)
 	{

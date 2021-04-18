@@ -78,7 +78,7 @@ INPUT_PORTS_END
 
 /* 8355 Interface */
 
-READ8_MEMBER( exp85_state::i8355_a_r )
+uint8_t exp85_state::i8355_a_r()
 {
 	/*
 
@@ -98,7 +98,7 @@ READ8_MEMBER( exp85_state::i8355_a_r )
 	return 0x02;
 }
 
-WRITE8_MEMBER( exp85_state::i8355_a_w )
+void exp85_state::i8355_a_w(uint8_t data)
 {
 	/*
 
@@ -157,7 +157,6 @@ WRITE_LINE_MEMBER( exp85_state::sod_w )
 static DEVICE_INPUT_DEFAULTS_START( terminal )
 	DEVICE_INPUT_DEFAULTS( "RS232_TXBAUD", 0xff, RS232_BAUD_9600 )
 	DEVICE_INPUT_DEFAULTS( "RS232_RXBAUD", 0xff, RS232_BAUD_9600 )
-	DEVICE_INPUT_DEFAULTS( "RS232_STARTBITS", 0xff, RS232_STARTBITS_1 )
 	DEVICE_INPUT_DEFAULTS( "RS232_DATABITS", 0xff, RS232_DATABITS_7 )
 	DEVICE_INPUT_DEFAULTS( "RS232_PARITY", 0xff, RS232_PARITY_EVEN )
 	DEVICE_INPUT_DEFAULTS( "RS232_STOPBITS", 0xff, RS232_STOPBITS_1 )
@@ -167,11 +166,7 @@ DEVICE_INPUT_DEFAULTS_END
 
 void exp85_state::machine_start()
 {
-	address_space &program = m_maincpu->space(AS_PROGRAM);
-
 	/* setup memory banking */
-	program.install_read_bank(0x0000, 0x07ff, "bank1");
-	program.unmap_write(0x0000, 0x07ff);
 	membank("bank1")->configure_entry(0, m_rom->base() + 0xf000);
 	membank("bank1")->configure_entry(1, m_rom->base());
 	membank("bank1")->set_entry(0);

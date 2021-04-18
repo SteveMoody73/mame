@@ -179,7 +179,7 @@ ROMs
     23J8-0    - gfx2 mask ROM
     23J9-0    - gfx2 mask ROM
     23JA-0    - gfx2 mask ROM
-    TJR-100   - gfx3 custom ROM (undump)
+    TJR-100   - gfx3 custom ROM (undumped)
 
 SRAMs (2KBx8bits) Motorola MCM2016HN55, SANYO LC3517?
     IC7       - ?
@@ -251,11 +251,13 @@ M2H   -  /%    \_____/  duty 1:1, 1.5MHz
 #include "cpu/mcs48/mcs48.h"
 #include "cpu/z80/z80.h"
 #include "machine/timer.h"
-#include "sound/2203intf.h"
 #include "sound/okim6295.h"
 #include "sound/ym2151.h"
+#include "sound/ym2203.h"
 #include "speaker.h"
 
+
+namespace {
 
 #define MAIN_CLOCK      XTAL(12'000'000)
 #define PIXEL_CLOCK     MAIN_CLOCK / 2
@@ -280,17 +282,28 @@ protected:
 	virtual void video_start() override;
 
 private:
+	// for Sai Yu Gou Ma Roku
+	int            m_adpcm_addr;
+	int            m_i8748_P1;
+	int            m_i8748_P2;
+	int            m_pcm_shift;
+	int            m_pcm_nibble;
+	int            m_mcu_command;
+#if 0
+	int            m_m5205_clk;
+#endif
+
 	TIMER_DEVICE_CALLBACK_MEMBER(chinagat_scanline);
-	DECLARE_WRITE8_MEMBER(interrupt_w);
-	DECLARE_WRITE8_MEMBER(video_ctrl_w);
-	DECLARE_WRITE8_MEMBER(bankswitch_w);
-	DECLARE_WRITE8_MEMBER(sub_bankswitch_w);
-	DECLARE_WRITE8_MEMBER(sub_irq_ack_w);
-	DECLARE_READ8_MEMBER(saiyugoub1_mcu_command_r);
-	DECLARE_WRITE8_MEMBER(saiyugoub1_mcu_command_w);
-	DECLARE_WRITE8_MEMBER(saiyugoub1_adpcm_rom_addr_w);
-	DECLARE_WRITE8_MEMBER(saiyugoub1_adpcm_control_w);
-	DECLARE_WRITE8_MEMBER(saiyugoub1_m5205_clk_w);
+	void interrupt_w(offs_t offset, uint8_t data);
+	void video_ctrl_w(uint8_t data);
+	void bankswitch_w(uint8_t data);
+	void sub_bankswitch_w(uint8_t data);
+	void sub_irq_ack_w(uint8_t data);
+	uint8_t saiyugoub1_mcu_command_r();
+	void saiyugoub1_mcu_command_w(uint8_t data);
+	void saiyugoub1_adpcm_rom_addr_w(uint8_t data);
+	void saiyugoub1_adpcm_control_w(uint8_t data);
+	void saiyugoub1_m5205_clk_w(uint8_t data);
 	DECLARE_READ_LINE_MEMBER(saiyugoub1_m5205_irq_r);
 	DECLARE_WRITE_LINE_MEMBER(saiyugoub1_m5205_irq_w);
 
@@ -307,8 +320,6 @@ private:
 
 void chinagat_state::video_start()
 {
-	ddragon_state::video_start();
-
 	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(chinagat_state::get_bg_tile_info)), tilemap_mapper_delegate(*this, FUNC(chinagat_state::background_scan)), 16, 16, 32, 32);
 	m_fg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(chinagat_state::get_fg_16color_tile_info)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
 
@@ -355,7 +366,7 @@ TIMER_DEVICE_CALLBACK_MEMBER(chinagat_state::chinagat_scanline)
 		scanline = 0;
 }
 
-WRITE8_MEMBER(chinagat_state::interrupt_w)
+void chinagat_state::interrupt_w(offs_t offset, uint8_t data)
 {
 	switch (offset)
 	{
@@ -381,7 +392,7 @@ WRITE8_MEMBER(chinagat_state::interrupt_w)
 	}
 }
 
-WRITE8_MEMBER(chinagat_state::video_ctrl_w)
+void chinagat_state::video_ctrl_w(uint8_t data)
 {
 	/***************************
 	---- ---x   X Scroll MSB
@@ -395,22 +406,22 @@ WRITE8_MEMBER(chinagat_state::video_ctrl_w)
 	flip_screen_set(~data & 0x04);
 }
 
-WRITE8_MEMBER(chinagat_state::bankswitch_w)
+void chinagat_state::bankswitch_w(uint8_t data)
 {
 	membank("bank1")->set_entry(data & 0x07); // shall we check (data & 7) < 6 (# of banks)?
 }
 
-WRITE8_MEMBER(chinagat_state::sub_bankswitch_w)
+void chinagat_state::sub_bankswitch_w(uint8_t data)
 {
 	membank("bank4")->set_entry(data & 0x07); // shall we check (data & 7) < 6 (# of banks)?
 }
 
-WRITE8_MEMBER(chinagat_state::sub_irq_ack_w)
+void chinagat_state::sub_irq_ack_w(uint8_t data)
 {
 	m_subcpu->set_input_line(m_sprite_irq, CLEAR_LINE);
 }
 
-READ8_MEMBER(chinagat_state::saiyugoub1_mcu_command_r )
+uint8_t chinagat_state::saiyugoub1_mcu_command_r()
 {
 #if 0
 	if (m_mcu_command == 0x78)
@@ -421,7 +432,7 @@ READ8_MEMBER(chinagat_state::saiyugoub1_mcu_command_r )
 	return m_mcu_command;
 }
 
-WRITE8_MEMBER(chinagat_state::saiyugoub1_mcu_command_w )
+void chinagat_state::saiyugoub1_mcu_command_w(uint8_t data)
 {
 	m_mcu_command = data;
 #if 0
@@ -432,13 +443,13 @@ WRITE8_MEMBER(chinagat_state::saiyugoub1_mcu_command_w )
 #endif
 }
 
-WRITE8_MEMBER(chinagat_state::saiyugoub1_adpcm_rom_addr_w )
+void chinagat_state::saiyugoub1_adpcm_rom_addr_w(uint8_t data)
 {
 	/* i8748 Port 1 write */
 	m_i8748_P1 = data;
 }
 
-WRITE8_MEMBER(chinagat_state::saiyugoub1_adpcm_control_w )
+void chinagat_state::saiyugoub1_adpcm_control_w(uint8_t data)
 {
 	/* i8748 Port 2 write */
 	uint8_t *saiyugoub1_adpcm_rom = memregion("adpcm")->base();
@@ -484,7 +495,7 @@ WRITE8_MEMBER(chinagat_state::saiyugoub1_adpcm_control_w )
 	m_i8748_P2 = data;
 }
 
-WRITE8_MEMBER(chinagat_state::saiyugoub1_m5205_clk_w )
+[[maybe_unused]] void chinagat_state::saiyugoub1_m5205_clk_w(uint8_t data)
 {
 	/* i8748 T0 output clk mode */
 	/* This signal goes through a divide by 8 counter */
@@ -525,7 +536,7 @@ void chinagat_state::main_map(address_map &map)
 	map(0x2800, 0x2fff).ram().w(FUNC(chinagat_state::ddragon_bgvideoram_w)).share("bgvideoram");
 	map(0x3000, 0x317f).w(m_palette, FUNC(palette_device::write8)).share("palette");
 	map(0x3400, 0x357f).w(m_palette, FUNC(palette_device::write8_ext)).share("palette_ext");
-	map(0x3800, 0x397f).bankw("bank3").share("spriteram");
+	map(0x3800, 0x397f).ram().share("spriteram");
 	map(0x3e00, 0x3e04).w(FUNC(chinagat_state::interrupt_w));
 	map(0x3e06, 0x3e06).writeonly().share("scrolly_lo");
 	map(0x3e07, 0x3e07).writeonly().share("scrollx_lo");
@@ -705,8 +716,6 @@ GFXDECODE_END
 
 void chinagat_state::machine_start()
 {
-	ddragon_state::machine_start();
-
 	/* configure banks */
 	membank("bank1")->configure_entries(0, 8, memregion("maincpu")->base() + 0x10000, 0x4000);
 
@@ -728,8 +737,6 @@ void chinagat_state::machine_start()
 
 void chinagat_state::machine_reset()
 {
-	ddragon_state::machine_reset();
-
 	m_scrollx_hi = 0;
 	m_scrolly_hi = 0;
 	m_adpcm_sound_irq = 0;
@@ -1099,6 +1106,8 @@ void chinagat_state::init_chinagat()
 	membank("bank1")->configure_entries(0, 6, &MAIN[0x10000], 0x4000);
 	membank("bank4")->configure_entries(0, 6, &SUB[0x10000], 0x4000);
 }
+
+} // Anonymous namespace
 
 
 //  ( YEAR  NAME        PARENT    MACHINE     INPUT     STATE           INIT           MONITOR COMPANY    FULLNAME     FLAGS ) */

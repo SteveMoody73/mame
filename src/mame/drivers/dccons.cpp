@@ -278,7 +278,7 @@
 
 #define CPU_CLOCK (200000000)
 
-READ64_MEMBER(dc_cons_state::dcus_idle_skip_r )
+uint64_t dc_cons_state::dcus_idle_skip_r()
 {
 	//if (m_maincpu->pc()==0xc0ba52a)
 	//  m_maincpu->spin_until_time(attotime::from_usec(2500));
@@ -287,7 +287,7 @@ READ64_MEMBER(dc_cons_state::dcus_idle_skip_r )
 	return dc_ram[0x2303b0/8];
 }
 
-READ64_MEMBER(dc_cons_state::dcjp_idle_skip_r )
+uint64_t dc_cons_state::dcjp_idle_skip_r()
 {
 	//if (m_maincpu->pc()==0xc0bac62)
 	//  m_maincpu->spin_until_time(attotime::from_usec(2500));
@@ -306,14 +306,14 @@ void dc_cons_state::init_dc()
 
 void dc_cons_state::init_dcus()
 {
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0xc2303b0, 0xc2303b7, read64_delegate(*this, FUNC(dc_cons_state::dcus_idle_skip_r)));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0xc2303b0, 0xc2303b7, read64smo_delegate(*this, FUNC(dc_cons_state::dcus_idle_skip_r)));
 
 	init_dc();
 }
 
 void dc_cons_state::init_dcjp()
 {
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0xc2302f8, 0xc2302ff, read64_delegate(*this, FUNC(dc_cons_state::dcjp_idle_skip_r)));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0xc2302f8, 0xc2302ff, read64smo_delegate(*this, FUNC(dc_cons_state::dcjp_idle_skip_r)));
 
 	init_dc();
 }
@@ -330,7 +330,7 @@ void dc_cons_state::init_tream()
 	init_dcus();
 }
 
-READ64_MEMBER(dc_cons_state::dc_pdtra_r )
+uint64_t dc_cons_state::dc_pdtra_r()
 {
 	uint64_t out = PCTRA<<32;
 
@@ -360,18 +360,18 @@ READ64_MEMBER(dc_cons_state::dc_pdtra_r )
 	return out;
 }
 
-WRITE64_MEMBER(dc_cons_state::dc_pdtra_w )
+void dc_cons_state::dc_pdtra_w(uint64_t data)
 {
 	PCTRA = (data>>16) & 0xffff;
 	PDTRA = (data & 0xffff);
 }
 
-READ8_MEMBER(dc_cons_state::dc_flash_r)
+uint8_t dc_cons_state::dc_flash_r(offs_t offset)
 {
 	return m_dcflash->read(offset+0x20000);
 }
 
-WRITE8_MEMBER(dc_cons_state::dc_flash_w)
+void dc_cons_state::dc_flash_w(offs_t offset, uint8_t data)
 {
 	m_dcflash->write(offset+0x20000,data);
 }
@@ -379,7 +379,7 @@ WRITE8_MEMBER(dc_cons_state::dc_flash_w)
 void dc_cons_state::dc_map(address_map &map)
 {
 	map(0x00000000, 0x001fffff).rom().nopw();             // BIOS
-	map(0x00200000, 0x0021ffff).rw(FUNC(dc_cons_state::dc_flash_r), FUNC(dc_cons_state::dc_flash_w)).region("dcflash", 0x20000);
+	map(0x00200000, 0x0021ffff).rw(FUNC(dc_cons_state::dc_flash_r), FUNC(dc_cons_state::dc_flash_w));
 	map(0x005f6800, 0x005f69ff).rw(FUNC(dc_cons_state::dc_sysctrl_r), FUNC(dc_cons_state::dc_sysctrl_w));
 	map(0x005f6c00, 0x005f6cff).m(m_maple, FUNC(maple_dc_device::amap));
 	map(0x005f7000, 0x005f701f).rw(m_ata, FUNC(ata_interface_device::cs1_r), FUNC(ata_interface_device::cs1_w)).umask64(0x0000ffff0000ffff);
@@ -749,7 +749,11 @@ struct factory_sector
         char factory_code[4];
         char total_number[16];
         uint8_t sum;        // byte sum of above
-        uint8_t machine_id[8];  // 64bit UID
+        struct {
+            uint8_t sum_inv;    // ~(UID byte sum)
+            uint8_t sum;        // UID byte sum
+            uint8_t id[6];      // UID
+        } machine_id;
         uint8_t machine_type;   // FF - Dreamcast
         uint8_t machine_version;// FF - VA0, FE - VA1, FD - VA2, NOTE: present in 1st factory record only, in 2nd always FF
         uint8_t unused[0x40]    // FF filled
@@ -819,7 +823,7 @@ ROM_START( dcdev )
 	ROM_REGION(0x200000, "maincpu", 0)
 	ROM_SYSTEM_BIOS(0, "1011", "Katana Set5 v1.011 (World)")    // BOOT flash rom update from Katana SDK R9-R11, WinCE SDK v2.1
 	ROM_LOAD_BIOS(0, "set5v1.011.ic507", 0x000000, 0x200000, CRC(2186e0e5) SHA1(6bd18fb83f8fdb56f1941e079580e5dd672a6dad) )
-	ROM_SYSTEM_BIOS(1, "1001", "Katana Set5 v1.001 (Japan)")    // BOOT flash rom update from WinCE SDK v1.0
+	ROM_SYSTEM_BIOS(1, "1001", "Katana Set5 v1.001 (Japan)")    // BOOT flash rom update from Katana SDK 1.42J and WinCE SDK v1.0
 	ROM_LOAD_BIOS(1, "set5v1.001.ic507", 0x000000, 0x200000, CRC(5702d38f) SHA1(ea7a3ae1de73683008dd795c252941a4fc81b42e) )
 	ROM_SYSTEM_BIOS(2, "0976", "Katana Set5 v0.976 (Japan)")    // BOOT flash rom update from Katana SDK 1.20J
 	ROM_LOAD_BIOS(2, "set5v0.976.ic507", 0x000000, 0x200000, CRC(dcb2e86f) SHA1(c88b4b6704811e3a428ee225727e4f7df467a3b5) )
@@ -881,6 +885,7 @@ Consists of HKS-0300 main unit and HKS-0100 LCD with touch screen
   HDR-0095 673-01??? Fish Life Episode 1 Basic Edition
   HDR-0096 673-01??? Fish Life Episode 2 Basic Edition
   HDR-0097 673-01??? Fish Life Episode 3 Basic Edition
+  MSD-0001 ???-????? Fish Life Red Sea & Amazon PDP Ver.
  * denotes these games are archived.
 
  Machines high likely based on Fish Life:

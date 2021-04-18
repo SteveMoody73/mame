@@ -19,6 +19,9 @@
 #include "screen.h"
 #include "speaker.h"
 
+
+namespace {
+
 class pcfx_state : public driver_device
 {
 public:
@@ -29,6 +32,11 @@ public:
 
 	void pcfx(machine_config &config);
 
+protected:
+	virtual void machine_start() override;
+	virtual void machine_reset() override;
+	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+
 private:
 	enum
 	{
@@ -36,29 +44,25 @@ private:
 	};
 	uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
-	DECLARE_READ16_MEMBER( irq_read );
-	DECLARE_WRITE16_MEMBER( irq_write );
-	DECLARE_READ16_MEMBER( pad_r );
-	DECLARE_WRITE16_MEMBER( pad_w );
-	DECLARE_READ8_MEMBER( extio_r );
-	DECLARE_WRITE8_MEMBER( extio_w );
+	uint16_t irq_read(offs_t offset);
+	void irq_write(offs_t offset, uint16_t data);
+	uint16_t pad_r(offs_t offset);
+	void pad_w(offs_t offset, uint16_t data);
+	[[maybe_unused]] uint8_t extio_r(offs_t offset);
+	[[maybe_unused]] void extio_w(offs_t offset, uint8_t data);
 
-	DECLARE_WRITE_LINE_MEMBER( irq8_w );
-	DECLARE_WRITE_LINE_MEMBER( irq9_w );
-	DECLARE_WRITE_LINE_MEMBER( irq10_w );
-	DECLARE_WRITE_LINE_MEMBER( irq11_w );
+	[[maybe_unused]] DECLARE_WRITE_LINE_MEMBER( irq8_w );
+	[[maybe_unused]] DECLARE_WRITE_LINE_MEMBER( irq9_w );
+	[[maybe_unused]] DECLARE_WRITE_LINE_MEMBER( irq10_w );
+	[[maybe_unused]] DECLARE_WRITE_LINE_MEMBER( irq11_w );
 	DECLARE_WRITE_LINE_MEMBER( irq12_w );
 	DECLARE_WRITE_LINE_MEMBER( irq13_w );
 	DECLARE_WRITE_LINE_MEMBER( irq14_w );
-	DECLARE_WRITE_LINE_MEMBER( irq15_w );
+	[[maybe_unused]] DECLARE_WRITE_LINE_MEMBER( irq15_w );
 	TIMER_CALLBACK_MEMBER(pad_func);
 
 	void pcfx_io(address_map &map);
 	void pcfx_mem(address_map &map);
-
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
-
-	virtual void machine_reset() override;
 
 	// Interrupt controller (component unknown)
 	uint16_t m_irq_mask;
@@ -82,14 +86,14 @@ private:
 };
 
 
-READ8_MEMBER(pcfx_state::extio_r)
+uint8_t pcfx_state::extio_r(offs_t offset)
 {
 	address_space &io_space = m_maincpu->space(AS_IO);
 
 	return io_space.read_byte(offset);
 }
 
-WRITE8_MEMBER(pcfx_state::extio_w)
+void pcfx_state::extio_w(offs_t offset, uint8_t data)
 {
 	address_space &io_space = m_maincpu->space(AS_IO);
 
@@ -106,7 +110,7 @@ void pcfx_state::pcfx_mem(address_map &map)
 	map(0xFFF00000, 0xFFFFFFFF).rom().region("ipl", 0);  /* ROM */
 }
 
-READ16_MEMBER( pcfx_state::pad_r )
+uint16_t pcfx_state::pad_r(offs_t offset)
 {
 	uint16_t res;
 	uint8_t port_type = ((offset<<1) & 0x80) >> 7;
@@ -160,7 +164,7 @@ TIMER_CALLBACK_MEMBER(pcfx_state::pad_func)
 	set_irq_line(11, 1);
 }
 
-WRITE16_MEMBER( pcfx_state::pad_w )
+void pcfx_state::pad_w(offs_t offset, uint16_t data)
 {
 	uint8_t port_type = ((offset<<1) & 0x80) >> 7;
 
@@ -234,7 +238,7 @@ static INPUT_PORTS_START( pcfx )
 INPUT_PORTS_END
 
 
-READ16_MEMBER( pcfx_state::irq_read )
+uint16_t pcfx_state::irq_read(offs_t offset)
 {
 	uint16_t data = 0;
 
@@ -266,7 +270,7 @@ READ16_MEMBER( pcfx_state::irq_read )
 }
 
 
-WRITE16_MEMBER( pcfx_state::irq_write )
+void pcfx_state::irq_write(offs_t offset, uint16_t data)
 {
 	switch( offset )
 	{
@@ -403,6 +407,16 @@ WRITE_LINE_MEMBER( pcfx_state::irq15_w )
 }
 
 
+void pcfx_state::machine_start()
+{
+	for (int i = 0; i < 2; i++)
+	{
+		m_pad.ctrl[i] = 0;
+		m_pad.status[i] = 0;
+		m_pad.latch[i] = 0;
+	};
+}
+
 void pcfx_state::machine_reset()
 {
 	m_irq_mask = 0xFF;
@@ -479,6 +493,8 @@ ROM_START( pcfxga )
 
 	ROM_REGION32_LE( 0x80000, "scsi_rom", ROMREGION_ERASEFF )
 ROM_END
+
+} // Anonymous namespace
 
 
 /***************************************************************************

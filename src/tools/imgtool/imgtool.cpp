@@ -83,10 +83,11 @@ char *strncpyz(char *dest, const char *source, size_t len)
 //  extract_padded_string
 //-------------------------------------------------
 
-static std::string extract_padded_string(const char *source, size_t len)
+static std::string extract_padded_string(const char *source, size_t len, char pad)
 {
-	while ((len > 0) && (source[len - 1] == ' '))
+	while ((len > 0) && (source[len - 1] == pad))
 		len--;
+
 	return std::string(source, len);
 }
 
@@ -97,10 +98,10 @@ static std::string extract_padded_string(const char *source, size_t len)
 //  this in common code
 //-------------------------------------------------
 
-std::string extract_padded_filename(const char *source, size_t filename_length, size_t extension_length)
+std::string extract_padded_filename(const char *source, size_t filename_length, size_t extension_length, char pad)
 {
-	std::string filename = extract_padded_string(source, filename_length);
-	std::string extension = extract_padded_string(source + filename_length, extension_length);
+	std::string filename = extract_padded_string(source, filename_length, pad);
+	std::string extension = extract_padded_string(source + filename_length, extension_length, pad);
 	return extension.empty() ? filename : filename + "." + extension;
 }
 
@@ -936,7 +937,7 @@ char *imgtool_temp_str(void)
 {
 	static int index;
 	static char temp_string_pool[32][256];
-	return temp_string_pool[index++ % ARRAY_LENGTH(temp_string_pool)];
+	return temp_string_pool[index++ % std::size(temp_string_pool)];
 }
 
 
@@ -1602,7 +1603,7 @@ imgtoolerr_t imgtool::partition::get_chain_string(const char *path, char *buffer
 	chain[0].block = ~0;
 	last_block = chain[0].block;
 
-	err = get_chain(path, chain, ARRAY_LENGTH(chain));
+	err = get_chain(path, chain, std::size(chain));
 	if (err)
 		return err;
 
@@ -1883,7 +1884,7 @@ imgtoolerr_t imgtool::partition::put_file(const char *newfname, const char *fork
 
 	if (!newfname)
 	{
-		basename = core_filename_extract_base(source);
+		basename = std::string(core_filename_extract_base(source));
 		newfname = basename.c_str();
 	}
 
@@ -2361,7 +2362,7 @@ imgtoolerr_t imgtool::directory::get_next(imgtool_dirent &ent)
 		{
 			return imgtoolerr_t(IMGTOOLERR_BADFILENAME);
 		}
-		snprintf(ent.filename, ARRAY_LENGTH(ent.filename), "%s", new_fname.c_str());
+		snprintf(ent.filename, std::size(ent.filename), "%s", new_fname.c_str());
 	}
 
 	// don't trust the module!
