@@ -1195,53 +1195,67 @@ static void gfxset_draw_item(running_machine &machine, gfx_element &gfx, int ind
 //-------------------------------------------------
 static void gfxset_handle_save(running_machine &machine, ui_gfx_state &state)
 {
-	int dev = state.gfxset.devindex;
-	ui_gfx_info &info = state.gfxdev[dev];
-	device_gfx_interface &interface = *info.interface;
 	int xcells, ycells;
 	char filename[2048];
 	bitmap_rgb32 bitmap;
 
-	for (int set = 0; set < info.setcount; set++)
+	for (int dev = 0; dev < state.gfxset.devcount; dev++)
 	{
-		gfx_element &gfx = *interface.gfx(set);
-
-		xcells = 32;
-		ycells = (gfx.elements() + xcells - 1) / xcells;
-
-		int maxcolors = gfx.colors();
-		if (maxcolors > 32)
-			maxcolors = 32;	// Limit the number of sets that can be generated
-
-		if (gfx.palette().indirect_entries() > 0)
-				state.palette.which = 1;
-
-		int num_colors = state.palette.which ? gfx.palette().indirect_entries() : gfx.palette().entries();
-
-		for (int color = 0; color < maxcolors; color++)
+		ui_gfx_info &info = state.gfxdev[dev];
+		for (int set = 0; set < info.setcount; set++)
 		{
-			// set the set number and color number
+			state.gfxset.devindex = dev;
 			state.gfxset.set = set;
-			info.color[set] = color;
 
-			// update the bitmap
-			gfxset_update_save_bitmap(bitmap, state, xcells, ycells, gfx);
+			ui_gfx_info &info = state.gfxdev[dev];
+			gfx_element &gfx = *info.interface->gfx(set);
 
-			state.palette.which = 0;
-			state.palette.devindex = 0;
-			palette_set_device(machine, state);
+			if (gfx.elements() < 4096)
+				xcells = 32;
+			else if (gfx.elements() < 8162)
+				xcells = 64;
+			else
+				xcells = 128;
 
-			const rgb_t *palette = gfx.palette().palette()->entry_list_raw() + gfx.colorbase() + color * gfx.granularity();
+			ycells = (gfx.elements() + xcells - 1) / xcells;
 
-			// save the file
-			sprintf(filename, "gfxset%d tiles %dx%d colors %d set %X", set, gfx.width(), gfx.height(), gfx.colors(), color);
-
-			emu_file file("gfxsave", OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-			osd_file::error filerr = open_next_file(machine, file, filename, "png");
-			if (filerr == osd_file::error::NONE)
+			int maxcolors = gfx.colors();
+			if (maxcolors > 32)
 			{
-				gfxset_save_snapshot(bitmap, file, num_colors, palette);
-				osd_printf_error("Saved gfxset %d of %d colours %d set %d, %dx%d tiles %d items\n", set + 1, info.setcount, gfx.colors(), color, gfx.width(), gfx.height(), gfx.elements());
+				osd_printf_error("Limiting the number of palette entries from %d to 32\n", maxcolors);
+				maxcolors = 32;	// Limit the number of sets that can be generated
+			}
+
+			if (gfx.palette().indirect_entries() > 0)
+					state.palette.which = 1;
+
+			int num_colors = state.palette.which ? gfx.palette().indirect_entries() : gfx.palette().entries();
+
+			for (int color = 0; color < maxcolors; color++)
+			{
+				// set the set number and color number
+				state.gfxset.set = set;
+				info.color[set] = color;
+
+				// update the bitmap
+				gfxset_update_save_bitmap(bitmap, state, xcells, ycells, gfx);
+
+				state.palette.which = 0;
+				state.palette.devindex = 0;
+				palette_set_device(machine, state);
+
+				const rgb_t *palette = gfx.palette().palette()->entry_list_raw() + gfx.colorbase() + color * gfx.granularity();
+
+				// save the file
+				sprintf(filename, "gfx dev %d set %d tiles %dx%d colors %d pal %02X", dev, set, gfx.width(), gfx.height(), gfx.colors(), color);
+				
+				emu_file file("gfxsave", OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+				osd_file::error filerr = open_next_file(machine, file, filename, "png");
+				if (filerr == osd_file::error::NONE)
+				{
+					gfxset_save_snapshot(bitmap, file, num_colors, palette);
+					osd_printf_error("Saved gfx: device %d of %d, set %d of %d, colors %d, palette %02X, %dx%d tiles of %d items\n", dev, state.gfxset.devcount - 1, set, info.setcount - 1, gfx.colors(), color, gfx.width(), gfx.height(), gfx.elements());
+				}
 			}
 		}
 	}
@@ -1350,8 +1364,7 @@ static void gfxset_draw_save_item(gfx_element &gfx, int index, bitmap_rgb32 &bit
 			s = src + effy * gfx.rowbytes();
 
 			// extract the pixel
-			//*dest++ = s[effx];
-			*dest++ = 0xff000000 | palette[s[effx]];
+			*dest++ =  palette[s[effx]];
 		}
 	}
 }
