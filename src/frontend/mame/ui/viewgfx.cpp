@@ -29,6 +29,7 @@
 #include "corestr.h"
 #include "emuopts.h"
 #include "fileio.h"
+#include "path.h"
 
 #include <cmath>
 #include <vector>
@@ -773,6 +774,9 @@ void gfx_viewer::palette::handle_keys(running_machine &machine)
 		m_offset = ((total + rowcount - 1) / rowcount) * rowcount - screencount;
 	if (m_offset < 0)
 		m_offset = 0;
+
+	if (input.pressed(IPT_UI_SNAPSHOT))
+		m_save = true;
 }
 
 void gfx_viewer::palette::save_palette(running_machine& machine)
@@ -838,8 +842,11 @@ void gfx_viewer::palette::save_palette(running_machine& machine)
 		}
 
 		// Create a png file to save to
-		emu_file pngfile(machine.options().gfxsave_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-		filerr = machine.video().open_next(txtfile, "png");
+		util::core_file::ptr pngfile;
+		std::string pngfilename = std::string(filename);
+		pngfilename += std::string(".png");
+		pngfilename = util::path_concat(machine.options().gfxsave_directory(), pngfilename);		
+		filerr = util::core_file::open(pngfilename, OPEN_FLAG_WRITE | OPEN_FLAG_CREATE, pngfile);
 
 		if (!filerr)
 		{
@@ -849,19 +856,12 @@ void gfx_viewer::palette::save_palette(running_machine& machine)
 			int image_width = size_x * 8;
 			int image_height = size_y * 8;
 
-			bitmap_rgb32* img_bitmap = NULL;
-
-			// allocate new image
-			img_bitmap = new bitmap_rgb32(image_width, image_height);
-
-			if (img_bitmap == NULL)
-				return;
+			bitmap_rgb32 img_bitmap(image_width, image_height);
 
 			// now loop through the palette colors
-			uint32_t* dest = (uint32_t*)img_bitmap->raw_pixptr(0, 0);
-
 			for (y = 0; y < size_y; y++)
 			{
+				uint32_t *dest = &img_bitmap.pix(y, 0);
 				for (x = 0; x < size_x; x++)
 				{
 					int index = (y * m_columns) + x;
@@ -872,17 +872,13 @@ void gfx_viewer::palette::save_palette(running_machine& machine)
 						{
 							for (int x1 = 0; x1 < 8; x1++)
 							{
-								int ypos = ((y * 8) + y1) * image_width;
-								dest[ypos + (x * 8) + x1] = pen;
+								dest[(x * 8) + x1] = pen;
 							}
 						}
 					}
 				}
 			}
-			util::png_write_bitmap(pngfile, nullptr, *img_bitmap, total, raw_color);
-
-			delete img_bitmap;
-			pngfile.close();
+			util::png_write_bitmap(*pngfile, nullptr, img_bitmap, 0, nullptr);
 		}
 		osd_printf_error("Saved palette %s%d of %d \n", paltype, palidx + 1, m_count);
 	}
