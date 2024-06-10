@@ -23,6 +23,13 @@
 
 #include "osdepend.h"
 
+#include "png.h"
+#include "tilemap.h"
+#include "drawgfx.h"
+#include "corestr.h"
+#include "emuopts.h"
+#include "fileio.h"
+
 #include <cmath>
 #include <vector>
 
@@ -147,7 +154,11 @@ public:
 			{
 			case view::PALETTE:
 				if (m_palette.interface())
+				{
+					if (m_palette.m_save == true)
+						m_palette.save_palette(m_machine);
 					return handle_palette(mui, container, uistate);
+				}
 				m_mode = view::GFXSET;
 				break;
 
@@ -211,6 +222,10 @@ private:
 		}
 
 		void handle_keys(running_machine &machine);
+
+		void save_palette(running_machine &machine);
+
+		bool m_save = false;
 
 	private:
 		void set_device(running_machine &machine)
@@ -361,6 +376,7 @@ private:
 		std::vector<devinfo> m_devices;
 		unsigned m_device = 0U;
 		unsigned m_set = 0U;
+		bool m_save = false;
 
 	private:
 		bool next_group() noexcept
@@ -450,6 +466,8 @@ private:
 		}
 
 		bool handle_keys(running_machine &machine, float pixelscale);
+
+		bool m_save = false;
 
 	private:
 		static constexpr int MAX_ZOOM_LEVEL = 8; // maximum tilemap zoom ratio screen:native
@@ -757,6 +775,69 @@ void gfx_viewer::palette::handle_keys(running_machine &machine)
 		m_offset = 0;
 }
 
+void gfx_viewer::palette::save_palette(running_machine& machine)
+{
+	m_save = false;
+
+	int x, y;
+
+	char filename[200];
+	char paltype[20];
+	char data[512];
+
+	// Go to the first entry if not already
+	while (m_index > 0)
+		prev_group(machine);
+
+	for (unsigned int palidx = 0; palidx < m_count; palidx++)
+	{
+		device_palette_interface& palette = *interface();
+
+		bool indirect = subset::INDIRECT == m_which;
+		unsigned const total = indirect ? palette.indirect_entries() : palette.entries();
+		const rgb_t* raw_color = palette.palette()->entry_list_raw();
+
+		memset(paltype, 0, 20);
+		sprintf(paltype, "%s", subset::INDIRECT == m_which ? "pens" : "colors");
+		sprintf(filename, "palette%d %s%d", palidx, paltype, total);
+
+		emu_file txtfile(machine.options().gfxsave_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+		std::error_condition const filerr = machine.video().open_next(txtfile, "txt");
+
+		if (!filerr)
+		{
+			sprintf(data, "%d\t\t# total colors\n", total);
+			txtfile.puts(data);
+			sprintf(data, "%d\t\t# column width\n", m_columns);
+			txtfile.puts(data);
+			sprintf(data, "# palette data r,g,b,a\n");
+			txtfile.puts(data);
+
+			int size_y = (total + m_columns - 1) / m_columns;
+			int size_x = m_columns;
+
+			// now loop through the palette colors
+			for (y = 0; y < size_y; y++)
+			{
+				for (x = 0; x < size_x; x++)
+				{
+					int index = (y * m_columns) + x;
+					if (index < total)
+					{
+						pen_t pen = subset::INDIRECT == m_which ? palette.indirect_color(index) : raw_color[index];
+						u32 a = pen >> 24 & 0x000000FF;
+						u32 r = pen >> 16 & 0x000000FF;
+						u32 g = pen >> 8 & 0x000000FF;
+						u32 b = pen & 0x000000FF;
+						sprintf(data, "%d,%d,%d,%d\n", r, g, b, a);
+						txtfile.puts(data);
+					}
+				}
+			}
+			txtfile.close();
+		}
+	}
+}
 
 bool gfx_viewer::gfxset::handle_keys(running_machine &machine, int xcells, int ycells)
 {
