@@ -802,7 +802,7 @@ void gfx_viewer::palette::save_palette(running_machine& machine)
 		sprintf(filename, "palette%d %s%d", palidx, paltype, total);
 
 		emu_file txtfile(machine.options().gfxsave_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-		std::error_condition const filerr = machine.video().open_next(txtfile, "txt");
+		std::error_condition filerr = machine.video().open_next(txtfile, "txt");
 
 		if (!filerr)
 		{
@@ -836,7 +836,57 @@ void gfx_viewer::palette::save_palette(running_machine& machine)
 			}
 			txtfile.close();
 		}
+
+		// Create a png file to save to
+		emu_file pngfile(machine.options().gfxsave_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+		filerr = machine.video().open_next(txtfile, "png");
+
+		if (!filerr)
+		{
+			int size_y = (total + m_columns - 1) / m_columns;
+			int size_x = m_columns;
+
+			int image_width = size_x * 8;
+			int image_height = size_y * 8;
+
+			bitmap_rgb32* img_bitmap = NULL;
+
+			// allocate new image
+			img_bitmap = new bitmap_rgb32(image_width, image_height);
+
+			if (img_bitmap == NULL)
+				return;
+
+			// now loop through the palette colors
+			uint32_t* dest = (uint32_t*)img_bitmap->raw_pixptr(0, 0);
+
+			for (y = 0; y < size_y; y++)
+			{
+				for (x = 0; x < size_x; x++)
+				{
+					int index = (y * m_columns) + x;
+					if (index < total)
+					{
+						pen_t pen = subset::INDIRECT == m_which ? palette.indirect_color(index) : raw_color[index];
+						for (int y1 = 0; y1 < 8; y1++)
+						{
+							for (int x1 = 0; x1 < 8; x1++)
+							{
+								int ypos = ((y * 8) + y1) * image_width;
+								dest[ypos + (x * 8) + x1] = pen;
+							}
+						}
+					}
+				}
+			}
+			util::png_write_bitmap(pngfile, nullptr, *img_bitmap, total, raw_color);
+
+			delete img_bitmap;
+			pngfile.close();
+		}
+		osd_printf_error("Saved palette %s%d of %d \n", paltype, palidx + 1, m_count);
 	}
+	osd_printf_error("Finished saving palettes\n");
 }
 
 bool gfx_viewer::gfxset::handle_keys(running_machine &machine, int xcells, int ycells)
