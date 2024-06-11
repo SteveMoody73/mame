@@ -155,11 +155,7 @@ public:
 			{
 			case view::PALETTE:
 				if (m_palette.interface())
-				{
-					if (m_palette.m_save == true)
-						m_palette.save_palette(m_machine);
 					return handle_palette(mui, container, uistate);
-				}
 				m_mode = view::GFXSET;
 				break;
 
@@ -842,11 +838,8 @@ void gfx_viewer::palette::save_palette(running_machine& machine)
 		}
 
 		// Create a png file to save to
-		util::core_file::ptr pngfile;
-		std::string pngfilename = std::string(filename);
-		pngfilename += std::string(".png");
-		pngfilename = util::path_concat(machine.options().gfxsave_directory(), pngfilename);		
-		filerr = util::core_file::open(pngfilename, OPEN_FLAG_WRITE | OPEN_FLAG_CREATE, pngfile);
+		emu_file pngfile(machine.options().gfxsave_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+		filerr = machine.video().open_next(txtfile, "png");
 
 		if (!filerr)
 		{
@@ -861,7 +854,6 @@ void gfx_viewer::palette::save_palette(running_machine& machine)
 			// now loop through the palette colors
 			for (y = 0; y < size_y; y++)
 			{
-				uint32_t *dest = &img_bitmap.pix(y, 0);
 				for (x = 0; x < size_x; x++)
 				{
 					int index = (y * m_columns) + x;
@@ -872,13 +864,16 @@ void gfx_viewer::palette::save_palette(running_machine& machine)
 						{
 							for (int x1 = 0; x1 < 8; x1++)
 							{
-								dest[(x * 8) + x1] = pen;
+								int ypos = ((y * 8) + y1);
+								uint32_t *dest = &img_bitmap.pix(ypos, (x * 8) + x1);
+
+								*dest = pen;
 							}
 						}
 					}
 				}
 			}
-			util::png_write_bitmap(*pngfile, nullptr, img_bitmap, 0, nullptr);
+			util::png_write_bitmap(pngfile, nullptr, img_bitmap, 0, nullptr);
 		}
 		osd_printf_error("Saved palette %s%d of %d \n", paltype, palidx + 1, m_count);
 	}
@@ -1257,6 +1252,9 @@ uint32_t gfx_viewer::handle_palette(mame_ui_manager &mui, render_container &cont
 			}
 		}
 	}
+
+	if (m_palette.m_save == true)
+		m_palette.save_palette(m_machine);
 
 	// handle keys
 	m_palette.handle_keys(m_machine);
