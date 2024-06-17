@@ -24,7 +24,7 @@ public:
 		: h8_sci_device(mconfig, tag, owner, 0)
 	{
 		m_cpu.set_tag(std::forward<T>(cpu));
-		m_intc.set_tag(std::forward<U>(intc));
+		//m_intc.set_tag(std::forward<U>(intc));
 		m_id = id;
 		m_eri_int = eri;
 		m_rxi_int = rxi;
@@ -106,7 +106,7 @@ protected:
 	};
 
 	required_device<h8_device> m_cpu;
-	required_device<h8_intc_device> m_intc;
+	//required_device<h8_intc_device> m_intc;
 	attotime m_external_clock_period;
 	double m_external_to_internal_ratio, m_internal_to_external_ratio;
 	emu_timer *m_sync_timer;

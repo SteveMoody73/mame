@@ -66,7 +66,7 @@ const char *const h8_sci_device::state_names[] = { "idle", "start", "bit", "pari
 h8_sci_device::h8_sci_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock) :
 	device_t(mconfig, H8_SCI, tag, owner, clock),
 	m_cpu(*this, finder_base::DUMMY_TAG),
-	m_intc(*this, finder_base::DUMMY_TAG),
+	//m_intc(*this, finder_base::DUMMY_TAG),
 	m_external_to_internal_ratio(0), m_internal_to_external_ratio(0), m_sync_timer(nullptr), m_id(0), m_eri_int(0), m_rxi_int(0), m_txi_int(0), m_tei_int(0),
 	m_tx_state(0), m_rx_state(0), m_tx_bit(0), m_rx_bit(0), m_clock_state(0), m_tx_parity(0), m_rx_parity(0), m_tx_clock_counter(0), m_rx_clock_counter(0),
 	m_clock_mode(INTERNAL_ASYNC), m_ext_clock_value(false), m_rx_value(true),
@@ -148,14 +148,14 @@ void h8_sci_device::scr_w(u8 data)
 
 	if((delta & SCR_RE) && (m_scr & SCR_RE) && m_rx_state == ST_IDLE && !has_recv_error() && !is_sync_start())
 		rx_start();
-	if((delta & SCR_TIE) && (m_scr & SCR_TIE) && (m_ssr & SSR_TDRE))
-		m_intc->internal_interrupt(m_txi_int);
-	if((delta & SCR_TEIE) && (m_scr & SCR_TEIE) && (m_ssr & SSR_TEND))
-		m_intc->internal_interrupt(m_tei_int);
-	if((delta & SCR_RIE) && (m_scr & SCR_RIE) && (m_ssr & SSR_RDRF))
-		m_intc->internal_interrupt(m_rxi_int);
-	if((delta & SCR_RIE) && (m_scr & SCR_RIE) && has_recv_error())
-		m_intc->internal_interrupt(m_eri_int);
+	//if((delta & SCR_TIE) && (m_scr & SCR_TIE) && (m_ssr & SSR_TDRE))
+	//	m_intc->internal_interrupt(m_txi_int);
+	//if((delta & SCR_TEIE) && (m_scr & SCR_TEIE) && (m_ssr & SSR_TEND))
+	//	m_intc->internal_interrupt(m_tei_int);
+	//if((delta & SCR_RIE) && (m_scr & SCR_RIE) && (m_ssr & SSR_RDRF))
+	//	m_intc->internal_interrupt(m_rxi_int);
+	//if((delta & SCR_RIE) && (m_scr & SCR_RIE) && has_recv_error())
+	//	m_intc->internal_interrupt(m_eri_int);
 }
 
 u8 h8_sci_device::scr_r()
@@ -496,8 +496,8 @@ void h8_sci_device::tx_start()
 	m_tsr = m_tdr;
 	m_tx_parity = m_smr & SMR_OE ? 0 : 1;
 	LOGMASKED(LOG_DATA, "start transmit %02x '%c'\n", m_tsr, m_tsr >= 32 && m_tsr < 127 ? m_tsr : '.');
-	if(m_scr & SCR_TIE)
-		m_intc->internal_interrupt(m_txi_int);
+	//if(m_scr & SCR_TIE)
+	//	m_intc->internal_interrupt(m_txi_int);
 	if(m_smr & SMR_CA) {
 		m_tx_state = ST_BIT;
 		m_tx_bit = 8;
@@ -584,8 +584,8 @@ void h8_sci_device::tx_async_step()
 		clock_stop(CLK_TX);
 		m_cpu->do_sci_tx(m_id, 1);
 		m_ssr |= SSR_TEND;
-		if(m_scr & SCR_TEIE)
-			m_intc->internal_interrupt(m_tei_int);
+		//if(m_scr & SCR_TEIE)
+		//	m_intc->internal_interrupt(m_tei_int);
 
 		// if there's more to send, start the transmitter
 		if((m_scr & SCR_TE) && !(m_ssr & SSR_TDRE))
@@ -620,8 +620,8 @@ void h8_sci_device::tx_sync_step()
 		clock_stop(CLK_TX);
 		m_cpu->do_sci_tx(m_id, 1);
 		m_ssr |= SSR_TEND;
-		if(m_scr & SCR_TEIE)
-			m_intc->internal_interrupt(m_tei_int);
+		//if(m_scr & SCR_TEIE)
+		//	m_intc->internal_interrupt(m_tei_int);
 
 		// if there's more to send, start the transmitter
 		if((m_scr & SCR_TE) && !(m_ssr & SSR_TDRE))
@@ -666,10 +666,10 @@ void h8_sci_device::rx_done()
 		}
 	}
 	if(m_scr & SCR_RIE) {
-		if(has_recv_error())
-			m_intc->internal_interrupt(m_eri_int);
-		else
-			m_intc->internal_interrupt(m_rxi_int);
+		//if(has_recv_error())
+		//	m_intc->internal_interrupt(m_eri_int);
+		//else
+		//	m_intc->internal_interrupt(m_rxi_int);
 	}
 	if((m_scr & SCR_RE) && !has_recv_error() && !is_sync_start())
 		rx_start();

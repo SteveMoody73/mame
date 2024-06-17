@@ -681,68 +681,68 @@ void bfm_gu96x8m_k657c2_device::write_char(int data)
 				m_flash_rate = flash_rates[data & 0x0f];
 				break;
 
-			case 0xd0:
-				if(data <= 0xd3)
-				{
-					for(int i = 0; i < 16; i++)
-					{
-						m_attributes[i] &= ~(1 << AT_FLASH);
-					}
+			//case 0xd0:
+			//	if(data <= 0xd3)
+			//	{
+			//		for(int i = 0; i < 16; i++)
+			//		{
+			//			m_attributes[i] &= ~(1 << AT_FLASH);
+			//		}
 
-					switch(data & 3)
-					{
-						case 0x01:
-							if(m_window_size > 0)
-							{
-								for(int i = 0; i < m_window_size; i++)
-								{
-									m_attributes[m_window_start + i] |= (1 << AT_FLASH);
-								}
-							}
-							break;
+			//		switch(data & 3)
+			//		{
+			//			case 0x01:
+			//				if(m_window_size > 0)
+			//				{
+			//					for(int i = 0; i < m_window_size; i++)
+			//					{
+			//						m_attributes[m_window_start + i] |= (1 << AT_FLASH);
+			//					}
+			//				}
+			//				break;
 
-						case 0x02:
-							if(m_window_size)
-							{
-								if(m_window_start > 0)
-								{
-									for(int i = 0; i < m_window_start; i++)
-									{
-										m_attributes[i] |= (1 << AT_FLASH);
-									}
-								}
+			//			case 0x02:
+			//				if(m_window_size)
+			//				{
+			//					if(m_window_start > 0)
+			//					{
+			//						for(int i = 0; i < m_window_start; i++)
+			//						{
+			//							m_attributes[i] |= (1 << AT_FLASH);
+			//						}
+			//					}
 
-								if(m_window_end < 15)
-								{
-									for(int i = m_window_end + 1; i < 16; i++)
-									{
-										m_attributes[i] |= (1 << AT_FLASH);
-									}
-								}
-							}
-							break;
+			//					if(m_window_end < 15)
+			//					{
+			//						for(int i = m_window_end + 1; i < 16; i++)
+			//						{
+			//							m_attributes[i] |= (1 << AT_FLASH);
+			//						}
+			//					}
+			//				}
+			//				break;
 
-						case 0x03:
-							for(int i = 0; i < 16; i++)
-							{
-								m_attributes[i] |= (1 << AT_FLASH);
-							}
-							break;
-					}
-				}
-				else if(data == 0xdd)
-				{
-					m_load_extra_data = LOAD_LED_FREQUENCY;
-				}
-				else if(data == 0xde)
-				{
-					m_load_extra_data = LOAD_LED_FLASH_CONTROL;
-				}
-				else if(data == 0xdf)
-				{
-					m_load_extra_data = LOAD_LED_COLOUR;
-				}
-				break;
+			//			case 0x03:
+			//				for(int i = 0; i < 16; i++)
+			//				{
+			//					m_attributes[i] |= (1 << AT_FLASH);
+			//				}
+			//				break;
+			//		}
+			//	}
+			//	else if(data == 0xdd)
+			//	{
+			//		m_load_extra_data = LOAD_LED_FREQUENCY;
+			//	}
+			//	else if(data == 0xde)
+			//	{
+			//		m_load_extra_data = LOAD_LED_FLASH_CONTROL;
+			//	}
+			//	else if(data == 0xdf)
+			//	{
+			//		m_load_extra_data = LOAD_LED_COLOUR;
+			//	}
+			//	break;
 
 			case 0xe0:
 				m_window_start = data & 0x0f;
