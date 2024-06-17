@@ -37,6 +37,8 @@
 
 namespace {
 
+static std::error_condition open_next_file(running_machine &machine, emu_file &file, const char *basename, const char *extension);
+
 class gfx_viewer
 {
 public:
@@ -802,7 +804,7 @@ void gfx_viewer::palette::save_palette(running_machine& machine)
 		sprintf(filename, "palette%d %s%d", palidx, paltype, total);
 
 		emu_file txtfile(machine.options().gfxsave_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-		std::error_condition filerr = machine.video().open_next(txtfile, "txt");
+		std::error_condition filerr = open_next_file(machine, txtfile, filename, "txt");
 
 		if (!filerr)
 		{
@@ -839,7 +841,7 @@ void gfx_viewer::palette::save_palette(running_machine& machine)
 
 		// Create a png file to save to
 		emu_file pngfile(machine.options().gfxsave_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-		filerr = machine.video().open_next(txtfile, "png");
+		filerr = open_next_file(machine, pngfile, filename, "png");
 
 		if (!filerr)
 		{
@@ -1719,6 +1721,132 @@ void gfx_viewer::gfxset_draw_item(gfx_element &gfx, int index, int dstx, int dst
 		}
 	}
 }
+
+//-------------------------------------------------
+//  open_next_file - open the next non-existing
+//  file of type filetype according to our
+//  numbering scheme
+//-------------------------------------------------
+static std::error_condition open_next_file(running_machine &machine, emu_file &file, const char *basename, const char *extension)
+{
+	uint32_t origflags = file.openflags();
+
+	// handle defaults
+	const char *snapname = machine.options().snap_name();
+	if (snapname == nullptr || snapname[0] == 0)
+		snapname = "%g/%i";
+	std::string snapstr(snapname);
+
+	// strip any extension in the provided name
+	int index = snapstr.find_last_of('.');
+	if (index != -1)
+		snapstr = snapstr.substr(0, index);
+
+	// handle %d in the template (for image devices)
+	std::string snapdev("%d_");
+	int pos = snapstr.find(snapdev);
+
+	if (pos != -1)
+	{
+		// if more %d are found, revert to default and ignore them all
+		if (snapstr.find(snapdev.c_str(), pos + 3) != -1)
+			snapstr.assign("%g/%i");
+		// else if there is a single %d, try to create the correct snapname
+		else
+		{
+			int name_found = 0;
+
+			// find length of the device name
+			int end1 = snapstr.find("/", pos + 3);
+			int end2 = snapstr.find("%", pos + 3);
+			int end;
+
+			if ((end1 != -1) && (end2 != -1))
+				end = std::min(end1, end2);
+			else if (end1 != -1)
+				end = end1;
+			else if (end2 != -1)
+				end = end2;
+			else
+				end = snapstr.length();
+
+			if (end - pos < 3)
+				fatalerror("Something very wrong is going on!!!\n");
+
+			// copy the device name to an std::string
+			std::string snapdevname;
+			snapdevname.assign(snapstr.substr(pos + 3, end - pos - 3));
+			//printf("check template: %s\n", snapdevname.c_str());
+
+			image_interface_enumerator iter(machine.root_device());
+			for (device_image_interface& image : iter)
+			{
+				// get the device name
+				std::string tempdevname(image.brief_instance_name());
+				//printf("check device: %s\n", tempdevname.c_str());
+
+				if (snapdevname.compare(tempdevname) == 0)
+				{
+					// verify that such a device has an image mounted
+					if (image.basename() != nullptr)
+					{
+						std::string filename(image.basename());
+
+						// strip extension
+						filename = filename.substr(0, filename.find_last_of('.'));
+
+						// setup snapname and remove the %d_
+						strreplace(snapstr, snapdevname.c_str(), filename.c_str());
+						snapstr.erase(pos, 3);
+						//printf("check image: %s\n", filename.c_str());
+
+						name_found = 1;
+					}
+				}
+			}
+
+			// or fallback to default
+			if (name_found == 0)
+				snapstr.assign("%g/%i");
+		}
+	}
+
+	// add our own extension
+	snapstr.append(".").append(extension);
+
+	// substitute path and gamename up front
+	strreplace(snapstr, "/", PATH_SEPARATOR);
+	strreplace(snapstr, "%g", machine.basename());
+
+	// determine if the template has an index; if not, we always use the same name
+	std::string fname;
+	if (snapstr.find("%i") == -1)
+		fname.assign(snapstr);
+
+	// otherwise, we scan for the next available filename
+	else
+	{
+		// try until we succeed
+		file.set_openflags(OPEN_FLAG_READ);
+		for (int seq = 0; ; seq++)
+		{
+			// build up the filename
+			fname.assign(snapstr);
+			strreplace(fname, "%i", string_format("%s_%04d", basename, seq).c_str());
+
+			// try to open the file; stop when we fail
+			std::error_condition filerr = file.open(fname.c_str());
+			if (!filerr)
+				break;
+		}
+	}
+
+	// create the final file
+	file.set_openflags(origflags);
+	return file.open(fname.c_str());
+}
+
+
 
 } // anonymous namespace
 
