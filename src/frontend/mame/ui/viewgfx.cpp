@@ -1836,7 +1836,7 @@ static std::error_condition open_next_file(running_machine &machine, emu_file &f
 
 			// try to open the file; stop when we fail
 			std::error_condition filerr = file.open(fname.c_str());
-			if (!filerr)
+			if (filerr)
 				break;
 		}
 	}
