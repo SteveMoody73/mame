@@ -23,6 +23,14 @@
 
 #include "osdepend.h"
 
+#include "png.h"
+#include "tilemap.h"
+#include "drawgfx.h"
+#include "corestr.h"
+#include "emuopts.h"
+#include "fileio.h"
+#include "path.h"
+
 #include <cmath>
 #include <vector>
 
@@ -212,6 +220,10 @@ private:
 
 		void handle_keys(running_machine &machine);
 
+		void save_palette(running_machine &machine);
+
+		bool m_save = false;
+
 	private:
 		void set_device(running_machine &machine)
 		{
@@ -361,6 +373,7 @@ private:
 		std::vector<devinfo> m_devices;
 		unsigned m_device = 0U;
 		unsigned m_set = 0U;
+		bool m_save = false;
 
 	private:
 		bool next_group() noexcept
@@ -450,6 +463,8 @@ private:
 		}
 
 		bool handle_keys(running_machine &machine, float pixelscale);
+
+		bool m_save = false;
 
 	private:
 		static constexpr int MAX_ZOOM_LEVEL = 8; // maximum tilemap zoom ratio screen:native
@@ -755,8 +770,115 @@ void gfx_viewer::palette::handle_keys(running_machine &machine)
 		m_offset = ((total + rowcount - 1) / rowcount) * rowcount - screencount;
 	if (m_offset < 0)
 		m_offset = 0;
+
+	if (input.pressed(IPT_UI_SNAPSHOT))
+		m_save = true;
 }
 
+void gfx_viewer::palette::save_palette(running_machine& machine)
+{
+	m_save = false;
+
+	int x, y;
+
+	char filename[200];
+	char paltype[20];
+	char data[512];
+
+	// Go to the first entry if not already
+	while (m_index > 0)
+		prev_group(machine);
+
+	for (unsigned int palidx = 0; palidx < m_count; palidx++)
+	{
+		device_palette_interface& palette = *interface();
+
+		bool indirect = subset::INDIRECT == m_which;
+		unsigned const total = indirect ? palette.indirect_entries() : palette.entries();
+		const rgb_t* raw_color = palette.palette()->entry_list_raw();
+
+		memset(paltype, 0, 20);
+		sprintf(paltype, "%s", subset::INDIRECT == m_which ? "pens" : "colors");
+		sprintf(filename, "palette%d %s%d", palidx, paltype, total);
+
+		emu_file txtfile(machine.options().gfxsave_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+		std::error_condition filerr = machine.video().open_next(txtfile, "txt");
+
+		if (!filerr)
+		{
+			sprintf(data, "%d\t\t# total colors\n", total);
+			txtfile.puts(data);
+			sprintf(data, "%d\t\t# column width\n", m_columns);
+			txtfile.puts(data);
+			sprintf(data, "# palette data r,g,b,a\n");
+			txtfile.puts(data);
+
+			int size_y = (total + m_columns - 1) / m_columns;
+			int size_x = m_columns;
+
+			// now loop through the palette colors
+			for (y = 0; y < size_y; y++)
+			{
+				for (x = 0; x < size_x; x++)
+				{
+					int index = (y * m_columns) + x;
+					if (index < total)
+					{
+						pen_t pen = subset::INDIRECT == m_which ? palette.indirect_color(index) : raw_color[index];
+						u32 a = pen >> 24 & 0x000000FF;
+						u32 r = pen >> 16 & 0x000000FF;
+						u32 g = pen >> 8 & 0x000000FF;
+						u32 b = pen & 0x000000FF;
+						sprintf(data, "%d,%d,%d,%d\n", r, g, b, a);
+						txtfile.puts(data);
+					}
+				}
+			}
+			txtfile.close();
+		}
+
+		// Create a png file to save to
+		emu_file pngfile(machine.options().gfxsave_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+		filerr = machine.video().open_next(txtfile, "png");
+
+		if (!filerr)
+		{
+			int size_y = (total + m_columns - 1) / m_columns;
+			int size_x = m_columns;
+
+			int image_width = size_x * 8;
+			int image_height = size_y * 8;
+
+			bitmap_rgb32 img_bitmap(image_width, image_height);
+
+			// now loop through the palette colors
+			for (y = 0; y < size_y; y++)
+			{
+				for (x = 0; x < size_x; x++)
+				{
+					int index = (y * m_columns) + x;
+					if (index < total)
+					{
+						pen_t pen = subset::INDIRECT == m_which ? palette.indirect_color(index) : raw_color[index];
+						for (int y1 = 0; y1 < 8; y1++)
+						{
+							for (int x1 = 0; x1 < 8; x1++)
+							{
+								int ypos = ((y * 8) + y1);
+								uint32_t *dest = &img_bitmap.pix(ypos, (x * 8) + x1);
+
+								*dest = pen;
+							}
+						}
+					}
+				}
+			}
+			util::png_write_bitmap(pngfile, nullptr, img_bitmap, 0, nullptr);
+		}
+		osd_printf_error("Saved palette %s%d of %d \n", paltype, palidx + 1, m_count);
+	}
+	osd_printf_error("Finished saving palettes\n");
+}
 
 bool gfx_viewer::gfxset::handle_keys(running_machine &machine, int xcells, int ycells)
 {
@@ -1130,6 +1252,9 @@ uint32_t gfx_viewer::handle_palette(mame_ui_manager &mui, render_container &cont
 			}
 		}
 	}
+
+	if (m_palette.m_save == true)
+		m_palette.save_palette(m_machine);
 
 	// handle keys
 	m_palette.handle_keys(m_machine);
