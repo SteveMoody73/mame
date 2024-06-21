@@ -61,6 +61,7 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_INPUT_DIRECTORY,                            "inp",       core_options::option_type::PATH,       "directory to save input device logs" },
 	{ OPTION_STATE_DIRECTORY,                            "sta",       core_options::option_type::PATH,       "directory to save states" },
 	{ OPTION_SNAPSHOT_DIRECTORY,                         "snap",      core_options::option_type::PATH,       "directory to save/load screenshots" },
+	{ OPTION_GFXSET_DIRECTORY,                           "gfxset",       core_options::option_type::PATH,    "directory to save graphic views" },
 	{ OPTION_DIFF_DIRECTORY,                             "diff",      core_options::option_type::PATH,       "directory to save hard drive image difference files" },
 	{ OPTION_COMMENT_DIRECTORY,                          "comments",  core_options::option_type::PATH,       "directory to save debugger comments" },
 	{ OPTION_SHARE_DIRECTORY,                            "share",     core_options::option_type::PATH,       "directory to share with emulated machines" },
@@ -84,6 +85,7 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_SNAPBILINEAR,                               "1",         core_options::option_type::BOOLEAN,    "specify if the snapshot/movie should have bilinear filtering applied" },
 	{ OPTION_STATENAME,                                  "%g",        core_options::option_type::STRING,     "override of the default state subfolder naming; %g == gamename" },
 	{ OPTION_BURNIN,                                     "0",         core_options::option_type::BOOLEAN,    "create burn-in snapshots for each screen" },
+	{ OPTION_GFXSAVE8BPP,                                "0",         core_options::option_type::BOOLEAN,    "try and save gfxset saves in 8 bpp mode" },
 
 	// performance options
 	{ nullptr,                                           nullptr,     core_options::option_type::HEADER,     "CORE PERFORMANCE OPTIONS" },

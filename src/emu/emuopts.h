@@ -45,6 +45,7 @@
 #define OPTION_INPUT_DIRECTORY      "input_directory"
 #define OPTION_STATE_DIRECTORY      "state_directory"
 #define OPTION_SNAPSHOT_DIRECTORY   "snapshot_directory"
+#define OPTION_GFXSET_DIRECTORY     "gfxset_directory"
 #define OPTION_DIFF_DIRECTORY       "diff_directory"
 #define OPTION_COMMENT_DIRECTORY    "comment_directory"
 #define OPTION_SHARE_DIRECTORY      "share_directory"
@@ -66,6 +67,7 @@
 #define OPTION_SNAPBILINEAR         "snapbilinear"
 #define OPTION_STATENAME            "statename"
 #define OPTION_BURNIN               "burnin"
+#define OPTION_GFXSAVE8BPP			"gfxsave8bpp"
 
 // core performance options
 #define OPTION_AUTOFRAMESKIP        "autoframeskip"
@@ -331,6 +333,7 @@ public:
 	const char *input_directory() const { return value(OPTION_INPUT_DIRECTORY); }
 	const char *state_directory() const { return value(OPTION_STATE_DIRECTORY); }
 	const char *snapshot_directory() const { return value(OPTION_SNAPSHOT_DIRECTORY); }
+	const char* gfxset_directory() const { return value(OPTION_GFXSET_DIRECTORY); }
 	const char *diff_directory() const { return value(OPTION_DIFF_DIRECTORY); }
 	const char *comment_directory() const { return value(OPTION_COMMENT_DIRECTORY); }
 	const char *share_directory() const { return value(OPTION_SHARE_DIRECTORY); }
@@ -352,6 +355,8 @@ public:
 	bool snap_bilinear() const { return bool_value(OPTION_SNAPBILINEAR); }
 	const char *state_name() const { return value(OPTION_STATENAME); }
 	bool burnin() const { return bool_value(OPTION_BURNIN); }
+	int gfxsave8bpp() const { return int_value(OPTION_GFXSAVE8BPP); }
+
 
 	// core performance options
 	bool auto_frameskip() const { return bool_value(OPTION_AUTOFRAMESKIP); }
