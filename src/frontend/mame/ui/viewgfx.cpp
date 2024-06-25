@@ -1914,20 +1914,24 @@ void gfx_viewer::save_gfxset(running_machine& machine)
 			for (int color = 0; color < maxcolors; color++)
 			{
 				int num_colors = set.m_color_count;
+				num_colors = set.m_palette->palette()->num_colors();
 				set.m_color = color;
 
 				bitmap_t* bitmap = nullptr;
 
-				// update the bitmap
-				if (machine.options().gfxsave8bpp() != 0)
-					bitmap = new bitmap_ind16();
-				else
-					bitmap = new bitmap_rgb32();
+				// Save RGB32 and Indexed bitmaps if bpp <= 8
+
+				bool indexed_palette = false;
+				if (num_colors <= 256)
+					indexed_palette = true;
+
+				// Save true color image bitmap
+				bitmap = new bitmap_rgb32();
 
 				update_gfxset_save_bitmap(*bitmap, xcells, ycells, gfx);
 
 				// save the file
-				std::string filename(string_format("gfxset dev-%d set-%d tiles-(%d x %d) colors-%d pal-%02X", devnum, setnum, gfx.width(), gfx.height(), num_colors, color).c_str());
+				std::string filename(string_format("gfxset dev-%d set-%d tiles-(%d x %d) colors-%d pal-%02X-rgb", devnum, setnum, gfx.width(), gfx.height(), gfx.colors(), color).c_str());
 
 				emu_file pngfile(machine.options().gfxset_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
 				std::error_condition filerr = open_next_file(machine, pngfile, filename.c_str(), "png", -1);
@@ -1936,7 +1940,27 @@ void gfx_viewer::save_gfxset(running_machine& machine)
 				{
 					rgb_t const* const palette = set.m_palette->palette()->entry_list_raw() + gfx.colorbase() + set.m_color * gfx.granularity();
 					util::png_write_bitmap(pngfile, nullptr, *bitmap, num_colors, palette);
-					osd_printf_error("Saved gfx: device %d of %d, set %d of %d, colors %d, palette %02X, %dx%d tiles of %d items\n", devnum, m_gfxset.m_devices.size() - 1, setnum, info.setcount() - 1, gfx.colors(), color, gfx.width(), gfx.height(), gfx.elements());
+					osd_printf_error("Saved gfx: device %d of %d, set %d of %d, colors %d, palette %02X, %dx%d tiles of %d items (RGB)\n", devnum, m_gfxset.m_devices.size() - 1, setnum, info.setcount() - 1, gfx.colors(), color, gfx.width(), gfx.height(), gfx.elements());
+				}
+
+				if (indexed_palette)
+				{
+					bitmap = new bitmap_ind16();
+
+					update_gfxset_save_bitmap(*bitmap, xcells, ycells, gfx);
+
+					// save the file
+					std::string filename(string_format("gfxset dev-%d set-%d tiles-(%d x %d) colors-%d pal-%02X-idx", devnum, setnum, gfx.width(), gfx.height(), gfx.colors(), color).c_str());
+
+					emu_file pngfile(machine.options().gfxset_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+					std::error_condition filerr = open_next_file(machine, pngfile, filename.c_str(), "png", -1);
+
+					if (!filerr)
+					{
+						rgb_t const* const palette = set.m_palette->palette()->entry_list_raw() + gfx.colorbase() + set.m_color * gfx.granularity();
+						util::png_write_bitmap(pngfile, nullptr, *bitmap, num_colors, palette);
+						osd_printf_error("Saved gfx: device %d of %d, set %d of %d, colors %d, palette %02X, %dx%d tiles of %d items (Indexed)\n", devnum, m_gfxset.m_devices.size() - 1, setnum, info.setcount() - 1, gfx.colors(), color, gfx.width(), gfx.height(), gfx.elements());
+					}
 				}
 			}
 		}
