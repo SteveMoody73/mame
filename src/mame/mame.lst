@@ -427,6 +427,9 @@ skattva                         // (c) 1995
 backgamn                        // (c) 1990
 manohman                        // 199?, Merkur.
 
+@source:adp/stella8085.cpp
+dicemstr
+
 @source:adp/stellafr.cpp
 st_ohla                         //
 st_vulkn                        //
@@ -18051,16 +18054,16 @@ premiere                        //
 feldo
 
 @source:fidelity/elite.cpp
+feag                            //
+feag2100                        //
+feag2100a                       //
 feas                            //
 feasbu                          //
 feasbua                         //
 feasgla                         //
 feasglaa                        //
 feasglab                        //
-feag                            //
-feag2100                        //
-feag2100a                       //
-feagp                           //
+feasx                           //
 fpres                           //
 fpresa                          //
 fpresb                          //
@@ -35058,6 +35061,9 @@ nsvipb
 nsvipc
 nvip
 
+@source:novag/zircon2.cpp
+zircon2
+
 @source:novation/basssta.cpp
 bassstr                         //
 sbasssta                        //
@@ -39750,6 +39756,7 @@ sderby2                         // (c) 1985
 @source:sega/sega_beena.cpp
 beena                           //
 tvochken                        //
+carbeena                        //
 
 @source:sega/sega_sawatte.cpp
 sawatte                         //
@@ -41881,6 +41888,8 @@ bkarast
 easykara
 karams
 karatvst
+karatvsta
+mks4001
 
 @source:skeleton/elcirculo.cpp
 elcirculo                       // (c) 1980 Inder
