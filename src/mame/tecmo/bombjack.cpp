@@ -46,6 +46,7 @@
         * Convert the audio and video hardware to devices.
 
 ***********************************************************************/
+
 #include "emu.h"
 
 #include "cpu/z80/z80.h"
@@ -59,6 +60,7 @@
 #include "speaker.h"
 #include "tilemap.h"
 
+
 namespace {
 
 class bombjack_state : public driver_device
@@ -71,7 +73,6 @@ public:
 		, m_watchdog(*this, "watchdog")
 		, m_audiocpu(*this, "audiocpu")
 		, m_soundlatch(*this, "soundlatch")
-		, m_speaker(*this, "speaker")
 		, m_ay8910(*this, "psg%u", 1U)
 		, m_screen(*this, "screen")
 		, m_videoram(*this, "videoram")
@@ -93,18 +94,21 @@ protected:
 	static inline constexpr u16 VTOTAL = 264, VBSTART = 240, VBEND = 16;
 
 	// initialization
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
-	virtual void video_start() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void machine_reset() override ATTR_COLD;
+	virtual void video_start() override ATTR_COLD;
+
+	template <typename T>
+	void bombjack_base(machine_config &config, T &&psg_type);
 
 	// main CPU
-	void program_map(address_map &map);
-	void bombjack_map(address_map &map);
+	void program_map(address_map &map) ATTR_COLD;
+	void bombjack_map(address_map &map) ATTR_COLD;
 
 	// audio CPU
 	u8 soundlatch_r();
-	void bombjack_audio_map(address_map &map);
-	void bombjack_audio_portmap(address_map &map);
+	void bombjack_audio_map(address_map &map) ATTR_COLD;
+	void bombjack_audio_portmap(address_map &map) ATTR_COLD;
 
 	// video hardware
 	void videoram_w(offs_t offset, u8 data);
@@ -137,7 +141,6 @@ protected:
 
 	required_device<cpu_device> m_audiocpu;
 	required_device<generic_latch_8_device> m_soundlatch;
-	required_device<speaker_device> m_speaker;
 	required_device_array<ay8910_device, 3> m_ay8910;
 
 	required_device<screen_device> m_screen;
@@ -163,24 +166,25 @@ private:
 class calorie_state : public bombjack_state
 {
 public:
-	calorie_state(machine_config const &mconfig,
-		device_type type, char const *tag)
+	calorie_state(machine_config const &mconfig, device_type type, char const *tag)
 		: bombjack_state(mconfig, type, tag)
 		, m_opcodes(*this, "opcodes")
 	{ }
 
-	void calorie(machine_config &config, bool encrypted);
+	void calorie(machine_config &config);
 	void calorieb(machine_config &config);
 
 	void init_calorieb();
 
 protected:
+	void calorie_common(machine_config &config);
+
 	// main CPU
-	void calorie_map(address_map &map);
-	void calorie_opcodes_map(address_map &map);
+	void calorie_map(address_map &map) ATTR_COLD;
+	void calorie_opcodes_map(address_map &map) ATTR_COLD;
 
 	// audio CPU
-	void calorie_audio_map(address_map &map);
+	void calorie_audio_map(address_map &map) ATTR_COLD;
 
 	// video hardware
 	void set_bg_tile_info(u8 const attr, u16 &code, u8 &color, bool &flipx, bool &flipy) override;
@@ -192,11 +196,13 @@ protected:
 	optional_shared_ptr<u8> m_opcodes;
 };
 
+
 /*************************************
  *
  *  Audio hardware
  *
  *************************************/
+
 u8 bombjack_state::soundlatch_r()
 {
 	// An extra flip-flop is used to clear the LS273 after
@@ -210,11 +216,13 @@ u8 bombjack_state::soundlatch_r()
 	return res;
 }
 
+
 /*************************************
  *
  *  Video hardware
  *
  *************************************/
+
 void bombjack_state::video_start()
 {
 	save_item(NAME(m_bg_image));
@@ -245,13 +253,13 @@ void bombjack_state::colorram_w(offs_t offset, u8 data)
 
 void bombjack_state::spritectrl_w(offs_t offset, u8 data)
 {
-	data = BIT(data, 0, 4); // four bits, addresses 16 sprites
+	data &= 0x0f; // four bits, addresses 16 sprites
 	m_spritectrl[offset] = data;
 }
 
 void bombjack_state::background_w(u8 data)
 {
-	data = BIT(data, 0, 5); // four address bits + a "KILL" bit
+	data &= 0x1f; // four address bits + a "KILL" bit
 	if (m_bg_image != data)
 	{
 		m_bg_image = data;
@@ -261,8 +269,7 @@ void bombjack_state::background_w(u8 data)
 
 void bombjack_state::flip_w(u8 data)
 {
-	data = BIT(data, 0);
-	m_flip = data;
+	m_flip = BIT(data, 0);
 
 	m_bg_tilemap->set_flip(m_flip ? (TILEMAP_FLIPY | TILEMAP_FLIPX) : 0);
 	m_fg_tilemap->set_flip(m_flip ? (TILEMAP_FLIPY | TILEMAP_FLIPX) : 0);
@@ -284,13 +291,12 @@ void bombjack_state::vblank_nmi(int state)
 
 void bombjack_state::watchdog_w(u8 data)
 {
-	data = BIT(data, 0);
-	m_watchdog->watchdog_enable(data);
+	m_watchdog->watchdog_enable(BIT(data, 0));
 }
 
 void bombjack_state::set_bg_tile_info(u8 const attr, u16 &code, u8 &color, bool &flipx, bool &flipy)
 {
-	color = BIT(attr, 0, 4);
+	color = attr & 0x0f;
 	flipy = BIT(attr, 7);
 }
 
@@ -304,7 +310,7 @@ void calorie_state::set_bg_tile_info(u8 const attr, u16 &code, u8 &color, bool &
 
 TILE_GET_INFO_MEMBER(bombjack_state::get_bg_tile_info)
 {
-	tile_index |= BIT(m_bg_image, 0, 4) << 9;
+	tile_index |= (m_bg_image & 0x0f) << 9;
 
 	u8 const attr = m_bgmaps[tile_index + 0x100];
 	u16 code = m_bgmaps[tile_index];
@@ -313,7 +319,7 @@ TILE_GET_INFO_MEMBER(bombjack_state::get_bg_tile_info)
 
 	set_bg_tile_info(attr, code, color, flipx, flipy);
 	tileinfo.set(1, code, color, (flipx ? TILE_FLIPX : 0) |
-								 (flipy ? TILE_FLIPY : 0));
+			(flipy ? TILE_FLIPY : 0));
 }
 
 void bombjack_state::set_fg_tile_info(u8 const attr, u16 &code, u8 &color, bool &flipx, bool &flipy)
@@ -340,14 +346,13 @@ TILE_GET_INFO_MEMBER(bombjack_state::get_fg_tile_info)
 
 	set_fg_tile_info(attr, code, color, flipx, flipy);
 	tileinfo.set(0, code, color, (flipx ? TILE_FLIPX : 0) |
-								 (flipy ? TILE_FLIPY : 0));
+			(flipy ? TILE_FLIPY : 0));
 }
 
 bool bombjack_state::large_sprite(int const index, u8 const attr)
 {
-	bool const reverse = m_spritectrl[0] > m_spritectrl[1];
-	return (index >  m_spritectrl[reverse ? 1 : 0]) &&
-		   (index <= m_spritectrl[reverse ? 0 : 1]);
+	u8 const rev = (m_spritectrl[0] > m_spritectrl[1]) ? 1 : 0;
+	return (index > m_spritectrl[rev]) && (index <= m_spritectrl[rev ^ 1]);
 }
 
 bool calorie_state::large_sprite(int const index, u8 const attr)
@@ -363,7 +368,7 @@ void bombjack_state::draw_sprites(bitmap_ind16 &bitmap, rectangle const &cliprec
 		int const offs = sprite * 4;
 		int code = m_spriteram[offs];
 		int const attr = m_spriteram[offs + 1];
-		int const color = BIT(attr, 0, 4);
+		int const color = attr & 0x0f;
 		// BIT(attr, 4) - internal tag for bonus objects
 		// BIT(attr, 5) - internal tag for large objects
 		bool flipx = BIT(attr, 6);
@@ -377,7 +382,7 @@ void bombjack_state::draw_sprites(bitmap_ind16 &bitmap, rectangle const &cliprec
 			if (BIT(sprite, 0))
 				continue;
 			else
-				code |= (1 << 6);
+				code |= 0x40;
 		}
 
 		int const vpos = large ? VBSTART - 16 : VBSTART;
@@ -391,7 +396,7 @@ void bombjack_state::draw_sprites(bitmap_ind16 &bitmap, rectangle const &cliprec
 		}
 
 		m_gfxdecode->gfx(large ? 3 : 2)->transpen(bitmap, cliprect,
-			code, color, flipx, flipy, xpos, ypos, 0);
+				code, color, flipx, flipy, xpos, ypos, 0);
 	}
 }
 
@@ -407,11 +412,13 @@ u32 bombjack_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, r
 	return 0;
 }
 
+
 /*************************************
  *
  *  Address maps
  *
  *************************************/
+
 void bombjack_state::program_map(address_map &map)
 {
 	map(0x0000, 0x0fff).ram().share(m_mainram);
@@ -485,12 +492,14 @@ void bombjack_state::bombjack_audio_portmap(address_map &map)
 	map(0x80, 0x81).mirror(0x6e).w(m_ay8910[2], FUNC(ay8910_device::address_data_w));
 }
 
+
 /*************************************
  *
  *  Input ports
  *  (Bomb Jack)
  *
  *************************************/
+
 static INPUT_PORTS_START( bombjack )
 	PORT_START("P1")
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_JOYSTICK_RIGHT ) PORT_8WAY
@@ -564,12 +573,14 @@ static INPUT_PORTS_START( bombjack )
 	PORT_DIPSETTING(    0x80, DEF_STR( Hard ) )
 INPUT_PORTS_END
 
+
 /*************************************
  *
  *  Input ports
  *  (Calorie Kun)
  *
  *************************************/
+
 static INPUT_PORTS_START( calorie )
 	PORT_START("P1")
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_JOYSTICK_UP ) PORT_PLAYER(1) PORT_4WAY
@@ -646,11 +657,13 @@ static INPUT_PORTS_START( calorie )
 	PORT_DIPSETTING(    0x80, DEF_STR( On ) )
 INPUT_PORTS_END
 
+
 /*************************************
  *
  *  Graphics definitions
  *
  *************************************/
+
 static gfx_layout const layout_8x8 =
 {
 	8, 8,
@@ -691,11 +704,13 @@ static GFXDECODE_START( gfx_bombjack )
 	GFXDECODE_ENTRY( "sprites", 0x0000, layout_32x32, 0, 16 )
 GFXDECODE_END
 
+
 /*************************************
  *
  *  Machine driver
  *
  *************************************/
+
 void bombjack_state::machine_start()
 {
 	save_item(NAME(m_nmi_on));
@@ -709,32 +724,10 @@ void bombjack_state::machine_reset()
 	m_audiocpu->pulse_input_line(INPUT_LINE_RESET, attotime::zero);
 }
 
-void bombjack_state::bombjack(machine_config &config)
+template <typename T>
+void bombjack_state::bombjack_base(machine_config &config, T &&psg_type)
 {
-	// NOTE: X2 is 12MHz, but schematics specify 12.096MHz
-	Z80(config, m_maincpu, CLOCK_X1);
-	m_maincpu->set_addrmap(AS_PROGRAM, &bombjack_state::bombjack_map);
-
-	WATCHDOG_TIMER(config, m_watchdog).set_vblank_count(m_screen, 8);
-
-	Z80(config, m_audiocpu, CLOCK_X2 / 4);
-	m_audiocpu->set_addrmap(AS_PROGRAM, &bombjack_state::bombjack_audio_map);
-	m_audiocpu->set_addrmap(AS_IO, &bombjack_state::bombjack_audio_portmap);
-
-	GENERIC_LATCH_8(config, m_soundlatch);
-
-	SPEAKER(config, m_speaker).front_center();
-
-	AY8910(config, m_ay8910[0], CLOCK_X2 / 8).add_route(ALL_OUTPUTS, m_speaker, 0.13);
-	m_ay8910[0]->port_a_write_callback().set_nop(); // see todo
-	m_ay8910[0]->port_b_write_callback().set_nop();
-	AY8910(config, m_ay8910[1], CLOCK_X2 / 8).add_route(ALL_OUTPUTS, m_speaker, 0.13);
-	m_ay8910[1]->port_a_write_callback().set_nop(); // see todo
-	m_ay8910[1]->port_b_write_callback().set_nop();
-	AY8910(config, m_ay8910[2], CLOCK_X2 / 8).add_route(ALL_OUTPUTS, m_speaker, 0.13);
-	m_ay8910[2]->port_a_write_callback().set_nop(); // see todo
-	m_ay8910[2]->port_b_write_callback().set_nop();
-
+	// video
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
 	m_screen->set_raw(CLOCK_X2 / 2, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART);
 	m_screen->set_screen_update(FUNC(bombjack_state::screen_update));
@@ -744,40 +737,70 @@ void bombjack_state::bombjack(machine_config &config)
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_bombjack);
 	PALETTE(config, m_palette).set_format(palette_device::xBGR_444, 128);
+
+	// sound
+	Z80(config, m_audiocpu, CLOCK_X2 / 4);
+	m_audiocpu->set_addrmap(AS_PROGRAM, &bombjack_state::bombjack_audio_map);
+	m_audiocpu->set_addrmap(AS_IO, &bombjack_state::bombjack_audio_portmap);
+
+	GENERIC_LATCH_8(config, m_soundlatch);
+
+	SPEAKER(config, "speaker").front_center();
+
+	psg_type(config, m_ay8910[0], CLOCK_X2 / 8).add_route(ALL_OUTPUTS, "speaker", 0.13);
+	psg_type(config, m_ay8910[1], CLOCK_X2 / 8).add_route(ALL_OUTPUTS, "speaker", 0.13);
+	psg_type(config, m_ay8910[2], CLOCK_X2 / 8).add_route(ALL_OUTPUTS, "speaker", 0.13);
 }
 
-void calorie_state::calorie(machine_config &config, bool encrypted = true)
+void bombjack_state::bombjack(machine_config &config)
 {
-	bombjack(config);
+	// NOTE: X2 is 12MHz, but schematics specify 12.096MHz
+	Z80(config, m_maincpu, CLOCK_X1);
+	m_maincpu->set_addrmap(AS_PROGRAM, &bombjack_state::bombjack_map);
 
-	if (encrypted)
-	{
-		sega_317_0004_device &maincpu(SEGA_317_0004(config.replace(), m_maincpu, CLOCK_X1));
-		maincpu.set_addrmap(AS_OPCODES, &calorie_state::calorie_opcodes_map);
-		maincpu.set_decrypted_tag(m_opcodes);
-	}
+	WATCHDOG_TIMER(config, m_watchdog).set_vblank_count(m_screen, 8);
+
+	bombjack_base(config, AY8910);
+
+	m_ay8910[0]->port_a_write_callback().set_nop(); // see TODO
+	m_ay8910[0]->port_b_write_callback().set_nop();
+	m_ay8910[1]->port_a_write_callback().set_nop(); // see TODO
+	m_ay8910[1]->port_b_write_callback().set_nop();
+	m_ay8910[2]->port_a_write_callback().set_nop(); // see TODO
+	m_ay8910[2]->port_b_write_callback().set_nop();
+}
+
+void calorie_state::calorie_common(machine_config &config)
+{
+	bombjack_base(config, YM2149);
+
 	m_maincpu->set_addrmap(AS_PROGRAM, &calorie_state::calorie_map);
 
-	config.device_remove("watchdog");
-
 	m_audiocpu->set_addrmap(AS_PROGRAM, &calorie_state::calorie_audio_map);
-
-	// NOTE: never seems to use filters
-	YM2149(config.replace(), m_ay8910[0], CLOCK_X2 / 8).add_route(ALL_OUTPUTS, m_speaker, 0.13);
-	YM2149(config.replace(), m_ay8910[1], CLOCK_X2 / 8).add_route(ALL_OUTPUTS, m_speaker, 0.13);
-	YM2149(config.replace(), m_ay8910[2], CLOCK_X2 / 8).add_route(ALL_OUTPUTS, m_speaker, 0.13);
 
 	// TODO: proper IRQ pulse timings
 	m_screen->screen_vblank().set_inputline(m_maincpu, INPUT_LINE_IRQ0, HOLD_LINE);
 	m_screen->screen_vblank().append_inputline(m_audiocpu, INPUT_LINE_IRQ0, HOLD_LINE);
+
+	// NOTE: never seems to use filters
+}
+
+void calorie_state::calorie(machine_config &config)
+{
+	sega_317_0004_device &maincpu(SEGA_317_0004(config, m_maincpu, CLOCK_X1));
+	maincpu.set_addrmap(AS_OPCODES, &calorie_state::calorie_opcodes_map);
+	maincpu.set_decrypted_tag(m_opcodes);
+
+	calorie_common(config);
 }
 
 void calorie_state::calorieb(machine_config &config)
 {
-	calorie(config, false);
-
 	// not encrypted, but still needs a lookup table for /M1
+	Z80(config, m_maincpu, CLOCK_X1);
 	m_maincpu->set_addrmap(AS_OPCODES, &calorie_state::calorie_opcodes_map);
+
+	calorie_common(config);
 }
 
 void calorie_state::init_calorieb()
@@ -785,12 +808,14 @@ void calorie_state::init_calorieb()
 	memcpy(m_opcodes, memregion("maincpu")->base() + 0x10000, 0x8000);
 }
 
+
 /*************************************
  *
  *  ROM definitions
  *  (Bomb Jack)
  *
  *************************************/
+
 ROM_START( bombjack )
 	ROM_REGION( 0x10000, "maincpu", 0 )
 	ROM_LOAD( "09_j01b.bin", 0x0000, 0x2000, CRC(c668dc30) SHA1(51dd6a2688b42e9f28f0882bd76f75be7ec3222a) )
@@ -918,12 +943,14 @@ ROM_START( bombjackbl )
 	ROM_LOAD( "14.bin", 0x4000, 0x2000, CRC(101c858d) SHA1(ed1746c15cdb04fae888601d940183d5c7702282) )
 ROM_END
 
+
 /*************************************
  *
  *  ROM definitions
  *  (Calorie Kun)
  *
  *************************************/
+
 /*
 Calorie Kun
 Sega, 1986
@@ -1053,22 +1080,11 @@ ROM_END
 
 } // anonymous namespace
 
-/*************************************
- *
- *  Game drivers
- *  (Bomb Jack)
- *
- *************************************/
-GAME( 1984, bombjack,   0,        bombjack, bombjack, bombjack_state, empty_init, ROT90, "Tehkan",                  "Bomb Jack",                 MACHINE_SUPPORTS_SAVE )
-GAME( 1984, bombjack2,  bombjack, bombjack, bombjack, bombjack_state, empty_init, ROT90, "Tehkan",                  "Bomb Jack (earlier)",       MACHINE_SUPPORTS_SAVE )
-GAME( 1984, bombjackt,  bombjack, bombjack, bombjack, bombjack_state, empty_init, ROT90, "Tehkan (Tecfri license)", "Bomb Jack (Tecfri, Spain)", MACHINE_SUPPORTS_SAVE ) // official license
-GAME( 1985, bombjackbl, bombjack, bombjack, bombjack, bombjack_state, empty_init, ROT90, "bootleg",                 "Bomb Jack (bootleg)",       MACHINE_SUPPORTS_SAVE )
 
-/*************************************
- *
- *  Game drivers
- *  (Calorie Kun)
- *
- *************************************/
-GAME( 1986, calorie,  0,       calorie,  calorie, calorie_state, empty_init,    ROT0, "Sega",    "Calorie Kun vs Moguranian",           MACHINE_SUPPORTS_SAVE )
-GAME( 1986, calorieb, calorie, calorieb, calorie, calorie_state, init_calorieb, ROT0, "bootleg", "Calorie Kun vs Moguranian (bootleg)", MACHINE_SUPPORTS_SAVE )
+GAME( 1984, bombjack,   0,        bombjack, bombjack, bombjack_state, empty_init,    ROT90, "Tehkan",                  "Bomb Jack",                           MACHINE_SUPPORTS_SAVE )
+GAME( 1984, bombjack2,  bombjack, bombjack, bombjack, bombjack_state, empty_init,    ROT90, "Tehkan",                  "Bomb Jack (earlier)",                 MACHINE_SUPPORTS_SAVE )
+GAME( 1984, bombjackt,  bombjack, bombjack, bombjack, bombjack_state, empty_init,    ROT90, "Tehkan (Tecfri license)", "Bomb Jack (Tecfri, Spain)",           MACHINE_SUPPORTS_SAVE ) // official license
+GAME( 1985, bombjackbl, bombjack, bombjack, bombjack, bombjack_state, empty_init,    ROT90, "bootleg",                 "Bomb Jack (bootleg)",                 MACHINE_SUPPORTS_SAVE )
+
+GAME( 1986, calorie,    0,        calorie,  calorie,  calorie_state,  empty_init,    ROT0,  "Sega",                    "Calorie Kun vs Moguranian",           MACHINE_SUPPORTS_SAVE )
+GAME( 1986, calorieb,   calorie,  calorieb, calorie,  calorie_state,  init_calorieb, ROT0,  "bootleg",                 "Calorie Kun vs Moguranian (bootleg)", MACHINE_SUPPORTS_SAVE )

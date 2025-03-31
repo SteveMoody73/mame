@@ -60,7 +60,7 @@ public:
 	void madmoney2(machine_config &config);
 
 protected:
-	virtual void machine_start() override;
+	virtual void machine_start() override ATTR_COLD;
 
 private:
 	required_device<m68705p3_device> m_maincpu;
@@ -109,7 +109,7 @@ ROM_START(madmoney2)
 
 	ROM_REGION(0x8000, "roms", 0)
 	ROM_LOAD("mad2a.bin",   0x0000, 0x4000, CRC(81d4c727) SHA1(a58c5be0bc7604b7fed095fceab9976aa2125b69))
-	ROM_LOAD("mad2b,bin",   0x4000, 0x4000, CRC(7368c04c) SHA1(a5770e4f0c8278a970dc4837e922fe857337817b))
+	ROM_LOAD("mad2b.bin",   0x4000, 0x4000, CRC(7368c04c) SHA1(a5770e4f0c8278a970dc4837e922fe857337817b))
 
 	ROM_REGION(0x0117, "plds", 0)
 	ROM_LOAD("pls153n.bin", 0x0000, 0x0117, NO_DUMP) // Signetics PLS153N
@@ -117,4 +117,4 @@ ROM_END
 
 } // anonymous namespace
 
-GAME(1988, madmoney2, 0, madmoney2, madmoney2, madmoney2_state, empty_init, ROT0, "Picmatic", "Mad Money 2", MACHINE_IS_SKELETON_MECHANICAL) // String "(C) PICMATIC S.A. 1988 BY B.MEITINER VER 0.0 09.09.88" on ROM
+GAME(1988, madmoney2, 0, madmoney2, madmoney2, madmoney2_state, empty_init, ROT0, "Picmatic", "Mad Money 2", MACHINE_NO_SOUND | MACHINE_NOT_WORKING | MACHINE_MECHANICAL | MACHINE_REQUIRES_ARTWORK) // String "(C) PICMATIC S.A. 1988 BY B.MEITINER VER 0.0 09.09.88" on ROM

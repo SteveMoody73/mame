@@ -2,7 +2,9 @@
 // copyright-holders:Aaron Giles
 /*************************************************************************
 
-    Cinemat/Leland driver
+    Cinematronics / Leland Cinemat System driver
+
+    Leland sound hardware
 
 *************************************************************************/
 #ifndef MAME_CINEMATRONICS_LELAND_A_H
@@ -46,9 +48,9 @@ protected:
 	leland_80186_sound_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock);
 
 	// device-level overrides
-	virtual void device_start() override;
-	virtual void device_reset() override;
-	virtual void device_add_mconfig(machine_config &config) override;
+	virtual void device_start() override ATTR_COLD;
+	virtual void device_reset() override ATTR_COLD;
+	virtual void device_add_mconfig(machine_config &config) override ATTR_COLD;
 	int m_type;
 
 	enum
@@ -67,9 +69,9 @@ protected:
 	optional_device<i80186_cpu_device> m_audiocpu;
 	optional_device<ym2151_device> m_ymsnd;
 
-	void ataxx_80186_map_io(address_map &map);
-	void leland_80186_map_io(address_map &map);
-	void leland_80186_map_program(address_map &map);
+	void ataxx_80186_map_io(address_map &map) ATTR_COLD;
+	void leland_80186_map_io(address_map &map) ATTR_COLD;
+	void leland_80186_map_program(address_map &map) ATTR_COLD;
 
 private:
 	void set_clock_line(int which, int state) { m_clock_active = state ? (m_clock_active | (1<<which)) : (m_clock_active & ~(1<<which)); }
@@ -99,9 +101,9 @@ public:
 	void redline_dac_w(offs_t offset, u16 data);
 
 protected:
-	virtual void device_add_mconfig(machine_config &config) override;
+	virtual void device_add_mconfig(machine_config &config) override ATTR_COLD;
 private:
-	void redline_80186_map_io(address_map &map);
+	void redline_80186_map_io(address_map &map) ATTR_COLD;
 };
 
 
@@ -111,7 +113,7 @@ public:
 	ataxx_80186_sound_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
 
 protected:
-	virtual void device_add_mconfig(machine_config &config) override;
+	virtual void device_add_mconfig(machine_config &config) override ATTR_COLD;
 };
 
 
@@ -121,7 +123,7 @@ public:
 	wsf_80186_sound_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
 
 protected:
-	virtual void device_add_mconfig(machine_config &config) override;
+	virtual void device_add_mconfig(machine_config &config) override ATTR_COLD;
 };
 
 

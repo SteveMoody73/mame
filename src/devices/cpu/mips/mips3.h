@@ -313,14 +313,13 @@ public:
 
 protected:
 	// device-level overrides
-	virtual void device_start() override;
-	virtual void device_reset() override;
-	virtual void device_stop() override;
+	virtual void device_start() override ATTR_COLD;
+	virtual void device_reset() override ATTR_COLD;
+	virtual void device_stop() override ATTR_COLD;
 
 	// device_execute_interface overrides
 	virtual uint32_t execute_min_cycles() const noexcept override { return 1; }
 	virtual uint32_t execute_max_cycles() const noexcept override { return 40; }
-	virtual uint32_t execute_input_lines() const noexcept override { return 6; }
 	virtual void execute_run() override;
 	virtual void execute_set_input(int inputnum, int state) override;
 
@@ -449,7 +448,6 @@ protected:
 	uint32_t        m_byte_xor;
 	uint32_t        m_word_xor;
 	uint32_t        m_dword_xor;
-	data_accessors  m_memory;
 
 	/* cache memory */
 	size_t          c_icache_size;
@@ -524,7 +522,7 @@ protected:
 	void static_generate_memory_mode_checks(drcuml_block &block, uml::code_handle &exception_addrerr, int &label, int mode);
 	void static_generate_fastram_accessor(drcuml_block &block, int &label, int size, bool iswrite, bool ismasked);
 	void static_generate_memory_rw(drcuml_block &block, int size, bool iswrite, bool ismasked);
-	virtual void static_generate_memory_accessor(int mode, int size, bool iswrite, bool ismasked, const char *name, uml::code_handle *&handleptr);
+	virtual void static_generate_memory_accessor(drcuml_block &block, int &label, int mode, int size, bool iswrite, bool ismasked, const char *name, uml::code_handle *&handleptr);
 
 	virtual void check_irqs();
 	virtual void handle_mult(uint32_t op);
@@ -622,11 +620,11 @@ private:
 		uml::code_label  labelnum;                   /* index for local labels */
 	};
 
-	void static_generate_entry_point();
-	void static_generate_nocode_handler();
-	void static_generate_out_of_cycles();
-	void static_generate_tlb_mismatch();
-	void static_generate_exception(uint8_t exception, int recover, const char *name);
+	void static_generate_entry_point(drcuml_block &block, int &label);
+	void static_generate_nocode_handler(drcuml_block &block, int &label);
+	void static_generate_out_of_cycles(drcuml_block &block, int &label);
+	void static_generate_tlb_mismatch(drcuml_block &block, int &label);
+	void static_generate_exception(drcuml_block &block, int &label, uint8_t exception, int recover, const char *name);
 
 	void generate_update_mode(drcuml_block &block);
 	void generate_update_cycles(drcuml_block &block, compiler_state &compiler, uml::parameter param, bool allow_exception);
@@ -760,7 +758,7 @@ public:
 protected:
 	virtual bool memory_translate(int spacenum, int intention, offs_t &address, address_space *&target_space) override;
 
-	virtual void static_generate_memory_accessor(int mode, int size, bool iswrite, bool ismasked, const char *name, uml::code_handle *&handleptr) override;
+	virtual void static_generate_memory_accessor(drcuml_block &block, int &label, int mode, int size, bool iswrite, bool ismasked, const char *name, uml::code_handle *&handleptr) override;
 
 	virtual bool RBYTE(offs_t address, uint32_t *result) override;
 	virtual bool RHALF(offs_t address, uint32_t *result) override;
@@ -880,7 +878,7 @@ protected:
 	{
 	}
 
-	virtual void device_start() override;
+	virtual void device_start() override ATTR_COLD;
 
 	// device_disasm_interface overrides
 	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;

@@ -148,13 +148,13 @@ protected:
 	void set_irq_line(int irq);
 	void dma_sound_cb();
 	void common_start();
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void machine_reset() override ATTR_COLD;
 	void palette(palette_device &palette) const;
 
-	void io_map(address_map &map);
-	void mem_map(address_map &map);
-	void snd_map(address_map &map);
+	void io_map(address_map &map) ATTR_COLD;
+	void mem_map(address_map &map) ATTR_COLD;
+	void snd_map(address_map &map) ATTR_COLD;
 
 	void register_save();
 	void handle_irqs();
@@ -173,8 +173,8 @@ public:
 	void wscolor(machine_config &config);
 
 protected:
-	virtual void machine_start() override;
-	void mem_map(address_map &map);
+	virtual void machine_start() override ATTR_COLD;
+	void mem_map(address_map &map) ATTR_COLD;
 	void palette(palette_device &palette) const;
 	virtual u16 get_internal_eeprom_address() override;
 };
@@ -321,7 +321,7 @@ void wswan_state::pockchv2(machine_config &config)
 	wswan_base(config);
 
 	// software lists
-	SOFTWARE_LIST(config, "pc2_list").set_compatible("pockchalv2");
+	SOFTWARE_LIST(config, "pc2_list").set_original("pockchalv2");
 }
 
 void wscolor_state::wscolor(machine_config &config)

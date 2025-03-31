@@ -121,8 +121,8 @@ private:
 	virtual void driver_start() override;
 	virtual void driver_reset() override;
 
-	void ipc_io_map(address_map &map);
-	void ipc_mem_map(address_map &map);
+	void ipc_io_map(address_map &map) ATTR_COLD;
+	void ipc_mem_map(address_map &map) ATTR_COLD;
 
 	u8 bus_pio_r(offs_t offset) { return m_bus->space(AS_IO).read_byte(offset); }
 	void bus_pio_w(offs_t offset, u8 data) { m_bus->space(AS_IO).write_byte(offset, data); }
@@ -188,8 +188,8 @@ imds2_state::imds2_state(const machine_config &mconfig, device_type type, const 
 	m_ipcctrl(*this, "ipcctrl"),
 	m_serial(*this, "serial%u", 0U),
 	m_ioc(*this, "ioc"),
-	m_bus(*this, "slot"),
-	m_slot(*this, "slot:1"),
+	m_bus(*this, "bus"),
+	m_slot(*this, "slot1"),
 	m_ram(*this, "ram"),
 	m_boot(*this, "boot")
 {

@@ -23,18 +23,18 @@ class toaplan1_state : public driver_device
 public:
 	toaplan1_state(const machine_config &mconfig, device_type type, const char *tag, bool large = false) :
 		driver_device(mconfig, type, tag),
-		m_bgpaletteram(*this, "bgpalette"),
-		m_fgpaletteram(*this, "fgpalette"),
-		m_sharedram(*this, "sharedram"),
-		m_dswb_io(*this, "DSWB"),
-		m_tjump_io(*this, "TJUMP"),
-		m_spriteram(*this, "spriteram", large ? 0x1000 : 0x800, ENDIANNESS_BIG),
 		m_maincpu(*this, "maincpu"),
 		m_audiocpu(*this, "audiocpu"),
 		m_ymsnd(*this, "ymsnd"),
 		m_gfxdecode(*this, "gfxdecode"),
 		m_screen(*this, "screen"),
-		m_palette(*this, "palette")
+		m_palette(*this, "palette"),
+		m_bgpaletteram(*this, "bgpalette"),
+		m_fgpaletteram(*this, "fgpalette"),
+		m_sharedram(*this, "sharedram"),
+		m_spriteram(*this, "spriteram", large ? 0x1000 : 0x800, ENDIANNESS_BIG),
+		m_dswb_io(*this, "DSWB"),
+		m_tjump_io(*this, "TJUMP")
 	{ }
 
 	void truxton(machine_config &config);
@@ -45,19 +45,25 @@ public:
 	void zerowing(machine_config &config);
 
 protected:
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
-	virtual void video_start() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void machine_reset() override ATTR_COLD;
+	virtual void video_start() override ATTR_COLD;
+
+	required_device<m68000_device> m_maincpu;
+	required_device<cpu_device> m_audiocpu;
+	required_device<ym3812_device> m_ymsnd;
+	required_device<gfxdecode_device> m_gfxdecode;
+	required_device<screen_device> m_screen;
+	required_device<palette_device> m_palette;
 
 	required_shared_ptr<u16> m_bgpaletteram;
 	required_shared_ptr<u16> m_fgpaletteram;
 
 	optional_shared_ptr<u8> m_sharedram;
+	memory_share_creator<u16> m_spriteram;
 
 	optional_ioport m_dswb_io;
 	optional_ioport m_tjump_io;
-
-	u8 m_intenable = 0;
 
 	std::unique_ptr<u16[]> m_tilevram[4];
 	/*
@@ -67,13 +73,14 @@ protected:
 	std::unique_ptr<u16[]> m_tilevram[0];   //  \/
 	*/
 
-	memory_share_creator<u16> m_spriteram;
 	std::unique_ptr<u16[]> m_buffered_spriteram;
 	std::unique_ptr<u16[]> m_spritesizeram;
 	std::unique_ptr<u16[]> m_buffered_spritesizeram;
 
+	u8 m_intenable = 0;
+
 	s32 m_bcu_flipscreen;     /* Tile   controller flip flag */
-	s32 m_fcu_flipscreen;     /* Sprite controller flip flag */
+	bool m_fcu_flipscreen;    /* Sprite controller flip flag */
 
 	s32 m_pf_voffs = 0;
 	s32 m_spriteram_offs = 0;
@@ -82,8 +89,8 @@ protected:
 	s32 m_scrolly[4]{};
 
 #ifdef MAME_DEBUG
-	int m_display_pf[4]{};
-	int m_displog = 0;
+	bool m_display_pf[4]{};
+	bool m_displog = false;
 #endif
 
 	s32 m_tiles_offsetx = 0;
@@ -137,26 +144,20 @@ protected:
 	void draw_sprites(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	virtual void reset_sound();
 	void reset_callback(int state);
-	required_device<m68000_device> m_maincpu;
-	required_device<cpu_device> m_audiocpu;
-	required_device<ym3812_device> m_ymsnd;
-	required_device<gfxdecode_device> m_gfxdecode;
-	required_device<screen_device> m_screen;
-	required_device<palette_device> m_palette;
 
-	void hellfire_main_map(address_map &map);
-	void hellfire_sound_io_map(address_map &map);
-	void outzone_main_map(address_map &map);
-	void outzone_sound_io_map(address_map &map);
-	void outzonecv_main_map(address_map &map);
-	void sound_map(address_map &map);
-	void truxton_main_map(address_map &map);
-	void truxton_sound_io_map(address_map &map);
-	void vimana_hd647180_io_map(address_map &map);
-	void vimana_hd647180_mem_map(address_map &map);
-	void vimana_main_map(address_map &map);
-	void zerowing_main_map(address_map &map);
-	void zerowing_sound_io_map(address_map &map);
+	void hellfire_main_map(address_map &map) ATTR_COLD;
+	void hellfire_sound_io_map(address_map &map) ATTR_COLD;
+	void outzone_main_map(address_map &map) ATTR_COLD;
+	void outzone_sound_io_map(address_map &map) ATTR_COLD;
+	void outzonecv_main_map(address_map &map) ATTR_COLD;
+	void sound_map(address_map &map) ATTR_COLD;
+	void truxton_main_map(address_map &map) ATTR_COLD;
+	void truxton_sound_io_map(address_map &map) ATTR_COLD;
+	void vimana_hd647180_io_map(address_map &map) ATTR_COLD;
+	void vimana_hd647180_mem_map(address_map &map) ATTR_COLD;
+	void vimana_main_map(address_map &map) ATTR_COLD;
+	void zerowing_main_map(address_map &map) ATTR_COLD;
+	void zerowing_sound_io_map(address_map &map) ATTR_COLD;
 };
 
 class toaplan1_rallybik_state : public toaplan1_state
@@ -171,9 +172,11 @@ public:
 	void rallybik(machine_config &config);
 
 protected:
-	virtual void video_start() override;
+	virtual void video_start() override ATTR_COLD;
 
 private:
+	required_device<toaplan_scu_device> m_spritegen;
+
 	void coin_counter_1_w(int state);
 	void coin_counter_2_w(int state);
 	void coin_lockout_1_w(int state);
@@ -183,9 +186,8 @@ private:
 	u32 screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	void screen_vblank(int state);
 
-	required_device<toaplan_scu_device> m_spritegen;
-	void rallybik_main_map(address_map &map);
-	void rallybik_sound_io_map(address_map &map);
+	void rallybik_main_map(address_map &map) ATTR_COLD;
+	void rallybik_sound_io_map(address_map &map) ATTR_COLD;
 };
 
 class toaplan1_demonwld_state : public toaplan1_state
@@ -201,14 +203,16 @@ public:
 
 protected:
 	virtual void device_post_load() override;
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void machine_reset() override ATTR_COLD;
 
 private:
+	required_device<tms32010_device> m_dsp;
+
 	/* Demon world */
-	int m_dsp_on = 0;
-	int m_dsp_bio = 0;
-	int m_dsp_execute = 0;
+	s32 m_dsp_on = 0;
+	s32 m_dsp_bio = 0;
+	bool m_dsp_execute = false;
 	u32 m_dsp_addr_w = 0;
 	u32 m_main_ram_seg = 0;
 
@@ -220,11 +224,10 @@ private:
 	void dsp_ctrl_w(u8 data);
 	void dsp_int_w(int enable);
 
-	required_device<tms32010_device> m_dsp;
-	void dsp_io_map(address_map &map);
-	void dsp_program_map(address_map &map);
-	void main_map(address_map &map);
-	void sound_io_map(address_map &map);
+	void dsp_io_map(address_map &map) ATTR_COLD;
+	void dsp_program_map(address_map &map) ATTR_COLD;
+	void main_map(address_map &map) ATTR_COLD;
+	void sound_io_map(address_map &map) ATTR_COLD;
 };
 
 class toaplan1_samesame_state : public toaplan1_state
@@ -250,8 +253,8 @@ private:
 
 	void screen_vblank(int state);
 
-	void hd647180_io_map(address_map &map);
-	void main_map(address_map &map);
+	void hd647180_io_map(address_map &map) ATTR_COLD;
+	void main_map(address_map &map) ATTR_COLD;
 };
 
 #endif // MAME_TOAPLAN_TOAPLAN1_H

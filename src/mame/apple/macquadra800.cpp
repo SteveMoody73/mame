@@ -72,7 +72,7 @@ public:
 	void macqd610(machine_config &config);
 	void macqd650(machine_config &config);
 
-	void quadra800_map(address_map &map);
+	void quadra800_map(address_map &map) ATTR_COLD;
 
 	void init_macqd800();
 
@@ -91,8 +91,8 @@ private:
 
 	u8 m_mac[6];
 
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void machine_reset() override ATTR_COLD;
 
 	u16 mac_scc_r(offs_t offset)
 	{
@@ -247,6 +247,7 @@ void quadra800_state::macqd800(machine_config &config)
 
 	nubus_device &nubus(NUBUS(config, "nubus", 40_MHz_XTAL / 4));
 	nubus.set_space(m_maincpu, AS_PROGRAM);
+	nubus.set_bus_mode(nubus_device::nubus_mode_t::QUADRA_DAFB);
 	nubus.out_irqc_callback().set(m_iosb, FUNC(iosb_device::via2_irq_w<0x08>));
 	nubus.out_irqd_callback().set(m_iosb, FUNC(iosb_device::via2_irq_w<0x10>));
 	nubus.out_irqe_callback().set(m_iosb, FUNC(iosb_device::via2_irq_w<0x20>));

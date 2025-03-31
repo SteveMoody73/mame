@@ -37,10 +37,11 @@ public:
 	// MIDI I/O access (used for comms on Model 2/3)
 	void midi_in(u8 data);
 	u16 midi_out_r();
+	void midi_out_w(u8 data);
 
 protected:
 	// device-level overrides
-	virtual void device_start() override;
+	virtual void device_start() override ATTR_COLD;
 	virtual void device_post_load() override;
 	virtual void device_clock_changed() override;
 
@@ -118,6 +119,7 @@ private:
 	u32 m_IrqTimBC;
 	u32 m_IrqMidi;
 
+	u8 m_MidiOutStack[32];
 	u8 m_MidiOutW, m_MidiOutR;
 	u8 m_MidiStack[32];
 	u8 m_MidiW, m_MidiR;

@@ -78,7 +78,7 @@ public:
 	void init_wpksoc();
 
 protected:
-	virtual void video_start() override;
+	virtual void video_start() override ATTR_COLD;
 
 private:
 	required_device<cpu_device> m_maincpu;
@@ -126,14 +126,14 @@ private:
 	void update_scroll_positions();
 	void tilemap_draw(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect, int laynum, int category, int opaque);
 	void screen_refresh(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
-	void dsoccr94_io_map(address_map &map);
-	void dsoccr94_map(address_map &map);
-	void firebarr_map(address_map &map);
-	void main_map(address_map &map);
-	void main_portmap(address_map &map);
-	void sound_map(address_map &map);
-	void wpksoc_io_map(address_map &map);
-	void wpksoc_map(address_map &map);
+	void dsoccr94_io_map(address_map &map) ATTR_COLD;
+	void dsoccr94_map(address_map &map) ATTR_COLD;
+	void firebarr_map(address_map &map) ATTR_COLD;
+	void main_map(address_map &map) ATTR_COLD;
+	void main_portmap(address_map &map) ATTR_COLD;
+	void sound_map(address_map &map) ATTR_COLD;
+	void wpksoc_io_map(address_map &map) ATTR_COLD;
+	void wpksoc_map(address_map &map) ATTR_COLD;
 };
 
 
@@ -661,7 +661,7 @@ static INPUT_PORTS_START( m107_2player )
 	PORT_BIT( 0x0010, IP_ACTIVE_LOW, IPT_SERVICE1 )
 	PORT_BIT( 0x0020, IP_ACTIVE_LOW, IPT_SERVICE )
 	PORT_BIT( 0x0040, IP_ACTIVE_LOW, IPT_UNUSED )
-	PORT_BIT( 0x0080, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_VBLANK("screen") //this is sprite flag on Irem M92, if this is active low then Dream Soccer '94 is unplayably slow
+	PORT_BIT( 0x0080, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank)) //this is sprite flag on Irem M92, if this is active low then Dream Soccer '94 is unplayably slow
 
 	PORT_DIPUNKNOWN_DIPLOC( 0x0100, 0x0100, "SW3:1" )
 	PORT_DIPUNKNOWN_DIPLOC( 0x0200, 0x0200, "SW3:2" )
@@ -810,7 +810,7 @@ static INPUT_PORTS_START( wpksoc )
 	PORT_BIT( 0x0010, IP_ACTIVE_LOW, IPT_SERVICE1 )
 	PORT_BIT( 0x0020, IP_ACTIVE_LOW, IPT_SERVICE )
 	PORT_BIT( 0x0040, IP_ACTIVE_LOW, IPT_UNUSED )
-	PORT_BIT( 0x0080, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_VBLANK("screen") //this is sprite flag on Irem M92, if this is active low then Dream Soccer '94 is unplayably slow
+	PORT_BIT( 0x0080, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank)) //this is sprite flag on Irem M92, if this is active low then Dream Soccer '94 is unplayably slow
 	PORT_DIPNAME( 0x0100, 0x0000, "DSW3" )
 	PORT_DIPSETTING(    0x0000, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x0100, DEF_STR( On ) )

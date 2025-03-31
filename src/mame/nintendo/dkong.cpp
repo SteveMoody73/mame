@@ -1011,7 +1011,7 @@ static INPUT_PORTS_START( dkong_in2 )
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_START2 )
 	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_UNKNOWN )   /* not connected - held to high */
 	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_UNKNOWN )   /* not connected - held to high */
-	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("virtual_p2", latch8_device, bit4_q_r) /* status from sound cpu */
+	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("virtual_p2", FUNC(latch8_device::bit4_q_r)) /* status from sound cpu */
 	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_COIN1 )
 
 	PORT_START("SERVICE1")
@@ -1098,7 +1098,7 @@ static INPUT_PORTS_START( dkongike )
 	PORT_INCLUDE( dkongx )
 
 	PORT_START("GAME")
-	PORT_CONFNAME(0x01, 0x00, "Game") PORT_WRITE_LINE_DEVICE_MEMBER(DEVICE_SELF, dkong_state, dk_braze_a15)
+	PORT_CONFNAME(0x01, 0x00, "Game") PORT_WRITE_LINE_MEMBER(FUNC(dkong_state::dk_braze_a15))
 	PORT_CONFSETTING(0x00, "1")
 	PORT_CONFSETTING(0x01, "2")
 INPUT_PORTS_END
@@ -3800,7 +3800,7 @@ GAME( 1984, herodku,   hero,     s2650,     herodk,   dkong_state, empty_init,  
 GAME( 1984, 8ballact,  0,        herbiedk,  8ballact, dkong_state, empty_init,    ROT270, "Seatongrove UK, Ltd. (Magic Electronics USA license)", "Eight Ball Action (DK conversion)",                         MACHINE_SUPPORTS_SAVE )
 GAME( 1984, 8ballact2, 8ballact, herbiedk,  8ballact, dkong_state, empty_init,    ROT270, "Seatongrove UK, Ltd. (Magic Electronics USA license)", "Eight Ball Action (DKJr conversion)",                       MACHINE_SUPPORTS_SAVE )
 GAME( 1984, shootgal,  0,        s2650,     shootgal, dkong_state, empty_init,    ROT0,   "Seatongrove UK, Ltd. (Zaccaria license)",              "Shooting Gallery",                                          MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
-GAME( 1985, spclforc,  0,        spclforc,  spclforc, dkong_state, empty_init,    ROT270, "Senko Industries (Magic Electronics Inc. license)",    "Special Forces",                                            MACHINE_SUPPORTS_SAVE )
+GAME( 1985, spclforc,  0,        spclforc,  spclforc, dkong_state, empty_init,    ROT270, "Senko Industries (Magic Electronics Inc. license)",    "Special Forces - Kung Fu Commando",                         MACHINE_SUPPORTS_SAVE )
 GAME( 1985, spcfrcii,  0,        spclforc,  spclforc, dkong_state, empty_init,    ROT270, "Senko Industries (Magic Electronics Inc. license)",    "Special Forces II",                                         MACHINE_SUPPORTS_SAVE )
 
 /* EPOS */

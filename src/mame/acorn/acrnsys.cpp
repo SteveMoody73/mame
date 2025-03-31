@@ -56,16 +56,19 @@
 ****************************************************************************/
 
 #include "emu.h"
+
+#include "bus/acorn/bus.h"
+#include "bus/centronics/ctronics.h"
 #include "cpu/m6502/m6502.h"
 #include "cpu/m6809/m6809.h"
-#include "machine/ins8154.h"
 #include "machine/6522via.h"
-#include "machine/keyboard.h"
 #include "machine/input_merger.h"
-#include "bus/centronics/ctronics.h"
-#include "bus/acorn/bus.h"
+#include "machine/ins8154.h"
+#include "machine/keyboard.h"
+
 #include "softlist_dev.h"
 #include "utf8.h"
+
 
 namespace {
 
@@ -96,8 +99,8 @@ public:
 	void acrnsys5(machine_config &config);
 
 protected:
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void machine_reset() override ATTR_COLD;
 
 private:
 	void kbd_put(u8 data);
@@ -106,9 +109,9 @@ private:
 	uint8_t kbd_r();
 	void bus_nmi_w(int state);
 
-	void a6502_mem(address_map &map);
-	void a6809_mem(address_map &map);
-	void a6502a_mem(address_map &map);
+	void a6502_mem(address_map &map) ATTR_COLD;
+	void a6809_mem(address_map &map) ATTR_COLD;
+	void a6502a_mem(address_map &map) ATTR_COLD;
 
 	required_device<cpu_device> m_maincpu;
 	required_device<input_merger_device> m_irqs;
@@ -315,7 +318,7 @@ static INPUT_PORTS_START( acrnsys )
 //PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("REPT")         PORT_CODE(KEYCODE_RCONTROL)   PORT_CHAR(UCHAR_MAMEKEY(RCONTROL))
 
 	PORT_START("BRK")
-	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_OTHER) PORT_NAME("BREAK") PORT_CODE(KEYCODE_F12) PORT_CHANGED_MEMBER(DEVICE_SELF, acrnsys_state, trigger_reset, 0)
+	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_OTHER) PORT_NAME("BREAK") PORT_CODE(KEYCODE_F12) PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(acrnsys_state::trigger_reset), 0)
 INPUT_PORTS_END
 
 
@@ -333,7 +336,8 @@ uint8_t acrnsys_state::kbd_r()
 	uint8_t data = m_kbd_data;
 
 	/* clear strobe */
-	m_kbd_data &= 0x7f;
+	if (!machine().side_effects_disabled())
+		m_kbd_data &= 0x7f;
 
 	return data;
 }
@@ -585,7 +589,7 @@ void acrnsys_state::acrnsys5(machine_config &config)
 
 ROM_START( acrnsys2 )
 	ROM_REGION(0x1000, "maincpu", 0)
-	ROM_LOAD("syscos40.ic7", 0x0800, 0x0800, BAD_DUMP CRC(af457ccc) SHA1(c8c1fbfb8d2e8aa0fdf8e3dc80993ad404cc943d)) // Acorn COS (no known dump, this is re-created from source)
+	ROM_LOAD("cos.ic7", 0x0800, 0x0800, CRC(38f59dc7) SHA1(c587da5dcc6878dcd0bc823c508472d38296003e)) // Acorn COS
 ROM_END
 
 ROM_START( acrnsys3 )
@@ -610,9 +614,10 @@ ROM_START( acrnsys5 )
 	ROM_LOAD("sys5f_iss1.ic11", 0x0000, 0x2000, CRC(cd80418d) SHA1(e588298239b5360b5d1e15d5cd9f7fe2b1693e5d)) // 201,625
 ROM_END
 
-} // Anonymous namespace
+} // anonymous namespace
 
-/*    YEAR  NAME           PARENT    COMPAT  MACHINE        INPUT    CLASS          INIT        COMPANY            FULLNAME                     FLAGS */
+
+//    YEAR  NAME           PARENT    COMPAT  MACHINE        INPUT    CLASS          INIT        COMPANY            FULLNAME                     FLAGS
 COMP( 1980, acrnsys2,      acrnsys3, 0,      acrnsys2,      acrnsys, acrnsys_state, empty_init, "Acorn Computers", "Acorn System 2",            MACHINE_NO_SOUND_HW | MACHINE_SUPPORTS_SAVE )
 COMP( 1980, acrnsys3,      0,        0,      acrnsys3,      acrnsys, acrnsys_state, empty_init, "Acorn Computers", "Acorn System 3 (6502 CPU)", MACHINE_NO_SOUND_HW | MACHINE_SUPPORTS_SAVE )
 COMP( 1980, acrnsys3_6809, acrnsys3, 0,      acrnsys3_6809, acrnsys, acrnsys_state, empty_init, "Acorn Computers", "Acorn System 3 (6809 CPU)", MACHINE_NO_SOUND_HW | MACHINE_SUPPORTS_SAVE )

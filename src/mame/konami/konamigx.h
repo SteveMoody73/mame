@@ -85,7 +85,7 @@ public:
 	void konamigx_t4_psacmap_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
 	void vblank_irq_ack_w(int state);
 	void hblank_irq_ack_w(int state);
-	DECLARE_CUSTOM_INPUT_MEMBER(gx_rdport1_3_r);
+	ioport_value gx_rdport1_3_r();
 	void init_konamigx();
 	TILE_GET_INFO_MEMBER(get_gx_psac_tile_info);
 	TILE_GET_INFO_MEMBER(get_gx_psac3_tile_info);
@@ -144,6 +144,7 @@ public:
 	void konamigx_precache_registers(void);
 
 	void wipezbuf(int noshadow);
+	void set_brightness(int layer);
 
 	void dmastart_callback(int data);
 
@@ -170,37 +171,39 @@ public:
 	int K055555GX_decode_vmixcolor(int layer, int *color);
 	[[maybe_unused]] int K055555GX_decode_osmixcolor(int layer, int *color);
 
-	void init_posthack();
-	void konamigx_6bpp(machine_config &config);
-	void gxtype4(machine_config &config);
-	void gxtype4_vsn(machine_config &config);
-	void racinfrc(machine_config &config);
-	void gxtype4sd2(machine_config &config);
-	void konamigx_bios(machine_config &config);
-	void gxtype3(machine_config &config);
-	void opengolf(machine_config &config);
-	void winspike(machine_config &config);
-	void le2(machine_config &config);
-	void konamigx(machine_config &config);
-	void dragoonj(machine_config &config);
-	void salmndr2(machine_config &config);
-	void tbyahhoo(machine_config &config);
-	void gokuparo(machine_config &config);
-	void sexyparo(machine_config &config);
-	void gx_base_memmap(address_map &map);
-	void racinfrc_map(address_map &map);
-	void gx_type1_map(address_map &map);
-	void gx_type2_map(address_map &map);
-	void gx_type3_map(address_map &map);
-	void gx_type4_map(address_map &map);
-	void gxsndmap(address_map &map);
-	void gxtmsmap(address_map &map);
+	void init_posthack() ATTR_COLD;
+	void konamigx_6bpp(machine_config &config) ATTR_COLD;
+	void gxtype4(machine_config &config) ATTR_COLD;
+	void gxtype4_vsn(machine_config &config) ATTR_COLD;
+	void racinfrc(machine_config &config) ATTR_COLD;
+	void gxtype4sd2(machine_config &config) ATTR_COLD;
+	void konamigx_bios(machine_config &config) ATTR_COLD;
+	void gxtype3(machine_config &config) ATTR_COLD;
+	void opengolf(machine_config &config) ATTR_COLD;
+	void winspike(machine_config &config) ATTR_COLD;
+	void le2(machine_config &config) ATTR_COLD;
+	void konamigx(machine_config &config) ATTR_COLD;
+	void dragoonj(machine_config &config) ATTR_COLD;
+	void salmndr2(machine_config &config) ATTR_COLD;
+	void tbyahhoo(machine_config &config) ATTR_COLD;
+	void gokuparo(machine_config &config) ATTR_COLD;
+	void sexyparo(machine_config &config) ATTR_COLD;
+	void sexyparoebl(machine_config &config) ATTR_COLD;
+	void gx_base_memmap(address_map &map) ATTR_COLD;
+	void racinfrc_map(address_map &map) ATTR_COLD;
+	void gx_type1_map(address_map &map) ATTR_COLD;
+	void gx_type2_map(address_map &map) ATTR_COLD;
+	void gx_type3_map(address_map &map) ATTR_COLD;
+	void gx_type4_map(address_map &map) ATTR_COLD;
+	void gxsndmap(address_map &map) ATTR_COLD;
+	void gxtmsmap(address_map &map) ATTR_COLD;
+	void sexyparoebl_map(address_map &map) ATTR_COLD;
 
 protected:
 	required_device<cpu_device> m_maincpu;
 	optional_device<cpu_device> m_soundcpu;
 	optional_device<tms57002_device> m_dasp;
-	required_device<k053252_device> m_k053252;
+	optional_device<k053252_device> m_k053252;
 	required_device<k055673_device> m_k055673;
 	required_device<k055555_device> m_k055555;
 	required_device<k056832_device> m_k056832;
@@ -246,6 +249,9 @@ protected:
 
 	uint16_t *m_gx_spriteram = nullptr;
 	std::unique_ptr<uint16_t[]> m_gx_spriteram_alloc;
+
+	u8 m_current_brightness = 0xff;
+	u8 m_brightness[3]{};
 
 	// mirrored K054338 settings
 	int *m_K054338_shdRGB = nullptr;

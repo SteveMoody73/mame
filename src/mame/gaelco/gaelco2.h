@@ -1,12 +1,19 @@
 // license:BSD-3-Clause
 // copyright-holders:Manuel Abadia, David Haywood
+#ifndef MAME_GAELCO_GAELCO2_H
+#define MAME_GAELCO_GAELCO2_H
+
+#pragma once
+
 #include "cpu/m68000/m68000.h"
-#include "video/bufsprite.h"
 #include "machine/74259.h"
 #include "machine/eepromser.h"
 #include "machine/timer.h"
+#include "video/bufsprite.h"
+
 #include "emupal.h"
 #include "tilemap.h"
+
 
 class gaelco2_state : public driver_device
 {
@@ -58,7 +65,7 @@ protected:
 	u32 screen_update_left(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	u32 screen_update_right(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
-	void mcu_hostmem_map(address_map &map);
+	void mcu_hostmem_map(address_map &map) ATTR_COLD;
 
 	required_device<m68000_device> m_maincpu;
 	optional_device<ls259_device> m_mainlatch;
@@ -83,12 +90,12 @@ private:
 	void draw_sprites(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect, int mask);
 	u32 dual_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect, int index);
 
-	void alighunt_map(address_map &map);
-	void maniacsq_map(address_map &map);
-	void play2000_map(address_map &map);
-	void touchgo_map(address_map &map);
-	void saltcrdi_map(address_map &map);
-	void srollnd_map(address_map &map);
+	void alighunt_map(address_map &map) ATTR_COLD;
+	void maniacsq_map(address_map &map) ATTR_COLD;
+	void play2000_map(address_map &map) ATTR_COLD;
+	void touchgo_map(address_map &map) ATTR_COLD;
+	void saltcrdi_map(address_map &map) ATTR_COLD;
+	void srollnd_map(address_map &map) ATTR_COLD;
 
 	// simulation
 	u16 srollnd_share_sim_r(offs_t offset, u16 mem_mask = ~0);
@@ -115,13 +122,13 @@ public:
 	void init_snowboara();
 
 protected:
-	virtual void machine_start() override;
+	virtual void machine_start() override ATTR_COLD;
 
 private:
 	u16 snowboar_protection_r();
 	void snowboar_protection_w(offs_t offset, u16 data, u16 mem_mask = ~0);
 
-	void snowboar_map(address_map &map);
+	void snowboar_map(address_map &map) ATTR_COLD;
 
 	required_shared_ptr<u16> m_snowboar_protection;
 
@@ -141,14 +148,14 @@ public:
 	void bang(machine_config &config);
 
 protected:
-	virtual void machine_start() override;
+	virtual void machine_start() override ATTR_COLD;
 
 private:
 	template <unsigned Which> u16 gun_x();
 	template <unsigned Which> u16 gun_y();
 	void bang_clr_gun_int_w(u16 data);
 	TIMER_DEVICE_CALLBACK_MEMBER(bang_irq);
-	void bang_map(address_map &map);
+	void bang_map(address_map &map) ATTR_COLD;
 
 	required_ioport_array<2> m_light_x;
 	required_ioport_array<2> m_light_y;
@@ -174,9 +181,11 @@ public:
 private:
 	void wrally2_adc_clk(int state);
 	void wrally2_adc_cs(int state);
-	void wrally2_map(address_map &map);
+	void wrally2_map(address_map &map) ATTR_COLD;
 
 	required_ioport_array<2> m_analog;
 
 	u8 m_analog_ports[2]{};
 };
+
+#endif // MAME_GAELCO_GAELCO2_H

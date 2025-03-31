@@ -300,7 +300,7 @@ uint8_t spectrum_state::pre_opcode_fetch_r(offs_t offset)
 	   enable paged ROM and then fetches at 0700 to disable it
 	*/
 	m_exp->pre_opcode_fetch(offset);
-	uint8_t retval = m_specmem->space(AS_PROGRAM).read_byte(offset);
+	uint8_t retval = m_specmem->read8(offset);
 	m_exp->post_opcode_fetch(offset);
 	return retval;
 }
@@ -310,7 +310,7 @@ uint8_t spectrum_state::spectrum_data_r(offs_t offset)
 	if (is_contended(offset)) content_early();
 
 	m_exp->pre_data_fetch(offset);
-	uint8_t retval = m_specmem->space(AS_PROGRAM).read_byte(offset);
+	uint8_t retval = m_specmem->read8(offset);
 	m_exp->post_data_fetch(offset);
 	return retval;
 }
@@ -320,7 +320,7 @@ void spectrum_state::spectrum_data_w(offs_t offset, uint8_t data)
 	if (is_contended(offset)) content_early();
 	if (is_vram_write(offset)) m_screen->update_now();
 
-	m_specmem->space(AS_PROGRAM).write_byte(offset,data);
+	m_specmem->write8(offset,data);
 }
 
 void spectrum_state::spectrum_rom_w(offs_t offset, uint8_t data)
@@ -332,7 +332,7 @@ uint8_t spectrum_state::spectrum_rom_r(offs_t offset)
 {
 	return m_exp->romcs()
 		? m_exp->mreq_r(offset)
-		: memregion("maincpu")->base()[offset];
+		: m_rom[offset];
 }
 
 /*
@@ -551,12 +551,12 @@ void spectrum_state::spectrum_map(address_map &map)
 
 void spectrum_state::spectrum_opcodes(address_map &map)
 {
-	map(0x0000, 0xffff).rw(FUNC(spectrum_state::spectrum_data_r), FUNC(spectrum_state::spectrum_data_w));
+	map(0x0000, 0xffff).r(FUNC(spectrum_state::pre_opcode_fetch_r));
 }
 
 void spectrum_state::spectrum_data(address_map &map)
 {
-	map(0x0000, 0xffff).r(FUNC(spectrum_state::pre_opcode_fetch_r));
+	map(0x0000, 0xffff).rw(FUNC(spectrum_state::spectrum_data_r), FUNC(spectrum_state::spectrum_data_w));
 }
 
 // The ula is usually accessed with port 0xfe but is only partially decoded with a single address line (A0),
@@ -580,25 +580,7 @@ void spectrum_state::spectrum_clone_io(address_map &map)
 
 /* Input ports */
 
-/****************************************************************************************************/
-
-static INPUT_PORTS_START( spec_plus_joys )
-	PORT_START("JOY2") /* 0xF7FE */
-	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT)  PORT_8WAY PORT_PLAYER(2) PORT_CODE(JOYCODE_X_LEFT_SWITCH)
-	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT) PORT_8WAY PORT_PLAYER(2) PORT_CODE(JOYCODE_X_RIGHT_SWITCH)
-	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN)  PORT_8WAY PORT_PLAYER(2) PORT_CODE(JOYCODE_Y_DOWN_SWITCH)
-	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_UP)    PORT_8WAY PORT_PLAYER(2) PORT_CODE(JOYCODE_Y_UP_SWITCH)
-	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_BUTTON1)        PORT_PLAYER(2) PORT_CODE(JOYCODE_BUTTON1)
-
-	PORT_START("JOY1") /* 0xEFFE */
-	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_BUTTON1)        PORT_PLAYER(1) PORT_CODE(JOYCODE_BUTTON1)
-	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_JOYSTICK_UP)    PORT_8WAY PORT_PLAYER(1) PORT_CODE(JOYCODE_Y_UP_SWITCH)
-	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN)  PORT_8WAY PORT_PLAYER(1) PORT_CODE(JOYCODE_Y_DOWN_SWITCH)
-	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT) PORT_8WAY PORT_PLAYER(1) PORT_CODE(JOYCODE_X_RIGHT_SWITCH)
-	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT)  PORT_8WAY PORT_PLAYER(1) PORT_CODE(JOYCODE_X_LEFT_SWITCH)
-INPUT_PORTS_END
-
-/*
+/****************************************************************************************************
 Spectrum keyboard is quite complicate to emulate. Each key can have 5 or 6 different functions, depending on which input mode we are in:
 
 -------------------------------------------------------------------------------------------------------------------
@@ -635,7 +617,7 @@ INPUT_PORTS_START( spectrum )
 	PORT_START("LINE1") /* 0xFDFE */
 	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("a    A    STOP   READ      ~     NEW") PORT_CODE(KEYCODE_A)      PORT_CHAR('a') PORT_CHAR('A')// PORT_CHAR('~')
 	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("s    S    NOT    RESTORE   |     SAVE") PORT_CODE(KEYCODE_S)     PORT_CHAR('s') PORT_CHAR('S')// PORT_CHAR('|')
-	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("d    D    STEP   DATA      \\    DIM") PORT_CODE(KEYCODE_D)      PORT_CHAR('d') PORT_CHAR('D')// PORT_CHAR('\\')
+	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("d    D    STEP   DATA      \\     DIM") PORT_CODE(KEYCODE_D)     PORT_CHAR('d') PORT_CHAR('D')// PORT_CHAR('\\')
 	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("f    F    TO     SGN       {     FOR") PORT_CODE(KEYCODE_F)      PORT_CHAR('f') PORT_CHAR('F')// PORT_CHAR('{')
 	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("g    G    THEN   ABS       }     GOTO") PORT_CODE(KEYCODE_G)     PORT_CHAR('g') PORT_CHAR('G')// PORT_CHAR('}')
 
@@ -648,22 +630,22 @@ INPUT_PORTS_START( spectrum )
 
 	/* interface II uses this port for joystick */
 	PORT_START("LINE3") /* 0xF7FE */
-	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("1   EDIT       !    BLUE     DEF FN") PORT_CODE(KEYCODE_1)   PORT_CHAR('1') PORT_CHAR(UCHAR_MAMEKEY(F1)) PORT_CHAR('!')
-	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("2   CAPS LOCK  @    RED      FN") PORT_CODE(KEYCODE_2)       PORT_CHAR('2') PORT_CHAR(UCHAR_MAMEKEY(F2)) PORT_CHAR('@')
-	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("3   TRUE VID   #    MAGENTA  LINE") PORT_CODE(KEYCODE_3)     PORT_CHAR('3') PORT_CHAR(UCHAR_MAMEKEY(F3)) PORT_CHAR('#')
-	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("4   INV VID    $    GREEN    OPEN#") PORT_CODE(KEYCODE_4)    PORT_CHAR('4') PORT_CHAR(UCHAR_MAMEKEY(F4)) PORT_CHAR('$')
+	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("1   EDIT       !    BLUE     DEF FN") PORT_CODE(KEYCODE_1)   PORT_CHAR('1') PORT_CHAR('!')
+	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("2   CAPS LOCK  @    RED      FN") PORT_CODE(KEYCODE_2)       PORT_CHAR('2') PORT_CHAR('@')
+	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("3   TRUE VID   #    MAGENTA  LINE") PORT_CODE(KEYCODE_3)     PORT_CHAR('3') PORT_CHAR('#')
+	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("4   INV VID    $    GREEN    OPEN#") PORT_CODE(KEYCODE_4)    PORT_CHAR('4') PORT_CHAR('$')
 	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("5   Left       %    CYAN     CLOSE#") PORT_CODE(KEYCODE_5)   PORT_CHAR('5') PORT_CHAR(UCHAR_MAMEKEY(LEFT)) PORT_CHAR('%')
 
 	/* protek clashes with interface II! uses 5 = left, 6 = down, 7 = up, 8 = right, 0 = fire */
 	PORT_START("LINE4") /* 0xEFFE */
 	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("0   DEL        _    BLACK    FORMAT") PORT_CODE(KEYCODE_0)   PORT_CHAR('0') PORT_CHAR(8) PORT_CHAR('_')
-	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("9   GRAPH      )             POINT") PORT_CODE(KEYCODE_9)    PORT_CHAR('9') PORT_CHAR(UCHAR_MAMEKEY(F9)) PORT_CHAR(')')
+	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("9   GRAPH      )             POINT") PORT_CODE(KEYCODE_9)    PORT_CHAR('9') PORT_CHAR(')')
 	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("8   Right      (             CAT") PORT_CODE(KEYCODE_8)      PORT_CHAR('8') PORT_CHAR(UCHAR_MAMEKEY(RIGHT)) PORT_CHAR('(')
 	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("7   Up         '    WHITE    ERASE") PORT_CODE(KEYCODE_7)    PORT_CHAR('7') PORT_CHAR(UCHAR_MAMEKEY(UP)) PORT_CHAR('\'')
 	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("6   Down       &    YELLOW   MOVE") PORT_CODE(KEYCODE_6)     PORT_CHAR('6') PORT_CHAR(UCHAR_MAMEKEY(DOWN)) PORT_CHAR('&')
 
 	PORT_START("LINE5") /* 0xDFFE */
-	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("p    P    \"     TAB      (c)    PRINT") PORT_CODE(KEYCODE_P)    PORT_CHAR('p') PORT_CHAR('P') PORT_CHAR('"')
+	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("p    P    \"      TAB      (c)    PRINT") PORT_CODE(KEYCODE_P)   PORT_CHAR('p') PORT_CHAR('P') PORT_CHAR('"')
 	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("o    O    ;      PEEK     OUT    POKE") PORT_CODE(KEYCODE_O)     PORT_CHAR('o') PORT_CHAR('O') PORT_CHAR(';')
 	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("i    I    AT     CODE     IN     INPUT") PORT_CODE(KEYCODE_I)    PORT_CHAR('i') PORT_CHAR('I')
 	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("u    U    OR     CHR$     ]      IF") PORT_CODE(KEYCODE_U)       PORT_CHAR('u') PORT_CHAR('U')// PORT_CHAR(']')
@@ -691,48 +673,6 @@ INPUT_PORTS_START( spectrum )
 	PORT_CONFSETTING(   0x00, "Issue 2" )
 	PORT_CONFSETTING(   0x80, "Issue 3" )
 	PORT_BIT(0x7f, IP_ACTIVE_LOW, IPT_UNUSED)
-INPUT_PORTS_END
-
-/* These keys need not to be mapped in natural mode because Spectrum+ supports both these and the Spectrum sequences above.
-   Hence, we can simply keep using such sequences in natural keyboard emulation */
-INPUT_PORTS_START( spec128 )
-	PORT_INCLUDE( spectrum )
-
-	PORT_START("PLUS0") /* Spectrum+ Keys (Same as CAPS + 1-5) */
-	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("EDIT") PORT_CODE(KEYCODE_INSERT)
-	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("CAPS LOCK") PORT_CODE(KEYCODE_CAPSLOCK)
-	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("TRUE VID") PORT_CODE(KEYCODE_HOME)
-	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("INV VID") PORT_CODE(KEYCODE_END)
-	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("Cursor Left") PORT_CODE(KEYCODE_LEFT)
-	PORT_BIT(0xe0, IP_ACTIVE_LOW, IPT_UNUSED)
-
-	PORT_START("PLUS1") /* Spectrum+ Keys (Same as CAPS + 6-0) */
-	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("DEL") PORT_CODE(KEYCODE_BACKSPACE) PORT_CHAR(8)
-	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("GRAPH") PORT_CODE(KEYCODE_LALT)
-	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("Cursor Right") PORT_CODE(KEYCODE_RIGHT)
-	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("Cursor Up") PORT_CODE(KEYCODE_UP)
-	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("Cursor Down") PORT_CODE(KEYCODE_DOWN)
-	PORT_BIT(0xe0, IP_ACTIVE_LOW, IPT_UNUSED)
-
-	PORT_START("PLUS2") /* Spectrum+ Keys (Same as CAPS + SPACE and CAPS + SYMBOL) */
-	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("BREAK") PORT_CODE(KEYCODE_PAUSE)
-	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("EXT MODE") PORT_CODE(KEYCODE_LCONTROL)
-	PORT_BIT(0xfc, IP_ACTIVE_LOW, IPT_UNUSED)
-
-	PORT_START("PLUS3") /* Spectrum+ Keys (Same as SYMBOL SHIFT + O/P) */
-	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("\"") PORT_CODE(KEYCODE_F4)
-	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME(";") PORT_CODE(KEYCODE_COLON)
-	PORT_BIT(0xfc, IP_ACTIVE_LOW, IPT_UNUSED)
-
-	PORT_START("PLUS4") /* Spectrum+ Keys (Same as SYMBOL SHIFT + N/M) */
-	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME(".") PORT_CODE(KEYCODE_STOP)
-	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME(",") PORT_CODE(KEYCODE_COMMA)
-	PORT_BIT(0xf3, IP_ACTIVE_LOW, IPT_UNUSED)
-INPUT_PORTS_END
-
-INPUT_PORTS_START( spec_plus )
-	PORT_INCLUDE( spec128 )
-	PORT_INCLUDE( spec_plus_joys )
 INPUT_PORTS_END
 
 /* Machine initialization */
@@ -796,9 +736,9 @@ void spectrum_state::spectrum_common(machine_config &config)
 {
 	/* basic machine hardware */
 	Z80(config, m_maincpu, X1 / 4);        /* This is verified only for the ZX Spectrum. Other clones are reported to have different clocks */
-	m_maincpu->set_addrmap(AS_PROGRAM, &spectrum_state::spectrum_opcodes);
-	m_maincpu->set_addrmap(AS_OPCODES, &spectrum_state::spectrum_data);
-	m_maincpu->set_addrmap(AS_IO, &spectrum_state::spectrum_io);
+	m_maincpu->set_m1_map(&spectrum_state::spectrum_opcodes);
+	m_maincpu->set_memory_map(&spectrum_state::spectrum_data);
+	m_maincpu->set_io_map(&spectrum_state::spectrum_io);
 	m_maincpu->set_vblank_int("screen", FUNC(spectrum_state::spec_interrupt));
 	m_maincpu->nomreq_cb().set(FUNC(spectrum_state::spectrum_nomreq));
 
@@ -864,7 +804,7 @@ void spectrum_state::spectrum_clone(machine_config &config)
 	spectrum(config);
 
 	// no floating bus
-	m_maincpu->set_addrmap(AS_IO, &spectrum_state::spectrum_clone_io);
+	m_maincpu->set_io_map(&spectrum_state::spectrum_clone_io);
 	m_exp->fb_r_handler().set([]() { return 0xff; });
 }
 
@@ -1115,11 +1055,6 @@ ROM_START(blitzs)
 	ROM_LOAD("blitz.rom",0x0000,0x4000, CRC(91e535a8) SHA1(14f09d45dc3803cbdb05c33adb28eb12dbad9dd0))
 ROM_END
 
-ROM_START(byte)
-	ROM_REGION(0x10000,"maincpu",0)
-	ROM_LOAD("byte.rom",0x0000,0x4000, CRC(c13ba473) SHA1(99f40727185abbb2413f218d69df021ae2e99e45))
-ROM_END
-
 ROM_START(orizon)
 	ROM_REGION(0x10000,"maincpu",0)
 	ROM_LOAD("orizon.rom",0x0000,0x4000, CRC(ed4d9787) SHA1(3e8b29862e06be03344393c320a64a109fd9aff5))
@@ -1198,7 +1133,6 @@ COMP( 1993, didakm93, spectrum, 0,      spectrum_clone, spec_plus, spectrum_stat
 COMP( 1988, mistrum,  spectrum, 0,      spectrum_clone, spectrum,  spectrum_state, init_spectrum, "Amaterske RADIO",       "Mistrum",               0 )  // keyboard could be spectrum in some models (since it was a build-yourself design)
 COMP( 198?, bk08,     spectrum, 0,      spectrum_clone, spectrum,  spectrum_state, init_spectrum, "Orel",                  "BK-08",                 0 )
 COMP( 1990, blitzs,   spectrum, 0,      spectrum_clone, spectrum,  spectrum_state, init_spectrum, "<unknown>",             "Blic",                  0 )  // no keyboard images found
-COMP( 1990, byte,     spectrum, 0,      spectrum_clone, spectrum,  spectrum_state, init_spectrum, "BEMZ",                  "PEVM Byte",             0 )  // no keyboard images found
 COMP( 199?, orizon,   spectrum, 0,      spectrum_clone, spectrum,  spectrum_state, init_spectrum, "<unknown>",             "Orizon-Micro",          0 )  // no keyboard images found
 COMP( 1993, quorum48, spectrum, 0,      spectrum_clone, spectrum,  spectrum_state, init_spectrum, "<unknown>",             "Kvorum 48K",            MACHINE_NOT_WORKING )
 COMP( 1993, magic6,   spectrum, 0,      spectrum_clone, spectrum,  spectrum_state, init_spectrum, "<unknown>",             "Magic 6",               MACHINE_NOT_WORKING )   // keyboard should be spectrum, but image was not clear

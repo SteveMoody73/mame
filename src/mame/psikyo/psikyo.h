@@ -29,13 +29,12 @@ public:
 		, m_bootleg_spritebuffer(*this, "boot_spritebuf")
 		, m_spritelut(*this, "spritelut")
 		, m_audiobank(*this, "audiobank")
-		, m_okibank(*this, "okibank")
+		, m_okibank(*this, "okibank%u", 0U)
 		, m_in_dsw(*this, "DSW")
 		, m_in_p1_p2(*this, "P1_P2")
 		, m_in_coin(*this, "COIN")
 		, m_maincpu(*this, "maincpu")
 		, m_audiocpu(*this, "audiocpu")
-		, m_oki(*this, "oki")
 		, m_soundlatch(*this, "soundlatch")
 		, m_gfxdecode(*this, "gfxdecode")
 		, m_screen(*this, "screen")
@@ -52,6 +51,7 @@ public:
 	void gunbird(machine_config &config);
 	void s1945(machine_config &config);
 	void s1945bl(machine_config &config);
+	void tengaibl(machine_config &config);
 
 	void init_s1945a();
 	void init_s1945j();
@@ -59,6 +59,7 @@ public:
 	void init_s1945();
 	void init_s1945bl();
 	void init_tengai();
+	void init_tengaibl();
 	void init_gunbird();
 
 	int z80_nmi_r();
@@ -72,7 +73,7 @@ private:
 
 	required_region_ptr<u16> m_spritelut;
 	optional_memory_bank m_audiobank;
-	optional_memory_bank m_okibank;
+	optional_memory_bank_array<2> m_okibank;
 	optional_ioport m_in_dsw;
 	optional_ioport m_in_p1_p2;
 	optional_ioport m_in_coin;
@@ -122,15 +123,15 @@ private:
 	u32 s1945_mcu_data_r();
 	uint8_t s1945_mcu_control_r();
 	u32 s1945_input_r(offs_t offset);
-	void s1945bl_okibank_w(u8 data);
+	template <uint8_t Which> void s1945bl_okibank_w(u8 data);
 	template<int Shift> void sound_bankswitch_w(u8 data);
 	template<int Layer> u16 vram_r(offs_t offset);
 	template<int Layer> void vram_w(offs_t offset, u16 data, u16 mem_mask);
 
 	template<int Layer> TILE_GET_INFO_MEMBER(get_tile_info);
 	template<int Layer> TILEMAP_MAPPER_MEMBER(tile_scan);
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void machine_reset() override ATTR_COLD;
 	DECLARE_VIDEO_START(sngkace);
 	DECLARE_VIDEO_START(psikyo);
 	u32 screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
@@ -146,25 +147,25 @@ private:
 	/* devices */
 	required_device<cpu_device> m_maincpu;
 	optional_device<cpu_device> m_audiocpu;
-	optional_device<okim6295_device> m_oki;
 	optional_device<generic_latch_8_device> m_soundlatch;
 	required_device<gfxdecode_device> m_gfxdecode;
 	required_device<screen_device> m_screen;
 	required_device<palette_device> m_palette;
 	required_device<buffered_spriteram32_device> m_spriteram;
 
-	void gunbird_map(address_map &map);
-	void gunbird_sound_io_map(address_map &map);
-	void gunbird_sound_map(address_map &map);
-	void psikyo_bootleg_map(address_map &map);
-	void psikyo_map(address_map &map);
-	void s1945_map(address_map &map);
-	void s1945_sound_io_map(address_map &map);
-	void s1945bl_oki_map(address_map &map);
-	void s1945n_map(address_map &map);
-	void sngkace_map(address_map &map);
-	void sngkace_sound_io_map(address_map &map);
-	void sngkace_sound_map(address_map &map);
+	void gunbird_map(address_map &map) ATTR_COLD;
+	void gunbird_sound_io_map(address_map &map) ATTR_COLD;
+	void gunbird_sound_map(address_map &map) ATTR_COLD;
+	void psikyo_map(address_map &map) ATTR_COLD;
+	void s1945_map(address_map &map) ATTR_COLD;
+	void s1945_sound_io_map(address_map &map) ATTR_COLD;
+	void s1945bl_bootleg_map(address_map &map) ATTR_COLD;
+	template <uint8_t Which> void s1945bl_oki_map(address_map &map) ATTR_COLD;
+	void s1945n_map(address_map &map) ATTR_COLD;
+	void sngkace_map(address_map &map) ATTR_COLD;
+	void sngkace_sound_io_map(address_map &map) ATTR_COLD;
+	void sngkace_sound_map(address_map &map) ATTR_COLD;
+	void tengaibl_bootleg_map(address_map &map) ATTR_COLD;
 };
 
 #endif // MAME_PSIKYO_PSIKYO_H

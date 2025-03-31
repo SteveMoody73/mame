@@ -47,7 +47,9 @@ debugwin_info::debugwin_info(debugger_windows_interface &debugger, bool is_main_
 	m_wnd = win_create_window_ex_utf8(
 			DEBUG_WINDOW_STYLE_EX, "MAMEDebugWindow", title, DEBUG_WINDOW_STYLE,
 			0, 0, 100, 100,
-			dynamic_cast<win_window_info &>(*osd_common_t::window_list().front()).platform_window(),
+			debugger.get_group_windows()
+				? dynamic_cast<win_window_info &>(*osd_common_t::window_list().front()).platform_window()
+				: nullptr,
 			create_standard_menubar(),
 			GetModuleHandleUni(),
 			this);
@@ -559,8 +561,7 @@ LRESULT debugwin_info::window_proc(UINT message, WPARAM wparam, LPARAM lparam)
 			auto *minmax = (MINMAXINFO *)lparam;
 			minmax->ptMinTrackSize.x = m_minwidth;
 			minmax->ptMinTrackSize.y = m_minheight;
-			minmax->ptMaxSize.x = minmax->ptMaxTrackSize.x = m_maxwidth;
-			minmax->ptMaxSize.y = minmax->ptMaxTrackSize.y = m_maxheight;
+			// Leave default ptMaxSize and ptMaxTrackSize so maximum size is not restricted
 			break;
 		}
 

@@ -38,7 +38,7 @@ public:
 	void pcm_in(uint8_t data);
 
 protected:
-	void device_start() override;
+	void device_start() override ATTR_COLD;
 	void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
 
 private:
@@ -108,7 +108,7 @@ public:
 	DECLARE_INPUT_CHANGED_MEMBER(wakeup);
 
 protected:
-	virtual void machine_start() override;
+	virtual void machine_start() override ATTR_COLD;
 
 	required_device<psion_asic9_device> m_asic9;
 	required_device<ram_device> m_ram;
@@ -119,7 +119,6 @@ protected:
 	required_device<psion3a_codec_device> m_codec;
 	required_device_array<psion_ssd_device, 2> m_ssd;
 
-private:
 	void palette_init(palette_device &palette);
 
 	uint16_t kbd_r();
@@ -154,7 +153,7 @@ public:
 	void psion3c(machine_config &config);
 
 protected:
-	virtual void machine_reset() override;
+	virtual void machine_reset() override ATTR_COLD;
 
 private:
 	required_device<psion_condor_device> m_condor;
@@ -197,9 +196,9 @@ static INPUT_PORTS_START( psion3a )
 	PORT_BIT(0x020, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_DOWN)       PORT_CHAR(UCHAR_MAMEKEY(DOWN))                  PORT_NAME(u8"\u2193 Pg Dn") // U+2193 = ↓
 	PORT_BIT(0x040, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_N)          PORT_CHAR('n')  PORT_CHAR('N')
 	PORT_BIT(0x080, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_LALT)       PORT_CHAR(UCHAR_SHIFT_2)                        PORT_NAME("Psion")
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F8)         PORT_CHAR(UCHAR_MAMEKEY(F8))                    PORT_NAME("Sheet")           PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F5)         PORT_CHAR(UCHAR_MAMEKEY(F5))                    PORT_NAME("Time")            PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F2)         PORT_CHAR(UCHAR_MAMEKEY(F2))                    PORT_NAME("Data")            PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F8)         PORT_CHAR(UCHAR_MAMEKEY(F8))                    PORT_NAME("Sheet")           PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F5)         PORT_CHAR(UCHAR_MAMEKEY(F5))                    PORT_NAME("Time")            PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F2)         PORT_CHAR(UCHAR_MAMEKEY(F2))                    PORT_NAME("Data")            PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 
 	PORT_START("COL1")
 	PORT_BIT(0x001, IP_ACTIVE_HIGH, IPT_UNUSED)
@@ -210,9 +209,9 @@ static INPUT_PORTS_START( psion3a )
 	PORT_BIT(0x020, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_P)          PORT_CHAR('p')  PORT_CHAR('P')
 	PORT_BIT(0x040, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_COLON)      PORT_CHAR('*')  PORT_CHAR(':')
 	PORT_BIT(0x080, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_LSHIFT)     PORT_CHAR(UCHAR_SHIFT_1)                        PORT_NAME("Shift (L)")
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F7)         PORT_CHAR(UCHAR_MAMEKEY(F7))                    PORT_NAME("Calc")            PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F4)         PORT_CHAR(UCHAR_MAMEKEY(F4))                    PORT_NAME("Agenda")          PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F1)         PORT_CHAR(UCHAR_MAMEKEY(F1))                    PORT_NAME("System")          PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F7)         PORT_CHAR(UCHAR_MAMEKEY(F7))                    PORT_NAME("Calc")            PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F4)         PORT_CHAR(UCHAR_MAMEKEY(F4))                    PORT_NAME("Agenda")          PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F1)         PORT_CHAR(UCHAR_MAMEKEY(F1))                    PORT_NAME("System")          PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 
 	PORT_START("COL2")
 	PORT_BIT(0x001, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_BACKSPACE)  PORT_CHAR(0x08)                                 PORT_NAME("Delete")
@@ -224,8 +223,8 @@ static INPUT_PORTS_START( psion3a )
 	PORT_BIT(0x040, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_L)          PORT_CHAR('l')  PORT_CHAR('L')
 	PORT_BIT(0x080, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_LCONTROL)   PORT_CHAR(UCHAR_MAMEKEY(LCONTROL))              PORT_NAME("Control")
 	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_UNUSED)
-	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F6)         PORT_CHAR(UCHAR_MAMEKEY(F6))                    PORT_NAME("World")           PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F3)         PORT_CHAR(UCHAR_MAMEKEY(F3))                    PORT_NAME("Word")            PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F6)         PORT_CHAR(UCHAR_MAMEKEY(F6))                    PORT_NAME("World")           PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F3)         PORT_CHAR(UCHAR_MAMEKEY(F3))                    PORT_NAME("Word")            PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 
 	PORT_START("COL3")
 	PORT_BIT(0x001, IP_ACTIVE_HIGH, IPT_UNUSED)
@@ -274,7 +273,7 @@ static INPUT_PORTS_START( psion3a )
 	PORT_BIT(0x010, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_STOP)       PORT_CHAR('.')  PORT_CHAR('>')
 	PORT_BIT(0x020, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_UP)         PORT_CHAR(UCHAR_MAMEKEY(UP))                    PORT_NAME(u8"\u2191 Pg Up") // U+2191 = ↑
 	PORT_BIT(0x040, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_H)          PORT_CHAR('h')  PORT_CHAR('H')
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_ESC)        PORT_CHAR(UCHAR_MAMEKEY(ESC))                   PORT_NAME("Esc On")          PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_ESC)        PORT_CHAR(UCHAR_MAMEKEY(ESC))                   PORT_NAME("Esc On")          PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 INPUT_PORTS_END
 
 
@@ -286,23 +285,23 @@ static INPUT_PORTS_START( psion3a_de )
 	PORT_BIT(0x008, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_Y)          PORT_CHAR('z')  PORT_CHAR('Z')
 	PORT_BIT(0x010, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_LEFT)       PORT_CHAR(UCHAR_MAMEKEY(LEFT))                  PORT_NAME(u8"\u2190 Pos1") // U+2190 = ←
 	PORT_BIT(0x020, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_DOWN)       PORT_CHAR(UCHAR_MAMEKEY(DOWN))                  PORT_NAME(u8"\u2193 Bild Dn") // U+2193 = ↓
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F8)         PORT_CHAR(UCHAR_MAMEKEY(F8))                    PORT_NAME("Tabelle")         PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F5)         PORT_CHAR(UCHAR_MAMEKEY(F5))                    PORT_NAME("Uhr")             PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F2)         PORT_CHAR(UCHAR_MAMEKEY(F2))                    PORT_NAME("Daten")           PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F8)         PORT_CHAR(UCHAR_MAMEKEY(F8))                    PORT_NAME("Tabelle")         PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F5)         PORT_CHAR(UCHAR_MAMEKEY(F5))                    PORT_NAME("Uhr")             PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F2)         PORT_CHAR(UCHAR_MAMEKEY(F2))                    PORT_NAME("Daten")           PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 
 	PORT_MODIFY("COL1")
 	PORT_BIT(0x002, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_SLASH)      PORT_CHAR('/')  PORT_CHAR(0xdf)
 	PORT_BIT(0x008, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_EQUALS)     PORT_CHAR('+')  PORT_CHAR('<')
 	PORT_BIT(0x010, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_0)          PORT_CHAR('0')  PORT_CHAR('=')  PORT_CHAR('}')
 	PORT_BIT(0x040, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_COLON)      PORT_CHAR('*')  PORT_CHAR('>')
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F7)         PORT_CHAR(UCHAR_MAMEKEY(F7))                    PORT_NAME("Rechner")         PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F7)         PORT_CHAR(UCHAR_MAMEKEY(F7))                    PORT_NAME("Rechner")         PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 
 	PORT_MODIFY("COL2")
 	PORT_BIT(0x001, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_BACKSPACE)  PORT_CHAR(0x08)                                 PORT_NAME("Entf")
 	PORT_BIT(0x008, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_8)          PORT_CHAR('8')  PORT_CHAR('(')  PORT_CHAR('[')
 	PORT_BIT(0x010, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_9)          PORT_CHAR('9')  PORT_CHAR(')')  PORT_CHAR(']')
 	PORT_BIT(0x080, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_LCONTROL)   PORT_CHAR(UCHAR_MAMEKEY(LCONTROL))              PORT_NAME("Strg")
-	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F6)         PORT_CHAR(UCHAR_MAMEKEY(F6))                    PORT_NAME("Welt")            PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F6)         PORT_CHAR(UCHAR_MAMEKEY(F6))                    PORT_NAME("Welt")            PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 
 	PORT_MODIFY("COL3")
 	PORT_BIT(0x002, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_COMMA)      PORT_CHAR(',')  PORT_CHAR(';')
@@ -325,7 +324,7 @@ static INPUT_PORTS_START( psion3a_de )
 	PORT_BIT(0x008, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_6)          PORT_CHAR('6')  PORT_CHAR('&')  PORT_CHAR(0xba)
 	PORT_BIT(0x010, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_STOP)       PORT_CHAR('.')  PORT_CHAR(':')
 	PORT_BIT(0x020, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_UP)         PORT_CHAR(UCHAR_MAMEKEY(UP))                    PORT_NAME(u8"\u2191 Bild Up") // U+2191 = ↑
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_ESC)        PORT_CHAR(UCHAR_MAMEKEY(ESC))                   PORT_NAME("Esc Ein")         PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_ESC)        PORT_CHAR(UCHAR_MAMEKEY(ESC))                   PORT_NAME("Esc Ein")         PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 INPUT_PORTS_END
 
 
@@ -337,23 +336,23 @@ static INPUT_PORTS_START( psion3a_fr )
 	PORT_BIT(0x002, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_RIGHT)      PORT_CHAR(UCHAR_MAMEKEY(RIGHT))                 PORT_NAME(u8"\u2192 Fin") // U+2192 = →
 	PORT_BIT(0x010, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_LEFT)       PORT_CHAR(UCHAR_MAMEKEY(LEFT))                  PORT_NAME(u8"\u2190 Debut") // U+2190 = ←
 	PORT_BIT(0x020, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_DOWN)       PORT_CHAR(UCHAR_MAMEKEY(DOWN))                  PORT_NAME(u8"\u2193") // U+2193 = ↓
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F8)         PORT_CHAR(UCHAR_MAMEKEY(F8))                    PORT_NAME("Tableur")         PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F5)         PORT_CHAR(UCHAR_MAMEKEY(F5))                    PORT_NAME("Heure")           PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F2)         PORT_CHAR(UCHAR_MAMEKEY(F2))                    PORT_NAME("Fiche")           PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F8)         PORT_CHAR(UCHAR_MAMEKEY(F8))                    PORT_NAME("Tableur")         PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F5)         PORT_CHAR(UCHAR_MAMEKEY(F5))                    PORT_NAME("Heure")           PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F2)         PORT_CHAR(UCHAR_MAMEKEY(F2))                    PORT_NAME("Fiche")           PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 
 	PORT_MODIFY("COL1")
 	PORT_BIT(0x008, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_EQUALS)     PORT_CHAR('+')  PORT_CHAR('<')
 	PORT_BIT(0x010, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_0)          PORT_CHAR(0xe0) PORT_CHAR('0')  PORT_CHAR(0xba)
 	PORT_BIT(0x040, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_COLON)      PORT_CHAR('*')  PORT_CHAR('>')
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F7)         PORT_CHAR(UCHAR_MAMEKEY(F7))                    PORT_NAME("Calc")            PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F1)         PORT_CHAR(UCHAR_MAMEKEY(F1))                    PORT_NAME(u8"Système")       PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F7)         PORT_CHAR(UCHAR_MAMEKEY(F7))                    PORT_NAME("Calc")            PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F1)         PORT_CHAR(UCHAR_MAMEKEY(F1))                    PORT_NAME(u8"Système")       PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 
 	PORT_MODIFY("COL2")
 	PORT_BIT(0x001, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_BACKSPACE)  PORT_CHAR(0x08)                                 PORT_NAME("Eff")
 	PORT_BIT(0x008, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_8)          PORT_CHAR('!')  PORT_CHAR('8')  PORT_CHAR('>')
 	PORT_BIT(0x010, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_9)          PORT_CHAR(0xe7) PORT_CHAR('9')  PORT_CHAR(0xf9)
 	PORT_BIT(0x080, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_LCONTROL)   PORT_CHAR(UCHAR_MAMEKEY(LCONTROL))              PORT_NAME("Ctrl")
-	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F6)         PORT_CHAR(UCHAR_MAMEKEY(F6))                    PORT_NAME("Monde")           PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F6)         PORT_CHAR(UCHAR_MAMEKEY(F6))                    PORT_NAME("Monde")           PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 
 	PORT_MODIFY("COL3")
 	PORT_BIT(0x002, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_COMMA)      PORT_CHAR(',')  PORT_CHAR(';')
@@ -368,7 +367,10 @@ static INPUT_PORTS_START( psion3a_fr )
 	PORT_BIT(0x040, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_3)          PORT_CHAR('"')  PORT_CHAR('3') PORT_CHAR('\\')
 
 	PORT_MODIFY("COL6")
-	PORT_BIT(0x008, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_Z)          PORT_CHAR('y')  PORT_CHAR('Y')
+	PORT_BIT(0x002, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_Q)          PORT_CHAR('a')  PORT_CHAR('A')
+	PORT_BIT(0x004, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_A)          PORT_CHAR('q')  PORT_CHAR('Q')
+	PORT_BIT(0x008, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_Z)          PORT_CHAR('w')  PORT_CHAR('W')
+	PORT_BIT(0x020, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_W)          PORT_CHAR('z')  PORT_CHAR('Z')
 
 	PORT_MODIFY("COL7")
 	PORT_BIT(0x002, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_1)          PORT_CHAR('&')  PORT_CHAR('1')                  PORT_NAME("& 1 Off")
@@ -376,7 +378,7 @@ static INPUT_PORTS_START( psion3a_fr )
 	PORT_BIT(0x008, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_6)          PORT_CHAR(')')  PORT_CHAR('6')  PORT_CHAR('^')
 	PORT_BIT(0x010, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_STOP)       PORT_CHAR('.')  PORT_CHAR(':')
 	PORT_BIT(0x020, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_UP)         PORT_CHAR(UCHAR_MAMEKEY(UP))                    PORT_NAME(u8"\u2191") // U+2191 = ↑
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_ESC)        PORT_CHAR(UCHAR_MAMEKEY(ESC))                   PORT_NAME("Esc On")          PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_ESC)        PORT_CHAR(UCHAR_MAMEKEY(ESC))                   PORT_NAME("Esc On")          PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 INPUT_PORTS_END
 
 
@@ -388,20 +390,20 @@ static INPUT_PORTS_START( psion3a_it )
 	PORT_BIT(0x002, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_RIGHT)      PORT_CHAR(UCHAR_MAMEKEY(RIGHT))                 PORT_NAME(u8"\u2192 Fine") // U+2192 = →
 	PORT_BIT(0x010, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_LEFT)       PORT_CHAR(UCHAR_MAMEKEY(LEFT))                  PORT_NAME(u8"\u2190 Inizio") // U+2190 = ←
 	PORT_BIT(0x020, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_DOWN)       PORT_CHAR(UCHAR_MAMEKEY(DOWN))                  PORT_NAME(u8"\u2193 Pag") // U+2193 = ↓
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F8)         PORT_CHAR(UCHAR_MAMEKEY(F8))                    PORT_NAME("Foglio")          PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F5)         PORT_CHAR(UCHAR_MAMEKEY(F5))                    PORT_NAME("Ora")             PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F2)         PORT_CHAR(UCHAR_MAMEKEY(F2))                    PORT_NAME("Archivi")         PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F8)         PORT_CHAR(UCHAR_MAMEKEY(F8))                    PORT_NAME("Foglio")          PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F5)         PORT_CHAR(UCHAR_MAMEKEY(F5))                    PORT_NAME("Ora")             PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F2)         PORT_CHAR(UCHAR_MAMEKEY(F2))                    PORT_NAME("Archivi")         PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 
 	PORT_MODIFY("COL1")
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F7)         PORT_CHAR(UCHAR_MAMEKEY(F7))                    PORT_NAME("Calc")            PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F4)         PORT_CHAR(UCHAR_MAMEKEY(F4))                    PORT_NAME("Agenda")          PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F1)         PORT_CHAR(UCHAR_MAMEKEY(F1))                    PORT_NAME("Sistema")         PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F7)         PORT_CHAR(UCHAR_MAMEKEY(F7))                    PORT_NAME("Calc")            PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F4)         PORT_CHAR(UCHAR_MAMEKEY(F4))                    PORT_NAME("Agenda")          PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F1)         PORT_CHAR(UCHAR_MAMEKEY(F1))                    PORT_NAME("Sistema")         PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 
 	PORT_MODIFY("COL2")
 	PORT_BIT(0x001, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_BACKSPACE)  PORT_CHAR(0x08)                                 PORT_NAME("Canc.")
 	PORT_BIT(0x080, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_LCONTROL)   PORT_CHAR(UCHAR_MAMEKEY(LCONTROL))              PORT_NAME("Ctrl")
-	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F6)         PORT_CHAR(UCHAR_MAMEKEY(F6))                    PORT_NAME("Mondo")           PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F3)         PORT_CHAR(UCHAR_MAMEKEY(F3))                    PORT_NAME("Testi")           PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F6)         PORT_CHAR(UCHAR_MAMEKEY(F6))                    PORT_NAME("Mondo")           PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F3)         PORT_CHAR(UCHAR_MAMEKEY(F3))                    PORT_NAME("Testi")           PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 
 	PORT_MODIFY("COL3")
 	PORT_BIT(0x004, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F10)        PORT_CHAR(UCHAR_MAMEKEY(F10))                   PORT_NAME("Aiuto Telef.")
@@ -418,7 +420,7 @@ static INPUT_PORTS_START( psion3c )
 	PORT_INCLUDE(psion3a)
 
 	PORT_MODIFY("COL2")
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F9)         PORT_CHAR(UCHAR_MAMEKEY(F9))                    PORT_NAME("Jotter")          PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F9)         PORT_CHAR(UCHAR_MAMEKEY(F9))                    PORT_NAME("Jotter")          PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 INPUT_PORTS_END
 
 
@@ -426,7 +428,7 @@ INPUT_PORTS_END
 //  PORT_INCLUDE(psion3a_de)
 //
 //  PORT_MODIFY("COL2")
-//  PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F9)         PORT_CHAR(UCHAR_MAMEKEY(F9))                    PORT_NAME("Notiz")           PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+//  PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F9)         PORT_CHAR(UCHAR_MAMEKEY(F9))                    PORT_NAME("Notiz")           PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 //INPUT_PORTS_END
 
 
@@ -434,7 +436,7 @@ static INPUT_PORTS_START( psion3c_fr )
 	PORT_INCLUDE(psion3a_fr)
 
 	PORT_MODIFY("COL2")
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F9)         PORT_CHAR(UCHAR_MAMEKEY(F9))                    PORT_NAME("Calepin")         PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F9)         PORT_CHAR(UCHAR_MAMEKEY(F9))                    PORT_NAME("Calepin")         PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 INPUT_PORTS_END
 
 
@@ -443,18 +445,18 @@ static INPUT_PORTS_START( pocketbk2 )
 
 	PORT_MODIFY("COL0")
 	PORT_BIT(0x080, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_LALT)       PORT_CHAR(UCHAR_SHIFT_2)                        PORT_NAME("Acorn")
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F8)         PORT_CHAR(UCHAR_MAMEKEY(F8))                    PORT_NAME("Abacus")          PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F5)         PORT_CHAR(UCHAR_MAMEKEY(F5))                    PORT_NAME("Time")            PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F2)         PORT_CHAR(UCHAR_MAMEKEY(F2))                    PORT_NAME("Cards")           PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F8)         PORT_CHAR(UCHAR_MAMEKEY(F8))                    PORT_NAME("Abacus")          PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F5)         PORT_CHAR(UCHAR_MAMEKEY(F5))                    PORT_NAME("Time")            PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F2)         PORT_CHAR(UCHAR_MAMEKEY(F2))                    PORT_NAME("Cards")           PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 
 	PORT_MODIFY("COL1")
-	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F7)         PORT_CHAR(UCHAR_MAMEKEY(F7))                    PORT_NAME("Calc")            PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F4)         PORT_CHAR(UCHAR_MAMEKEY(F4))                    PORT_NAME("Schedule")        PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F1)         PORT_CHAR(UCHAR_MAMEKEY(F1))                    PORT_NAME("Desktop")         PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F7)         PORT_CHAR(UCHAR_MAMEKEY(F7))                    PORT_NAME("Calc")            PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F4)         PORT_CHAR(UCHAR_MAMEKEY(F4))                    PORT_NAME("Schedule")        PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F1)         PORT_CHAR(UCHAR_MAMEKEY(F1))                    PORT_NAME("Desktop")         PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 
 	PORT_MODIFY("COL2")
-	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F6)         PORT_CHAR(UCHAR_MAMEKEY(F6))                    PORT_NAME("World")           PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
-	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F3)         PORT_CHAR(UCHAR_MAMEKEY(F3))                    PORT_NAME("Write")           PORT_CHANGED_MEMBER(DEVICE_SELF, psion3a_state, wakeup, 0)
+	PORT_BIT(0x200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F6)         PORT_CHAR(UCHAR_MAMEKEY(F6))                    PORT_NAME("World")           PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
+	PORT_BIT(0x400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_CODE(KEYCODE_F3)         PORT_CHAR(UCHAR_MAMEKEY(F3))                    PORT_NAME("Write")           PORT_CHANGED_MEMBER(DEVICE_SELF, FUNC(psion3a_state::wakeup), 0)
 INPUT_PORTS_END
 
 
@@ -481,8 +483,14 @@ uint16_t psion3a_base_state::kbd_r()
 void psion3a_base_state::palette_init(palette_device &palette)
 {
 	palette.set_pen_color(0, rgb_t(190, 220, 190));
-	palette.set_pen_color(1, rgb_t(130, 130, 110));
-	palette.set_pen_color(2, rgb_t(190, 210, 180));
+
+	for (int i = 1; i < 3; i++)
+	{
+		const int r = (0x99 * i) / 2;
+		const int g = (0xaa * i) / 2;
+		const int b = (0x88 * i) / 2;
+		m_palette->set_pen_color(i, rgb_t(r, g, b));
+	}
 }
 
 
@@ -520,6 +528,7 @@ void psion3a_base_state::psion_asic9(machine_config &config)
 	m_ssd[1]->door_cb().set(m_asic9, FUNC(psion_asic9_device::medchng_w));
 
 	SOFTWARE_LIST(config, "ssd_list").set_original("psion_ssd").set_filter("S3,S3A");
+	//SOFTWARE_LIST(config, "flop_list").set_original("psion_flop").set_filter("S3A");
 }
 
 void psion3a_state::psion3a(machine_config &config)
@@ -554,7 +563,7 @@ void psion3c_state::psion3c(machine_config &config)
 	PSION_S3A_CODEC(config, m_codec).add_route(ALL_OUTPUTS, "mono", 1.00); // TODO: M7702-03
 	m_asic9->pcm_out().set(m_codec, FUNC(psion3a_codec_device::pcm_in));
 
-	PSION_CONDOR(config, m_condor);
+	PSION_CONDOR(config, m_condor, 3'686'400); // FIXME: unknown clock source
 	m_condor->txd_handler().set(m_honda, FUNC(psion_honda_slot_device::write_txd));
 	m_condor->rts_handler().set(m_honda, FUNC(psion_honda_slot_device::write_rts));
 	m_condor->dtr_handler().set(m_honda, FUNC(psion_honda_slot_device::write_dtr));
@@ -575,7 +584,17 @@ void psion3mx_state::psion3mx(machine_config &config)
 {
 	psion_asic9(config);
 
-	m_asic9->set_clock(3.6864_MHz_XTAL * 15 / 2); // V30MX
+	PSION_ASIC9MX(config.replace(), m_asic9, 3.6864_MHz_XTAL * 15 / 2); // V30MX
+	m_asic9->set_screen("screen");
+	m_asic9->set_ram_rom("ram", "rom");
+	m_asic9->port_ab_r().set(FUNC(psion3mx_state::kbd_r));
+	m_asic9->buz_cb().set(m_speaker, FUNC(speaker_sound_device::level_w));
+	//m_asic9->buzvol_cb().set([this](int state) { m_speaker->set_output_gain(ALL_OUTPUTS, state ? 1.0 : 0.25); });
+	m_asic9->col_cb().set([this](uint8_t data) { m_key_col = data; });
+	m_asic9->data_r<0>().set(m_ssd[1], FUNC(psion_ssd_device::data_r));      // SSD Pack 2
+	m_asic9->data_w<0>().set(m_ssd[1], FUNC(psion_ssd_device::data_w));
+	m_asic9->data_r<1>().set(m_ssd[0], FUNC(psion_ssd_device::data_r));      // SSD Pack 1
+	m_asic9->data_w<1>().set(m_ssd[0], FUNC(psion_ssd_device::data_w));
 
 	m_ram->set_default_size("2M").set_extra_options("");
 

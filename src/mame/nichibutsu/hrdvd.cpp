@@ -124,13 +124,13 @@ public:
 	void ata_irq(int state);
 	void ata_drq(int state);
 
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void machine_reset() override ATTR_COLD;
 
 	void general_init(int patchaddress, int patchvalue);
 	void hrdvd(machine_config &config);
-	void hrdvd_map(address_map &map);
-	void hrdvd_sub_map(address_map &map);
+	void hrdvd_map(address_map &map) ATTR_COLD;
+	void hrdvd_sub_map(address_map &map) ATTR_COLD;
 
 	static void dvdrom_config(device_t *device);
 };
@@ -468,12 +468,12 @@ void hrdvd_state::tmp68301_parallel_port_w(uint16_t data)
 
 static void atapi_devs(device_slot_interface &device)
 {
-	device.option_add("dvdrom", ATAPI_FIXED_DVDROM);
+	device.option_add("dvdrom", ATAPI_DVDROM);
 }
 
 void hrdvd_state::dvdrom_config(device_t *device)
 {
-	auto *drive = downcast<atapi_fixed_dvdrom_device *>(device);
+	auto *drive = downcast<atapi_dvdrom_device *>(device);
 	drive->set_model("PIONEER        DVD-A01  1.17"); // Wants firmware version between 1.14 and 1.19
 }
 

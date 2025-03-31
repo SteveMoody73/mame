@@ -14,7 +14,7 @@ Siemens SAB 8256 A 2 P (MUART)
 NEC D8279C-2 (keyboard & display interface)
 RTC 62421A
 
-Is there a sound board or is is discrete?
+Is there a sound board or is it discrete?
 
 Game reference: https://www.youtube.com/watch?v=NlB06dMxjME
 */
@@ -46,8 +46,8 @@ public:
 private:
 	required_device<cpu_device> m_maincpu;
 
-	void program_map(address_map &map);
-	void io_map(address_map &map);
+	void program_map(address_map &map) ATTR_COLD;
+	void io_map(address_map &map) ATTR_COLD;
 };
 
 
@@ -95,4 +95,4 @@ ROM_END
 
 
 // 'STELLA DICE MASTER F2' and 'COPYRIGHT BY ADP LUEBBECKE GERMANY 1993' in ROM
-GAME( 1993, dicemstr, 0, dicemstr, dicemstr, stella8085_state, empty_init, ROT0, "Stella", "Dice Master", MACHINE_IS_SKELETON_MECHANICAL )
+GAME( 1993, dicemstr, 0, dicemstr, dicemstr, stella8085_state, empty_init, ROT0, "Stella", "Dice Master", MACHINE_NO_SOUND | MACHINE_NOT_WORKING | MACHINE_MECHANICAL | MACHINE_REQUIRES_ARTWORK )

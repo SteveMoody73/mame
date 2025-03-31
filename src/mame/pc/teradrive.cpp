@@ -40,11 +40,11 @@ public:
 
 	void teradrive(machine_config &config);
 	void at_softlists(machine_config &config);
-	void teradrive_io(address_map &map);
-	void teradrive_map(address_map &map);
+	void teradrive_io(address_map &map) ATTR_COLD;
+	void teradrive_map(address_map &map) ATTR_COLD;
 
 protected:
-	void machine_start() override;
+	void machine_start() override ATTR_COLD;
 
 private:
 	u16 m_heartbeat = 0;
@@ -57,6 +57,7 @@ void teradrive_state::at_softlists(machine_config &config)
 //  SOFTWARE_LIST(config, "at_cdrom_list").set_original("ibm5170_cdrom");
 	SOFTWARE_LIST(config, "at_hdd_list").set_original("ibm5170_hdd");
 	SOFTWARE_LIST(config, "midi_disk_list").set_compatible("midi_flop");
+//  SOFTWARE_LIST(config, "photocd_list").set_compatible("photo_cd");
 
 //  TODO: MD portion
 //  TODO: Teradrive SW list

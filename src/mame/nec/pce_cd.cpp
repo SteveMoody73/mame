@@ -23,7 +23,7 @@ TODO:
 - Audio CD player rewind/fast forward don't work properly
   \- never go past 1 minute mark, underflows;
 - Fader feature is sketchy and unchecked against real HW;
-- Implement proper check condition errors (non-SCSI complaint);
+- Implement proper check condition errors (non-SCSI compliant);
 
 **************************************************************************************************/
 
@@ -258,7 +258,7 @@ void pce_cd_device::device_add_mconfig(machine_config &config)
 {
 	NVRAM(config, m_nvram).set_custom_handler(FUNC(pce_cd_device::nvram_init));
 
-	CDROM(config, m_cdrom).set_interface("pce_cdrom");
+	CDROM(config, m_cdrom).set_interface("cdrom");
 
 	MSM5205(config, m_msm, PCE_CD_CLOCK / 6);
 	m_msm->vck_legacy_callback().set(FUNC(pce_cd_device::msm5205_int)); /* interrupt function */

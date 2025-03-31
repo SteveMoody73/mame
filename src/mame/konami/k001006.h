@@ -7,7 +7,7 @@
 
 
 
-class k001006_device : public device_t
+class k001006_device : public device_t, public device_palette_interface
 {
 public:
 	k001006_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
@@ -26,8 +26,11 @@ public:
 
 protected:
 	// device-level overrides
-	virtual void device_start() override;
-	virtual void device_reset() override;
+	virtual void device_start() override ATTR_COLD;
+	virtual void device_reset() override ATTR_COLD;
+
+	// device_palette_interface overrides
+	virtual u32 palette_entries() const noexcept override { return 0x800; }
 
 private:
 	// internal state
@@ -37,8 +40,6 @@ private:
 	int          m_device_sel;
 
 	std::unique_ptr<uint8_t[]>     m_texrom;
-
-	std::unique_ptr<uint32_t[]>     m_palette;
 
 	required_region_ptr<uint8_t> m_gfxrom;
 	bool m_enable_bilinear = false;

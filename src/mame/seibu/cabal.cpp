@@ -198,7 +198,7 @@ public:
 	{ }
 
 protected:
-	virtual void video_start() override;
+	virtual void video_start() override ATTR_COLD;
 
 	required_device<cpu_device> m_maincpu;
 	required_device<cpu_device> m_audiocpu;
@@ -247,12 +247,12 @@ private:
 
 	void sound_irq_trigger_word_w(offs_t offset, uint16_t data, uint16_t mem_mask);
 
-	void main_map(address_map &map);
-	void sound_decrypted_opcodes_map(address_map &map);
-	void sound_map(address_map &map);
-	void trackball_main_map(address_map &map);
-	void cabalbl2_predecrypted_opcodes_map(address_map &map);
-	void cabalbl2_sound_map(address_map &map);
+	void main_map(address_map &map) ATTR_COLD;
+	void sound_decrypted_opcodes_map(address_map &map) ATTR_COLD;
+	void sound_map(address_map &map) ATTR_COLD;
+	void trackball_main_map(address_map &map) ATTR_COLD;
+	void cabalbl2_predecrypted_opcodes_map(address_map &map) ATTR_COLD;
+	void cabalbl2_sound_map(address_map &map) ATTR_COLD;
 };
 
 class cabalbl_state : public cabal_base_state
@@ -265,8 +265,8 @@ public:
 	void cabalbl(machine_config &config);
 
 protected:
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void machine_reset() override ATTR_COLD;
 
 private:
 	int m_sound_command[2]{};
@@ -277,12 +277,12 @@ private:
 	void coin_w(uint8_t data);
 	template<uint8_t Which> void adpcm_w(uint8_t data);
 
-	void main_map(address_map &map);
-	void sound_map(address_map &map);
-	void talk1_map(address_map &map);
-	void talk1_portmap(address_map &map);
-	void talk2_map(address_map &map);
-	void talk2_portmap(address_map &map);
+	void main_map(address_map &map) ATTR_COLD;
+	void sound_map(address_map &map) ATTR_COLD;
+	void talk1_map(address_map &map) ATTR_COLD;
+	void talk1_portmap(address_map &map) ATTR_COLD;
+	void talk2_map(address_map &map) ATTR_COLD;
+	void talk2_portmap(address_map &map) ATTR_COLD;
 };
 
 
@@ -532,7 +532,7 @@ void cabal_state::sound_map(address_map &map)
 	map(0x4008, 0x4009).rw(m_seibu_sound, FUNC(seibu_sound_device::ym_r), FUNC(seibu_sound_device::ym_w));
 	map(0x4010, 0x4011).r(m_seibu_sound, FUNC(seibu_sound_device::soundlatch_r));
 	map(0x4012, 0x4012).r(m_seibu_sound, FUNC(seibu_sound_device::main_data_pending_r));
-	map(0x4013, 0x4013).portr("COIN");
+	map(0x4013, 0x4013).r(m_seibu_sound, FUNC(seibu_sound_device::coin_r));
 	map(0x4018, 0x4019).w(m_seibu_sound, FUNC(seibu_sound_device::main_data_w));
 	map(0x401a, 0x401a).w(m_adpcm[0], FUNC(seibu_adpcm_device::ctl_w));
 	map(0x401b, 0x401b).w(m_seibu_sound, FUNC(seibu_sound_device::coin_w));
@@ -574,7 +574,7 @@ void cabal_state::cabalbl2_sound_map(address_map &map)
 	map(0x4008, 0x4009).rw(m_seibu_sound, FUNC(seibu_sound_device::ym_r), FUNC(seibu_sound_device::ym_w));
 	map(0x4010, 0x4011).r(m_seibu_sound, FUNC(seibu_sound_device::soundlatch_r));
 	map(0x4012, 0x4012).r(m_seibu_sound, FUNC(seibu_sound_device::main_data_pending_r));
-	map(0x4013, 0x4013).portr("COIN");
+	map(0x4013, 0x4013).r(m_seibu_sound, FUNC(seibu_sound_device::coin_r));
 	map(0x4018, 0x4019).w(m_seibu_sound, FUNC(seibu_sound_device::main_data_w));
 	map(0x401a, 0x401a).w(m_adpcm[0], FUNC(seibu_adpcm_device::ctl_w));
 	map(0x401b, 0x401b).w(m_seibu_sound, FUNC(seibu_sound_device::coin_w));
@@ -870,6 +870,7 @@ void cabal_state::cabal(machine_config &config)
 	// sound hardware
 	SEIBU_SOUND(config, m_seibu_sound, 0);
 	m_seibu_sound->int_callback().set_inputline(m_audiocpu, 0);
+	m_seibu_sound->coin_io_callback().set_ioport("COIN");
 	m_seibu_sound->set_rom_tag("audiocpu");
 	m_seibu_sound->ym_read_callback().set("ymsnd", FUNC(ym2151_device::read));
 	m_seibu_sound->ym_write_callback().set("ymsnd", FUNC(ym2151_device::write));

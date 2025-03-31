@@ -72,14 +72,14 @@ protected:
 	void x86_softlists(machine_config &config);
 
 private:
-	void pcipc_map(address_map &map);
-	void pcipc_map_io(address_map &map);
+	void pcipc_map(address_map &map) ATTR_COLD;
+	void pcipc_map_io(address_map &map) ATTR_COLD;
 	[[maybe_unused]] void boot_state_phoenix_w(uint8_t data);
 	void boot_state_phoenix_ver40_rev6_w(uint8_t data);
 	void boot_state_award_w(uint8_t data);
 
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void machine_reset() override ATTR_COLD;
 
 	static void smc_superio_config(device_t *device);
 	static void winbond_superio_config(device_t *device);
@@ -569,6 +569,7 @@ void pcipc_state::x86_softlists(machine_config &config)
 	SOFTWARE_LIST(config, "at_cdrom_list").set_original("ibm5170_cdrom");
 	SOFTWARE_LIST(config, "at_hdd_list").set_original("ibm5170_hdd");
 	SOFTWARE_LIST(config, "midi_disk_list").set_compatible("midi_flop");
+	SOFTWARE_LIST(config, "photocd_list").set_compatible("photo_cd");
 }
 
 void pcipc_state::pcipc(machine_config &config)

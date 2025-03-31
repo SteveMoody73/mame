@@ -111,7 +111,7 @@ public:
 	/* alt implementation - to be collapsed */
 	void zdrawgfxzoom32GP(
 			bitmap_rgb32 &bitmap, const rectangle &cliprect,
-			u32 code, u32 color, int flipx, int flipy, int sx, int sy,
+			u32 code, u32 color, bool flipx, bool flipy, int sx, int sy,
 			int scalex, int scaley, int alpha, int drawmode, int zcode, int pri, u8* gx_objzbuf, u8* gx_shdzbuf);
 
 	void zdrawgfxzoom32GP(
@@ -443,8 +443,8 @@ protected:
 	k053247_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock);
 
 	// device-level overrides
-	virtual void device_start() override;
-	virtual void device_reset() override;
+	virtual void device_start() override ATTR_COLD;
+	virtual void device_reset() override ATTR_COLD;
 
 	template <class BitmapClass> void k053247_sprites_draw_common(BitmapClass &bitmap, const rectangle &cliprect);
 };
@@ -460,7 +460,7 @@ public:
 
 protected:
 	// device-level overrides
-	virtual void device_start() override;
+	virtual void device_start() override ATTR_COLD;
 //  virtual void device_reset();
 private:
 	std::unique_ptr<u16[]> m_combined_gfx;

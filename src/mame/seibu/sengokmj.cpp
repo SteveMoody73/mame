@@ -91,8 +91,8 @@ public:
 	void sengokmj(machine_config &config);
 
 protected:
-	virtual void machine_start() override;
-	virtual void video_start() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void video_start() override ATTR_COLD;
 
 private:
 	required_device<cpu_device> m_maincpu;
@@ -137,8 +137,8 @@ private:
 	uint32_t pri_cb(uint8_t pri, uint8_t ext);
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
-	void sengokmj_io_map(address_map &map);
-	void sengokmj_map(address_map &map);
+	void sengokmj_io_map(address_map &map) ATTR_COLD;
+	void sengokmj_map(address_map &map) ATTR_COLD;
 };
 
 
@@ -603,9 +603,10 @@ void sengokmj_state::sengokmj(machine_config &config)
 	oki.add_route(ALL_OUTPUTS, "mono", 0.40);
 
 	seibu_sound_device &seibu_sound(SEIBU_SOUND(config, "seibu_sound", 0));
+	seibu_sound.coin_io_callback().set_ioport("COIN");
 	seibu_sound.int_callback().set_inputline("audiocpu", 0);
 	seibu_sound.set_rom_tag("audiocpu");
-	seibu_sound.set_rombank_tag("seibu_bank1");
+	seibu_sound.set_rombank_tag("seibu_bank");
 	seibu_sound.ym_read_callback().set("ymsnd", FUNC(ym3812_device::read));
 	seibu_sound.ym_write_callback().set("ymsnd", FUNC(ym3812_device::write));
 }

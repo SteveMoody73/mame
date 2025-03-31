@@ -77,8 +77,8 @@ public:
 	void macqd630(machine_config &config);
 	void maclc580(machine_config &config);
 
-	void quadra630_map(address_map &map);
-	void lc580_map(address_map &map);
+	void quadra630_map(address_map &map) ATTR_COLD;
+	void lc580_map(address_map &map) ATTR_COLD;
 
 	void init_macqd630();
 
@@ -91,8 +91,8 @@ private:
 	required_device<cuda_device> m_cuda;
 	required_device<ram_device> m_ram;
 
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void machine_reset() override ATTR_COLD;
 
 	void cuda_reset_w(int state)
 	{
@@ -176,7 +176,9 @@ void quadra630_state::macqd630(machine_config &config)
 	m_cuda->linechange_callback().set(m_macadb, FUNC(macadb_device::adb_linechange_w));
 	m_cuda->via_clock_callback().set(m_primetimeii, FUNC(primetime_device::cb1_w));
 	m_cuda->via_data_callback().set(m_primetimeii, FUNC(primetime_device::cb2_w));
+	m_cuda->nmi_callback().set_inputline(m_maincpu, M68K_IRQ_7);
 	m_macadb->adb_data_callback().set(m_cuda, FUNC(cuda_device::set_adb_line));
+	m_macadb->adb_power_callback().set(m_cuda, FUNC(cuda_device::set_adb_power));
 	config.set_perfect_quantum(m_maincpu);
 
 	input_merger_device &sda_merger(INPUT_MERGER_ALL_HIGH(config, "sda"));
@@ -195,6 +197,7 @@ void quadra630_state::macqd630(machine_config &config)
 
 	nubus_device &nubus(NUBUS(config, "pds", 0));
 	nubus.set_space(m_maincpu, AS_PROGRAM);
+	nubus.set_bus_mode(nubus_device::nubus_mode_t::QUADRA_DAFB);
 	nubus.out_irqe_callback().set(m_primetimeii, FUNC(primetime_device::via2_irq_w<0x20>));
 	NUBUS_SLOT(config, "lcpds", "pds", mac_pdslc_cards, nullptr);
 

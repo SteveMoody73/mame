@@ -82,11 +82,11 @@ public:
 	void goori(machine_config& config);
 
 protected:
-	virtual void machine_start() override;
-	virtual void video_start() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void video_start() override ATTR_COLD;
 
 private:
-	void goori_map(address_map& map);
+	void goori_map(address_map &map) ATTR_COLD;
 
 	void bg_videoram_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
 	TILE_GET_INFO_MEMBER(get_bg_tile_info);
@@ -142,7 +142,7 @@ uint32_t goori_state::screen_update(screen_device& screen, bitmap_ind16& bitmap,
 
 	m_bg_tilemap->draw(screen, bitmap, cliprect, 0, 0);
 
-	gfx_element *gfx = m_gfxdecode->gfx(0);
+	gfx_element &gfx = *m_gfxdecode->gfx(0);
 	// is this sprite format a clone of anything? (looks VERY similar to snowbros but this hardware also has a higer resolution, a tile layer and 8bpp)
 	for (int i = 0; i < 0x2000 / 2; i += 8)
 	{
@@ -169,7 +169,7 @@ uint32_t goori_state::screen_update(screen_device& screen, bitmap_ind16& bitmap,
 		if (realx >= 0x3e0)
 			realx -= 0x400;
 
-		gfx->transpen(bitmap, cliprect, tile, colour, flipx, 0, realx, y, 0xff);
+		gfx.transpen(bitmap, cliprect, tile, colour, flipx, 0, realx, y, 0xff);
 	}
 
 	return 0;
@@ -207,9 +207,9 @@ void goori_state::goori_map(address_map &map)
 
 static INPUT_PORTS_START( goori )
 	PORT_START("EEPROM")
-	PORT_BIT( 0x0001, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE_MEMBER("eeprom", eeprom_serial_93cxx_device, cs_write)
-	PORT_BIT( 0x0002, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE_MEMBER("eeprom", eeprom_serial_93cxx_device, clk_write)
-	PORT_BIT( 0x0004, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE_MEMBER("eeprom", eeprom_serial_93cxx_device, di_write)
+	PORT_BIT( 0x0001, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE_MEMBER("eeprom", FUNC(eeprom_serial_93cxx_device::cs_write))
+	PORT_BIT( 0x0002, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE_MEMBER("eeprom", FUNC(eeprom_serial_93cxx_device::clk_write))
+	PORT_BIT( 0x0004, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE_MEMBER("eeprom", FUNC(eeprom_serial_93cxx_device::di_write))
 	PORT_BIT( 0xfff8, IP_ACTIVE_HIGH, IPT_UNKNOWN )
 
 	PORT_START("DSW1")  /* 500001 */
@@ -242,7 +242,7 @@ static INPUT_PORTS_START( goori )
 	PORT_BIT( 0x1000, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_SERVICE_NO_TOGGLE( 0x2000, IP_ACTIVE_LOW )
 	PORT_BIT( 0x4000, IP_ACTIVE_LOW, IPT_SERVICE1 ) // makes sound but doesn't add a coin
-	PORT_BIT( 0x8000, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("eeprom", eeprom_serial_93cxx_device, do_read) // EEPROM
+	PORT_BIT( 0x8000, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("eeprom", FUNC(eeprom_serial_93cxx_device::do_read)) // EEPROM
 INPUT_PORTS_END
 
 static const gfx_layout layout_16x16x8 =
