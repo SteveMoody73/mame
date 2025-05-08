@@ -63,11 +63,6 @@ void r800_device::device_validity_check(validity_checker &valid) const
 
 
 /***************************************************************
- * adjust cycle count by n T-states
- ***************************************************************/
-#define T(icount) { m_icount -= icount; }
-
-/***************************************************************
  * SLL  r8
  ***************************************************************/
 u8 r800_device::r800_sll(u8 value)
@@ -97,7 +92,7 @@ void r800_device::muluw(u16 value)
 	set_f((F & (HF|NF)) | z | c);
 }
 
-void r800_device::do_op()
+void r800_device::execute_run()
 {
 	#include "cpu/z80/r800.hxx"
 }

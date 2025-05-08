@@ -3445,7 +3445,6 @@ void specnext_state::tbblue(machine_config &config)
 	m_maincpu->out_nextreg_cb().set(FUNC(specnext_state::reg_w));
 	m_maincpu->in_nextreg_cb().set(FUNC(specnext_state::reg_r));
 	m_maincpu->out_retn_seen_cb().set(FUNC(specnext_state::leave_nmi));
-	m_maincpu->nomreq_cb().set_nop();
 	m_maincpu->busack_cb().set(m_dma, FUNC(specnext_dma_device::bai_w));
 
 	SPECNEXT_CTC(config, m_ctc, 28_MHz_XTAL / 8);
@@ -3467,22 +3466,21 @@ void specnext_state::tbblue(machine_config &config)
 	m_sdcard->set_prefer_sdhc();
 	m_sdcard->spi_miso_callback().set(FUNC(specnext_state::spi_miso_w));
 
-	SPEAKER(config, "lspeaker").front_left();
-	SPEAKER(config, "rspeaker").front_right();
+	SPEAKER(config, "speakers", 2).front();
 
-	DAC_8BIT_R2R(config, m_dac[0], 0).add_route(ALL_OUTPUTS, "lspeaker", 0.75);
-	DAC_8BIT_R2R(config, m_dac[1], 0).add_route(ALL_OUTPUTS, "lspeaker", 0.75);
-	DAC_8BIT_R2R(config, m_dac[2], 0).add_route(ALL_OUTPUTS, "rspeaker", 0.75);
-	DAC_8BIT_R2R(config, m_dac[3], 0).add_route(ALL_OUTPUTS, "rspeaker", 0.75);
+	DAC_8BIT_R2R(config, m_dac[0], 0).add_route(ALL_OUTPUTS, "speakers", 0.75, 0);
+	DAC_8BIT_R2R(config, m_dac[1], 0).add_route(ALL_OUTPUTS, "speakers", 0.75, 0);
+	DAC_8BIT_R2R(config, m_dac[2], 0).add_route(ALL_OUTPUTS, "speakers", 0.75, 1);
+	DAC_8BIT_R2R(config, m_dac[3], 0).add_route(ALL_OUTPUTS, "speakers", 0.75, 1);
 
 	config.device_remove("ay8912");
 	for (auto i = 0; i < 3; ++i)
 	{
 		YM2149(config, m_ay[i], 14_MHz_XTAL / 8)
-			.add_route(0, "lspeaker", 0.50)
-			.add_route(1, "lspeaker", 0.25)
-			.add_route(1, "rspeaker", 0.25)
-			.add_route(2, "rspeaker", 0.50);
+			.add_route(0, "speakers", 0.50, 0)
+			.add_route(1, "speakers", 0.25, 0)
+			.add_route(1, "speakers", 0.25, 1)
+			.add_route(2, "speakers", 0.50, 1);
 	}
 
 	SPECNEXT_MULTIFACE(config, m_mf, 0);

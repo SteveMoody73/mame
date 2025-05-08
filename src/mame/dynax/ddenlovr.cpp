@@ -198,7 +198,7 @@ public:
 	void ddenlovrk(machine_config &config) ATTR_COLD;
 	void quizchq(machine_config &config) ATTR_COLD;
 	void mjmyuniv(machine_config &config) ATTR_COLD;
-	void mjmyunivbl2(machine_config &config) ATTR_COLD;
+	void mjmywrldt(machine_config &config) ATTR_COLD;
 	void dtoyoken(machine_config &config) ATTR_COLD;
 	void hgokou(machine_config &config) ATTR_COLD;
 	void seljan2(machine_config &config) ATTR_COLD;
@@ -396,7 +396,7 @@ private:
 	void mjflove_portmap(address_map &map) ATTR_COLD;
 	void mjmyorntr_portmap(address_map &map) ATTR_COLD;
 	void mjmyster_map(address_map &map) ATTR_COLD;
-	void mjmyunivbl2_map(address_map &map) ATTR_COLD;
+	void mjmywrldt_map(address_map &map) ATTR_COLD;
 	void mjmyster_portmap(address_map &map) ATTR_COLD;
 	void mjmywrld_portmap(address_map &map) ATTR_COLD;
 	void mjschuka_portmap(address_map &map) ATTR_COLD;
@@ -3211,7 +3211,7 @@ void ddenlovr_state::mjmyster_map(address_map &map)
 	map(0xf200, 0xffff).nopw();                        // ""
 }
 
-void ddenlovr_state::mjmyunivbl2_map(address_map &map)
+void ddenlovr_state::mjmywrldt_map(address_map &map)
 {
 	map(0x0000, 0x5fff).rom();                         // ROM
 	map(0x6000, 0x6fff).ram();                         // RAM
@@ -5048,8 +5048,8 @@ static INPUT_PORTS_START( htengoku )
 	// SW 4  OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF       OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF
 
 	PORT_START("COINS")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) PORT_CONDITION("DSW4", 0x10, EQUALS, 0x00) // pay
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_KEYOUT )                      PORT_CONDITION("DSW4", 0x10, EQUALS, 0x10)
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  PORT_CONDITION("DSW4", 0x10, EQUALS, 0x00) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_KEYOUT )  PORT_CONDITION("DSW4", 0x10, EQUALS, 0x10)
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR(Test)) PORT_TOGGLE
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
@@ -5644,7 +5644,7 @@ INPUT_PORTS_END
 
 static INPUT_PORTS_START( hanakanz )
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CONDITION("BET",0x40,EQUALS,0x00) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CONDITION("BET",0x40,EQUALS,0x00)  // pay
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN )       PORT_CONDITION("BET",0x40,EQUALS,0x40)
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR(Test))   // Test
@@ -5815,9 +5815,9 @@ static INPUT_PORTS_START( hkagerou )
 	// SW 4   ON  ON OFF OFF OFF OFF OFF OFF OFF OFF       OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF
 
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR( Test )) // Test
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR(Test)) // Test
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_GAMBLE_KEYIN )   // key-in
@@ -6195,7 +6195,7 @@ INPUT_PORTS_END
 static INPUT_PORTS_START( mjreach1 )
 
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
 	PORT_SERVICE(0x04, IP_ACTIVE_LOW)
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
@@ -6350,7 +6350,7 @@ INPUT_PORTS_END
 static INPUT_PORTS_START( jongtei )
 
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
 	PORT_SERVICE(0x04, IP_ACTIVE_LOW)
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
@@ -6561,7 +6561,7 @@ INPUT_PORTS_END
 static INPUT_PORTS_START( mjchuuka )
 
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
 	PORT_SERVICE(0x04, IP_ACTIVE_LOW)
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
@@ -6716,7 +6716,7 @@ INPUT_PORTS_END
 static INPUT_PORTS_START( mjschuka )
 
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
 	PORT_SERVICE(0x04, IP_ACTIVE_LOW)
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
@@ -6979,9 +6979,9 @@ static INPUT_PORTS_START( mjmyster )
 	// SW 4  Off  On  On  On  On Off Off Off Off Off        On  On  On  On  On Off Off Off Off Off        On  On  On  On  On Off Off Off Off Off
 
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) PORT_CONDITION("DSW3", 0x03, EQUALS, 0x02) // pay
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_KEYOUT )                      PORT_CONDITION("DSW3", 0x03, EQUALS, 0x03)
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNUSED )                             PORT_CONDITION("DSW3", 0x02, EQUALS, 0x00)
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  PORT_CONDITION("DSW3", 0x03, EQUALS, 0x02) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_KEYOUT )  PORT_CONDITION("DSW3", 0x03, EQUALS, 0x03)
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNUSED )         PORT_CONDITION("DSW3", 0x02, EQUALS, 0x00)
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
 	PORT_SERVICE_NO_TOGGLE(0x04, IP_ACTIVE_LOW)
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )                 // analyzer
@@ -7120,7 +7120,7 @@ static INPUT_PORTS_START( mjmyster )
 	PORT_DIPSETTING(    0x00, DEF_STR(2C_3C) )       PORT_CONDITION("FAKE", 0x01, EQUALS, 0x00)
 INPUT_PORTS_END
 
-static INPUT_PORTS_START( mjmyunivbl )
+static INPUT_PORTS_START( mjmyunivh )
 	// default to Hong Kong/Taiwan
 	PORT_INCLUDE(mjmyster)
 
@@ -7139,9 +7139,9 @@ static INPUT_PORTS_START( hginga )
 	// SW 4   ON OFF OFF OFF OFF OFF OFF OFF OFF OFF       OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF       OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF
 
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) PORT_CONDITION("DSW3", 0x03, EQUALS, 0x02) // pay
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_KEYOUT )                      PORT_CONDITION("DSW3", 0x03, EQUALS, 0x03)
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNUSED )                             PORT_CONDITION("DSW3", 0x02, EQUALS, 0x00)
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  PORT_CONDITION("DSW3", 0x03, EQUALS, 0x02) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_KEYOUT )  PORT_CONDITION("DSW3", 0x03, EQUALS, 0x03)
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNUSED )         PORT_CONDITION("DSW3", 0x02, EQUALS, 0x00)
 //  PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR( Test ))    // Test
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
@@ -7377,9 +7377,9 @@ INPUT_PORTS_END
 
 static INPUT_PORTS_START( hgokou )
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR( Test ))
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR(Test))
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )   // analyzer
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_GAMBLE_KEYIN )
@@ -7526,9 +7526,9 @@ static INPUT_PORTS_START( mjmyornt )
 	// SW 4  OFF  ON  ON  ON  ON  ON OFF OFF OFF OFF        ON  ON  ON  ON  ON  ON OFF OFF OFF OFF        ON  ON  ON  ON  ON  ON OFF OFF OFF OFF
 
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN ) // 18B
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_TOGGLE PORT_NAME(DEF_STR( Test ))   // Test
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_TOGGLE PORT_NAME(DEF_STR(Test))   // Test
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )   // analyzer
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BILL1 ) PORT_CODE(KEYCODE_6)  // note
@@ -8014,7 +8014,7 @@ INPUT_PORTS_END
 static INPUT_PORTS_START( sryudens )
 
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN  )
 	PORT_SERVICE( 0x04, IP_ACTIVE_LOW )
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
@@ -8169,7 +8169,7 @@ INPUT_PORTS_END
 static INPUT_PORTS_START( seljan2 )
 
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN  )
 	PORT_SERVICE( 0x04, IP_ACTIVE_LOW )
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
@@ -8324,7 +8324,7 @@ INPUT_PORTS_END
 static INPUT_PORTS_START( janshinp )
 
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN  )
 	PORT_SERVICE(0x04, IP_ACTIVE_LOW)
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
@@ -8478,7 +8478,7 @@ INPUT_PORTS_END
 static INPUT_PORTS_START( dtoyoken )
 
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN  )
 	PORT_SERVICE(0x04, IP_ACTIVE_LOW)
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
@@ -8641,7 +8641,7 @@ static INPUT_PORTS_START( daimyojn )
 	// SW 4  OFF  ON  ON  ON  ON OFF OFF OFF OFF OFF       OFF  ON  ON  ON  ON OFF OFF OFF OFF OFF       OFF OFF  ON  ON  ON OFF OFF OFF  ON OFF       OFF OFF  ON  ON  ON OFF OFF OFF  ON OFF
 
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN  )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE  ) PORT_NAME(DEF_STR( Test )) PORT_TOGGLE
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
@@ -8775,7 +8775,7 @@ INPUT_PORTS_END
 
 static INPUT_PORTS_START( hnrose )
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )  // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR(Test))
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )   // analyzer
@@ -9290,7 +9290,7 @@ void mmpanic_state::mmpanic_irq(int state)
 	/* I haven't found a irq ack register, so I need this kludge to
 	   make sure I don't lose any interrupt generated by the blitter,
 	   otherwise quizchq would lock up. */
-	//if (downcast<cpu_device *>(m_maincpu)->input_state(0))
+	//if (downcast<cpu_device *>(m_maincpu)->input_line_state(0))
 	//  return;
 
 	m_maincpu->set_input_line_and_vector(0, HOLD_LINE, 0xcf); // Z80 - RST 08, vblank
@@ -9748,11 +9748,11 @@ void ddenlovr_state::mjmyuniv(machine_config &config)
 	aysnd.add_route(ALL_OUTPUTS, "mono", 0.30);
 }
 
-void ddenlovr_state::mjmyunivbl2(machine_config &config)
+void ddenlovr_state::mjmywrldt(machine_config &config)
 {
 	mjmyuniv(config);
 
-	subdevice<tmpz84c015_device>("maincpu")->set_addrmap(AS_PROGRAM, &ddenlovr_state::mjmyunivbl2_map);
+	subdevice<tmpz84c015_device>("maincpu")->set_addrmap(AS_PROGRAM, &ddenlovr_state::mjmywrldt_map);
 }
 
 void ddenlovr_state::mjmyornt(machine_config &config)
@@ -11794,7 +11794,7 @@ ROM_END
 
 // 麻雀 龍兄虎弟
 // CS166P001 PCB (very similar to mjmyuniv's one). Dump was presented as a bootleg but the PCB has all Dynax / Nakanihon original customs.
-ROM_START( mjmyunivbl )
+ROM_START( mjmyunivh )
 	ROM_REGION( 0x90000 + 0x1000*8, "maincpu", 0 )  // Z80 Code + space for banked RAM
 	ROM_LOAD( "rom.u42", 0x00000, 0x40000, CRC(8000eec3) SHA1(e2a4a46ebb8e152956f469382bde73b983090c01) )
 	ROM_RELOAD(          0x10000, 0x40000 )
@@ -11812,7 +11812,7 @@ ROM_END
 
 // 麻雀 財会贏
 // also CS166P001 PCB
-ROM_START( mjmyunivbl2 )
+ROM_START( mjmywrldt )
 	ROM_REGION( 0x90000 + 0x1000*8, "maincpu", 0 )  // Z80 Code + space for banked RAM
 	ROM_LOAD( "romb.u47", 0x00000, 0x40000, CRC(eb447ce4) SHA1(8b38cedd83dbc3dd1dff7f4a60658c1a9ef50428) )
 	ROM_RELOAD(           0x10000, 0x40000 )
@@ -12709,8 +12709,8 @@ GAME( 1994, mjmywrld,    mjmyster, mjmywrld,  mjmyster,   ddenlovr_state, empty_
 GAME( 1994, hginga,      0,        hginga,    hginga,     ddenlovr_state, empty_init,    ROT0, "Dynax",                                       "Hanafuda Hana Ginga (Japan)",                                    MACHINE_NO_COCKTAIL  )
 
 GAME( 1994, mjmyuniv,    0,        mjmyuniv,  mjmyster,   ddenlovr_state, empty_init,    ROT0, "Dynax",                                       "Mahjong The Mysterious Universe (Japan, D85)",                   MACHINE_NO_COCKTAIL  )
-GAME( 1995, mjmyunivbl,  mjmyuniv, mjmyuniv,  mjmyunivbl, ddenlovr_state, empty_init,    ROT0, "bootleg",                                     "Maa Zoek Lung Hing Fu Dai (Hong Kong, D106T)",                   MACHINE_IMPERFECT_GRAPHICS | MACHINE_NO_COCKTAIL ) // One GFX ROM isn't dumped
-GAME( 1996, mjmyunivbl2, mjmyuniv, mjmyunivbl2,mjmyunivbl,ddenlovr_state, empty_init,    ROT0, "bootleg",                                     "Maque Caihui Ying (Taiwan, ver 2.20)",                           MACHINE_NO_COCKTAIL )
+GAME( 1995, mjmyunivh,   mjmyuniv, mjmyuniv,  mjmyunivh,  ddenlovr_state, empty_init,    ROT0, "Dynax",                                       "Maa Zoek Lung Hing Fu Dai (Hong Kong, D106T)",                   MACHINE_IMPERFECT_GRAPHICS | MACHINE_NO_COCKTAIL ) // One GFX ROM isn't dumped
+GAME( 1996, mjmywrldt,   mjmyster, mjmywrldt, mjmyunivh,  ddenlovr_state, empty_init,    ROT0, "Dynax",                                       "Maque Caihui Ying (Taiwan, ver 2.20)",                           MACHINE_NO_COCKTAIL )
 
 GAME( 1994, quiz365,     0,        quiz365,   quiz365,    ddenlovr_state, empty_init,    ROT0, "Nakanihon",                                   "Quiz 365 (Japan)",                                               MACHINE_NO_COCKTAIL  | MACHINE_IMPERFECT_GRAPHICS | MACHINE_UNEMULATED_PROTECTION )
 GAME( 1994, quiz365t,    quiz365,  quiz365,   quiz365,    ddenlovr_state, empty_init,    ROT0, "Nakanihon / Taito",                           "Quiz 365 (Hong Kong & Taiwan)",                                  MACHINE_NO_COCKTAIL  | MACHINE_IMPERFECT_GRAPHICS | MACHINE_UNEMULATED_PROTECTION )

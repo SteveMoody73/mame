@@ -386,8 +386,8 @@ static INPUT_PORTS_START( rohga )
 	PORT_DIPSETTING(      0x1000, "Lowest" )
 	PORT_DIPSETTING(      0x0000, DEF_STR( High ) )
 	PORT_DIPNAME( 0x4000, 0x4000, DEF_STR( Allow_Continue ) ) PORT_DIPLOCATION("SW2:7")
-	PORT_DIPSETTING(      0x4000, DEF_STR( Off ) )
-	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x4000, DEF_STR( On ) )
 	PORT_DIPNAME( 0x8000, 0x0000, DEF_STR( Demo_Sounds ) ) PORT_DIPLOCATION("SW2:8")
 	PORT_DIPSETTING(      0x8000, DEF_STR( Off ) )
 	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
@@ -662,8 +662,6 @@ static INPUT_PORTS_START( schmeisr )
 	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
 INPUT_PORTS_END
 
-
-
 static INPUT_PORTS_START( hangzo )
 	PORT_START("INPUTS")
 	PORT_BIT( 0x0001, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_8WAY
@@ -875,8 +873,8 @@ void rohga_state::rohga_base(machine_config &config)
 
 	H6280(config, m_audiocpu, 32'220'000/4/3); // verified on PCB (8.050Mhz is XIN on pin 10 of H6280
 	m_audiocpu->set_addrmap(AS_PROGRAM, &rohga_state::sound_map);
-	m_audiocpu->add_route(ALL_OUTPUTS, "lspeaker", 0); // internal sound unused
-	m_audiocpu->add_route(ALL_OUTPUTS, "rspeaker", 0);
+	m_audiocpu->add_route(ALL_OUTPUTS, "speaker", 0, 0); // internal sound unused
+	m_audiocpu->add_route(ALL_OUTPUTS, "speaker", 0, 1);
 
 	// video hardware
 	BUFFERED_SPRITERAM16(config, m_spriteram[0]);
@@ -926,23 +924,22 @@ void rohga_state::rohga_base(machine_config &config)
 	m_ioprot->port_c_cb().set_ioport("DSW");
 	m_ioprot->soundlatch_irq_cb().set_inputline("audiocpu", 0);
 
-	// sound hardware
-	SPEAKER(config, "lspeaker").front_left();
-	SPEAKER(config, "rspeaker").front_right();
+	/* sound hardware */
+	SPEAKER(config, "speaker", 2).front();
 
 	ym2151_device &ymsnd(YM2151(config, "ymsnd", 32'220'000/9));
 	ymsnd.irq_handler().set_inputline(m_audiocpu, 1);    // IRQ2
 	ymsnd.port_write_handler().set(FUNC(rohga_state::sound_bankswitch_w));
-	ymsnd.add_route(0, "lspeaker", 0.36);
-	ymsnd.add_route(1, "rspeaker", 0.36);
+	ymsnd.add_route(0, "speaker", 0.36, 0);
+	ymsnd.add_route(1, "speaker", 0.36, 1);
 
 	OKIM6295(config, m_oki[0], 32'220'000/32, okim6295_device::PIN7_HIGH);
-	m_oki[0]->add_route(ALL_OUTPUTS, "lspeaker", 0.46);
-	m_oki[0]->add_route(ALL_OUTPUTS, "rspeaker", 0.46);
+	m_oki[0]->add_route(ALL_OUTPUTS, "speaker", 0.46, 0);
+	m_oki[0]->add_route(ALL_OUTPUTS, "speaker", 0.46, 1);
 
 	OKIM6295(config, m_oki[1], 32'220'000/16, okim6295_device::PIN7_HIGH);
-	m_oki[1]->add_route(ALL_OUTPUTS, "lspeaker", 0.18);
-	m_oki[1]->add_route(ALL_OUTPUTS, "rspeaker", 0.18);
+	m_oki[1]->add_route(ALL_OUTPUTS, "speaker", 0.18, 0);
+	m_oki[1]->add_route(ALL_OUTPUTS, "speaker", 0.18, 1);
 }
 
 void rohga_state::rohga(machine_config &config)
@@ -1032,7 +1029,7 @@ void rohga_state::schmeisr(machine_config &config)
 
 	DECO_SPRITE(config, m_sprgen[0], 0, m_palette, gfx_schmeisr_spr);
 	m_sprgen[0]->set_pri_callback(FUNC(rohga_state::rohga_pri_callback));
-	m_sprgen[0]->set_col_callback(FUNC(rohga_state::schmeisr_col_callback));  // wire mods on pcb...
+	m_sprgen[0]->set_col_callback(FUNC(rohga_state::schmeisr_col_callback)); // wire mods on pcb...
 }
 
 void rohga_state::hangzo(machine_config &config)
@@ -1751,7 +1748,6 @@ ROM_END
 
 
 
-
 /**********************************************************************************/
 
 void rohga_state::init_rohga()
@@ -1791,12 +1787,12 @@ void rohga_state::init_schmeisr()
 	deco74_decrypt_gfx(machine(), "tiles1");
 }
 
-GAME( 1991, rohga,     0,        rohga,    rohga,    rohga_state, init_rohga,    ROT0,   "Data East Corporation", "Rohga Armor Force (Asia/Europe v5.0)",       MACHINE_SUPPORTS_SAVE )
-GAME( 1991, rohga1,    rohga,    rohga,    rohga,    rohga_state, init_rohga,    ROT0,   "Data East Corporation", "Rohga Armor Force (Asia/Europe v3.0 set 1)", MACHINE_SUPPORTS_SAVE )
-GAME( 1991, rohga2,    rohga,    rohga,    rohga,    rohga_state, init_rohga,    ROT0,   "Data East Corporation", "Rohga Armor Force (Asia/Europe v3.0 set 2)", MACHINE_SUPPORTS_SAVE )
-GAME( 1991, rohgah,    rohga,    rohga,    rohga,    rohga_state, init_rohga,    ROT0,   "Data East Corporation", "Rohga Armor Force (Hong Kong v3.0)",         MACHINE_SUPPORTS_SAVE )
-GAME( 1991, rohgau,    rohga,    rohga,    rohga,    rohga_state, init_rohga,    ROT0,   "Data East Corporation", "Rohga Armor Force (US v1.0)",                MACHINE_SUPPORTS_SAVE )
-GAME( 1991, wolffang,  rohga,    rohga,    rohga,    rohga_state, init_rohga,    ROT0,   "Data East Corporation", "Wolf Fang -Kuhga 2001- (Japan)",             MACHINE_SUPPORTS_SAVE )
+GAME( 1991, rohga,     0,        rohga,    rohga,    rohga_state, init_rohga,    ROT0,   "Data East Corporation", "Rohga: Armor Force (Asia/Europe v5.0)",       MACHINE_SUPPORTS_SAVE )
+GAME( 1991, rohga1,    rohga,    rohga,    rohga,    rohga_state, init_rohga,    ROT0,   "Data East Corporation", "Rohga: Armor Force (Asia/Europe v3.0 set 1)", MACHINE_SUPPORTS_SAVE )
+GAME( 1991, rohga2,    rohga,    rohga,    rohga,    rohga_state, init_rohga,    ROT0,   "Data East Corporation", "Rohga: Armor Force (Asia/Europe v3.0 set 2)", MACHINE_SUPPORTS_SAVE )
+GAME( 1991, rohgah,    rohga,    rohga,    rohga,    rohga_state, init_rohga,    ROT0,   "Data East Corporation", "Rohga: Armor Force (Hong Kong v3.0)",         MACHINE_SUPPORTS_SAVE )
+GAME( 1991, rohgau,    rohga,    rohga,    rohga,    rohga_state, init_rohga,    ROT0,   "Data East Corporation", "Rohga: Armor Force (US v1.0)",                MACHINE_SUPPORTS_SAVE )
+GAME( 1991, wolffang,  rohga,    rohga,    rohga,    rohga_state, init_rohga,    ROT0,   "Data East Corporation", "Wolf Fang: Kuuga 2001 (Japan)",               MACHINE_SUPPORTS_SAVE )
 
 GAME( 1992, wizdfire,  0,        wizdfire, wizdfire, rohga_state, init_wizdfire, ROT0,   "Data East Corporation", "Wizard Fire (Over Sea v2.1)", MACHINE_SUPPORTS_SAVE )
 GAME( 1992, wizdfirea, wizdfire, wizdfire, wizdfire, rohga_state, init_wizdfire, ROT0,   "Data East Corporation", "Wizard Fire (Over Sea v1.0)", MACHINE_SUPPORTS_SAVE )

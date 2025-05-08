@@ -40,8 +40,6 @@ u8 z80_device::SZ_BIT[] = {};   // zero, sign and parity/overflow (=zero) flags 
 u8 z80_device::SZP[] = {};      // zero, sign and parity flags
 u8 z80_device::SZHV_inc[] = {}; // zero, sign, half carry and overflow flags INC r8
 u8 z80_device::SZHV_dec[] = {}; // zero, sign, half carry and overflow flags DEC r8
-u8 z80_device::SZHVC_add[] = {};
-u8 z80_device::SZHVC_sub[] = {};
 
 
 /***************************************************************
@@ -52,6 +50,7 @@ void z80_device::halt()
 	if (!m_halt)
 	{
 		m_halt = 1;
+		set_service_attention<SA_HALT, 1>();
 		m_halt_cb(1);
 	}
 }
@@ -64,6 +63,7 @@ void z80_device::leave_halt()
 	if (m_halt)
 	{
 		m_halt = 0;
+		set_service_attention<SA_HALT, 0>();
 		m_halt_cb(0);
 	}
 }
@@ -73,7 +73,7 @@ void z80_device::leave_halt()
  ***************************************************************/
 u8 z80_device::data_read(u16 addr)
 {
-	return m_data.read_interruptible(translate_memory_address(addr));
+	return m_data.read_interruptible(addr);
 }
 
 /***************************************************************
@@ -81,7 +81,7 @@ u8 z80_device::data_read(u16 addr)
  ***************************************************************/
 void z80_device::data_write(u16 addr, u8 value)
 {
-	m_data.write_interruptible(translate_memory_address((u32)addr), value);
+	m_data.write_interruptible(addr, value);
 }
 
 /***************************************************************
@@ -91,7 +91,7 @@ void z80_device::data_write(u16 addr, u8 value)
  ***************************************************************/
 u8 z80_device::opcode_read()
 {
-	return m_opcodes.read_byte(translate_memory_address(PC));
+	return m_opcodes.read_byte(PC);
 }
 
 /****************************************************************
@@ -103,7 +103,7 @@ u8 z80_device::opcode_read()
  ***************************************************************/
 u8 z80_device::arg_read()
 {
-	return m_args.read_byte(translate_memory_address(PC));
+	return m_args.read_byte(PC);
 }
 
 /***************************************************************
@@ -170,9 +170,11 @@ void z80_device::rra()
  ***************************************************************/
 void z80_device::add_a(u8 value)
 {
-	u32 ah = AF & 0xff00;
-	u32 res = (u8)((ah >> 8) + value);
-	set_f(SZHVC_add[ah | res]);
+	const u16 res = A + value;
+	u8 f = (((A ^ res) & (value ^ res)) >> 5) & VF;
+	f |= flags_szyxc(res);
+	f |= ((A & 0x0f) + (value & 0x0f)) & HF;
+	set_f(f);
 	A = res;
 }
 
@@ -181,20 +183,27 @@ void z80_device::add_a(u8 value)
  ***************************************************************/
 void z80_device::adc_a(u8 value)
 {
-	u32 ah = AF & 0xff00, c = AF & 1;
-	u32 res = (u8)((ah >> 8) + value + c);
-	set_f(SZHVC_add[(c << 16) | ah | res]);
+	const int c = F & CF;
+	const u16 res = A + value + c;
+	u8 f = (((A ^ res) & (value ^ res)) >> 5) & VF;
+	f |= flags_szyxc(res);
+	f |= ((A & 0x0f) + (value & 0x0f) + c) & HF;
+
+	set_f(f);
 	A = res;
 }
 
 /***************************************************************
- * SUB  n
+ * SUB  A,n
  ***************************************************************/
-void z80_device::sub(u8 value)
+void z80_device::sub_a(u8 value)
 {
-	u32 ah = AF & 0xff00;
-	u32 res = (u8)((ah >> 8) - value);
-	set_f(SZHVC_sub[ah | res]);
+	const u16 res = A - value;
+	u8 f = (((A ^ value) & (A ^ res)) >> 5) & VF;
+	f |= NF | flags_szyxc(res);
+	f |= ((A & 0x0f) - (value & 0x0f)) & HF;
+
+	set_f(f);
 	A = res;
 }
 
@@ -203,9 +212,13 @@ void z80_device::sub(u8 value)
  ***************************************************************/
 void z80_device::sbc_a(u8 value)
 {
-	u32 ah = AF & 0xff00, c = AF & 1;
-	u32 res = (u8)((ah >> 8) - value - c);
-	set_f(SZHVC_sub[(c << 16) | ah | res]);
+	const int c = F & CF;
+	const u16 res = A - value - c;
+	u8 f = (((A ^ value) & (A ^ res)) >> 5) & VF;
+	f |= NF | flags_szyxc(res);
+	f |= ((A & 0x0f) - (value & 0x0f) - c) & HF;
+
+	set_f(f);
 	A = res;
 }
 
@@ -216,7 +229,7 @@ void z80_device::neg()
 {
 	u8 value = A;
 	A = 0;
-	sub(value);
+	sub_a(value);
 }
 
 /***************************************************************
@@ -272,10 +285,12 @@ void z80_device::xor_a(u8 value)
  ***************************************************************/
 void z80_device::cp(u8 value)
 {
-	unsigned val = value;
-	u32 ah = AF & 0xff00;
-	u32 res = (u8)((ah >> 8) - val);
-	set_f((SZHVC_sub[ah | res] & ~(YF | XF)) | (val & (YF | XF)));
+	const u16 res = A - value;
+	u8 f = (((A ^ value) & (A ^ res)) >> 5) & VF;
+	f |= NF | flags_szyxc(res);
+	f |= ((A & 0x0f) - (value & 0x0f)) & HF;
+
+	set_f((f & ~(YF | XF)) | (value & (YF | XF)));
 }
 
 /***************************************************************
@@ -455,7 +470,7 @@ void z80_device::block_io_interrupted_flags()
 void z80_device::ei()
 {
 	m_iff1 = m_iff2 = 1;
-	m_after_ei = true;
+	set_service_attention<SA_AFTER_EI, 1>();
 }
 
 void z80_device::set_f(u8 f)
@@ -467,15 +482,23 @@ void z80_device::set_f(u8 f)
 void z80_device::illegal_1()
 {
 	LOGMASKED(LOG_UNDOC, "ill. opcode $%02x $%02x ($%04x)\n",
-			m_opcodes.read_byte(translate_memory_address((PC - 1) & 0xffff)),
-			m_opcodes.read_byte(translate_memory_address(PC)), PC - 1);
+			m_opcodes.read_byte((PC - 1) & 0xffff), m_opcodes.read_byte(PC), PC - 1);
 }
 
 void z80_device::illegal_2()
 {
 	LOGMASKED(LOG_UNDOC, "ill. opcode $ed $%02x\n",
-			m_opcodes.read_byte(translate_memory_address((PC - 1) & 0xffff)));
+			m_opcodes.read_byte((PC - 1) & 0xffff));
 }
+
+u8 z80_device::flags_szyxc(u16 value)
+{
+	u8 f = value & (SF | YF | XF);  // SF + undocumented flag bits 5+3
+	f |= u8(value) ? 0 : ZF;
+	f |= (value >> 8) & CF;
+	return f;
+}
+
 
 /****************************************************************************
  * Processor initialization
@@ -496,52 +519,6 @@ void z80_device::device_start()
 {
 	if (!tables_initialised)
 	{
-		u8 *padd = &SZHVC_add[  0*256];
-		u8 *padc = &SZHVC_add[256*256];
-		u8 *psub = &SZHVC_sub[  0*256];
-		u8 *psbc = &SZHVC_sub[256*256];
-		for (int oldval = 0; oldval < 256; oldval++)
-		{
-			for (int newval = 0; newval < 256; newval++)
-			{
-				// add or adc w/o carry set
-				int val = newval - oldval;
-				*padd = (newval) ? ((newval & 0x80) ? SF : 0) : ZF;
-				*padd |= (newval & (YF | XF));  // undocumented flag bits 5+3
-				if ((newval & 0x0f) < (oldval & 0x0f)) *padd |= HF;
-				if (newval < oldval) *padd |= CF;
-				if ((val^oldval^0x80) & (val^newval) & 0x80) *padd |= VF;
-				padd++;
-
-				// adc with carry set
-				val = newval - oldval - 1;
-				*padc = (newval) ? ((newval & 0x80) ? SF : 0) : ZF;
-				*padc |= (newval & (YF | XF));  // undocumented flag bits 5+3
-				if ((newval & 0x0f) <= (oldval & 0x0f)) *padc |= HF;
-				if (newval <= oldval) *padc |= CF;
-				if ((val^oldval^0x80) & (val^newval) & 0x80) *padc |= VF;
-				padc++;
-
-				// cp, sub or sbc w/o carry set
-				val = oldval - newval;
-				*psub = NF | ((newval) ? ((newval & 0x80) ? SF : 0) : ZF);
-				*psub |= (newval & (YF | XF));  // undocumented flag bits 5+3
-				if ((newval & 0x0f) > (oldval & 0x0f)) *psub |= HF;
-				if (newval > oldval) *psub |= CF;
-				if ((val^oldval) & (oldval^newval) & 0x80) *psub |= VF;
-				psub++;
-
-				// sbc with carry set
-				val = oldval - newval - 1;
-				*psbc = NF | ((newval) ? ((newval & 0x80) ? SF : 0) : ZF);
-				*psbc |= (newval & (YF | XF));  // undocumented flag bits 5+3
-				if ((newval & 0x0f) >= (oldval & 0x0f)) *psbc |= HF;
-				if (newval >= oldval) *psbc |= CF;
-				if ((val^oldval) & (oldval^newval) & 0x80) *psbc |= VF;
-				psbc++;
-			}
-		}
-
 		for (int i = 0; i < 256; i++)
 		{
 			int p = 0;
@@ -587,16 +564,13 @@ void z80_device::device_start()
 	save_item(NAME(m_im));
 	save_item(NAME(m_i));
 	save_item(NAME(m_nmi_state));
-	save_item(NAME(m_nmi_pending));
 	save_item(NAME(m_irq_state));
 	save_item(NAME(m_wait_state));
 	save_item(NAME(m_busrq_state));
 	save_item(NAME(m_busack_state));
-	save_item(NAME(m_after_ei));
-	save_item(NAME(m_after_ldair));
 	save_item(NAME(m_ea));
+	save_item(NAME(m_service_attention));
 	save_item(NAME(m_tmp_irq_vector));
-	save_item(NAME(m_shared_addr.w));
 	save_item(NAME(m_shared_data.w));
 	save_item(NAME(m_shared_data2.w));
 	save_item(NAME(m_rtemp));
@@ -627,14 +601,12 @@ void z80_device::device_start()
 	m_im = 0;
 	m_i = 0;
 	m_nmi_state = 0;
-	m_nmi_pending = false;
 	m_irq_state = 0;
 	m_wait_state = 0;
 	m_busrq_state = 0;
 	m_busack_state = 0;
-	m_after_ei = false;
-	m_after_ldair = false;
 	m_ea = 0;
+	m_service_attention = 0;
 	m_rtemp = 0;
 
 	space(AS_PROGRAM).cache(m_args);
@@ -692,16 +664,9 @@ void z80_device::device_reset()
 	m_i = 0;
 	m_r = 0;
 	m_r2 = 0;
-	m_nmi_pending = false;
-	m_after_ei = false;
-	m_after_ldair = false;
 	m_iff1 = 0;
 	m_iff2 = 0;
-}
-
-void z80_device::do_op()
-{
-	#include "cpu/z80/z80.hxx"
+	m_service_attention = 0;
 }
 
 /****************************************************************************
@@ -709,16 +674,7 @@ void z80_device::do_op()
  ****************************************************************************/
 void z80_device::execute_run()
 {
-	if (m_wait_state)
-	{
-		m_icount = 0; // stalled
-		return;
-	}
-
-	while (m_icount > 0)
-	{
-		do_op();
-	}
+	#include "cpu/z80/z80.hxx"
 }
 
 void z80_device::execute_set_input(int inputnum, int state)
@@ -727,12 +683,18 @@ void z80_device::execute_set_input(int inputnum, int state)
 	{
 	case Z80_INPUT_LINE_BUSRQ:
 		m_busrq_state = state;
+		if (state != CLEAR_LINE)
+			set_service_attention<SA_BUSRQ, 1>();
+		else
+			set_service_attention<SA_BUSRQ, 0>();
 		break;
 
 	case INPUT_LINE_NMI:
 		// mark an NMI pending on the rising edge
 		if (m_nmi_state == CLEAR_LINE && state != CLEAR_LINE)
-			m_nmi_pending = true;
+		{
+			set_service_attention<SA_NMI_PENDING, 1>();
+		}
 		m_nmi_state = state;
 		break;
 
@@ -741,6 +703,10 @@ void z80_device::execute_set_input(int inputnum, int state)
 		m_irq_state = state;
 		if (daisy_chain_present())
 			m_irq_state = (daisy_update_irq_state() == ASSERT_LINE) ? ASSERT_LINE : m_irq_state;
+		if (state != CLEAR_LINE)
+			set_service_attention<SA_IRQ_ON, 1>();
+		else
+			set_service_attention<SA_IRQ_ON, 0>();
 
 		// the main execute loop will take the interrupt
 		break;
@@ -767,8 +733,9 @@ void z80_device::state_import(const device_state_entry &entry)
 	case STATE_GENPC:
 		m_prvpc = m_pc;
 		m_ref = 0xffff00;
-		m_after_ei = false;
-		m_after_ldair = false;
+		set_service_attention<SA_AFTER_EI, 0>();
+		if (HAS_LDAIR_QUIRK)
+			set_service_attention<SA_AFTER_LDAIR, 0>();
 		break;
 
 	case Z80_R:
@@ -836,9 +803,6 @@ z80_device::z80_device(const machine_config &mconfig, device_type type, const ch
 	m_nomreq_cb(*this),
 	m_halt_cb(*this),
 	m_busack_cb(*this),
-	m_branch_cb(*this),
-	m_irqfetch_cb(*this),
-	m_reti_cb(*this),
 	m_m1_cycles(4),
 	m_memrq_cycles(3),
 	m_iorq_cycles(4)

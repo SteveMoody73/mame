@@ -196,21 +196,20 @@ void pentagon_state::pentagon(machine_config &config)
 	m_maincpu->set_addrmap(AS_IO, &pentagon_state::pentagon_io);
 	m_maincpu->set_addrmap(AS_OPCODES, &pentagon_state::pentagon_switch);
 	m_maincpu->set_vblank_int("screen", FUNC(pentagon_state::pentagon_interrupt));
-	m_maincpu->nomreq_cb().set_nop();
+	m_maincpu->nomreq_cb().remove();
 
 	m_screen->set_raw(14_MHz_XTAL / 2, 448, 320, {get_screen_area().left() - 48, get_screen_area().right() + 48, get_screen_area().top() - 48, get_screen_area().bottom() + 48});
 	subdevice<gfxdecode_device>("gfxdecode")->set_info(gfx_pentagon);
 
 	BETA_DISK(config, m_beta, 0);
 
-	SPEAKER(config, "lspeaker").front_left();
-	SPEAKER(config, "rspeaker").front_right();
+	SPEAKER(config, "speakers", 2).front();
 
 	ay8912_device &ay8912(AY8912(config.replace(), "ay8912", 14_MHz_XTAL / 8));
-	ay8912.add_route(0, "lspeaker", 0.50);
-	ay8912.add_route(1, "lspeaker", 0.25);
-	ay8912.add_route(1, "rspeaker", 0.25);
-	ay8912.add_route(2, "rspeaker", 0.50);
+	ay8912.add_route(0, "speakers", 0.50, 0);
+	ay8912.add_route(1, "speakers", 0.25, 0);
+	ay8912.add_route(1, "speakers", 0.25, 1);
+	ay8912.add_route(2, "speakers", 0.50, 1);
 
 	config.device_remove("exp");
 

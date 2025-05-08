@@ -141,19 +141,8 @@ static INPUT_PORTS_START( specd9 )
 INPUT_PORTS_END
 
 
-static const gfx_layout char_16x16_layout =
-{
-	16,16,
-	RGN_FRAC(1,1),
-	4,
-	{ 0,1,2,3 },
-	{ 4,0, 12,8, 20,16, 28,24, 36,32, 44,40, 52,48, 60,56 },
-	{ STEP16(0,8*8) },
-	8*8*16
-};
-
 static GFXDECODE_START( gfx_es9501 )
-	GFXDECODE_ENTRY( "gfx", 0, char_16x16_layout, 0, 0x10 )
+	GFXDECODE_ENTRY( "gfx", 0, gfx_16x16x4_packed_lsb, 0, 0x10 )
 GFXDECODE_END
 
 
@@ -177,16 +166,15 @@ void es9501_state::es9501(machine_config &config)
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_es9501);
 	PALETTE(config, m_palette).set_format(palette_device::RRRRGGGGBBBBRGBx, 0x1000 / 2); // TODO
 
-	SPEAKER(config, "lspeaker").front_left();
-	SPEAKER(config, "rspeaker").front_right();
+	SPEAKER(config, "speaker", 2).front();
 
 	ymz280b_device &ymz(YMZ280B(config, "ymz", 28.636363_MHz_XTAL / 2));
-	ymz.add_route(0, "lspeaker", 1.0);
-	ymz.add_route(1, "rspeaker", 1.0);
+	ymz.add_route(0, "speaker", 1.0, 0);
+	ymz.add_route(1, "speaker", 1.0, 1);
 
 	ymz284_device & ymz284(YMZ284(config, "ymz284", 28.636363_MHz_XTAL / 8)); // divider not verified
-	ymz284.add_route(0, "lspeaker", 1.0);
-	ymz284.add_route(1, "rspeaker", 1.0);
+	ymz284.add_route(0, "speaker", 1.0, 0);
+	ymz284.add_route(1, "speaker", 1.0, 1);
 }
 
 
