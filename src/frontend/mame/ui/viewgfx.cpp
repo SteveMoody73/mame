@@ -2083,7 +2083,7 @@ void gfx_viewer::gfxset_draw_save_item(gfx_element& gfx, int index, bitmap_rgb32
 			uint8_t const* const s = src + (effy * gfx.rowbytes());
 
 			// extract the pixel
-			*dest++ = 0xff000000 | palette[s[effx]];
+			*dest++ = palette[s[effx]];
 		}
 	}
 }
