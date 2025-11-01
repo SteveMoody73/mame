@@ -46,7 +46,7 @@ Notes:
                      Video Clock Input Pin 103 - 28.63636MHz
                      Another identical PCB has this chip marked "ADC Amazon-LF EISC" so these are 100% compatible.
            0260F8A - Renesas M30260F8AGP (TQFP44) (M16C/26A based microcontroller with internal 64K + 4K Flash ROM).
-                     Clock Input 8.000MHz.
+                     Clock Input 8.000MHz. (**)
               HY04 - rebadged DIP8 PIC - type unknown (*). PCB marked "SAM1"
                      Some chips are marked "SL01". Chip data is unique to each game but different
                      versions of the same game work ok with swapped HY04 or swapped main program EPROM.
@@ -80,6 +80,7 @@ Notes:
   7 High
   8 VCC
 
+** On some similar PCBs (f.e. wakeng) it's an M30262F8GP (LQFP48) with 12 MHz XTAL
 ****************************************************************************/
 
 #include "emu.h"
@@ -92,6 +93,7 @@ Notes:
 #include "machine/vrender0.h"
 
 #include "emupal.h"
+#include "speaker.h"
 
 #include <algorithm>
 
@@ -322,8 +324,9 @@ crzyddz2    in      out
             c0      80
 */
 // menghong Sealy logo pal offset is at 0x3ea7400, relevant code is at 2086034
-//  m_prot = (m_pio >> 8) & 0xc0) ^ 0x40;
-	m_prot = (machine().rand() & 0xc0);
+	if (!machine().side_effects_disabled())
+	//  m_prot = (m_pio >> 8) & 0xc0) ^ 0x40;
+		m_prot = (machine().rand() & 0xc0);
 
 	return 0xffffff00 | data | m_prot;
 }
@@ -482,7 +485,7 @@ INPUT_PORTS_END
 
 void menghong_state::menghong(machine_config &config)
 {
-	SE3208(config, m_maincpu, 14318180 * 3); // TODO : different between each PCBs
+	SE3208(config, m_maincpu, 14318180 * 3); // TODO : dynamic via PLL
 	m_maincpu->set_addrmap(AS_PROGRAM, &menghong_state::menghong_mem);
 	m_maincpu->iackx_cb().set(m_vr0soc, FUNC(vrender0soc_device::irq_callback));
 
@@ -490,12 +493,17 @@ void menghong_state::menghong(machine_config &config)
 
 //  NVRAM(config, m_nvram, nvram_device::DEFAULT_ALL_0);
 
-	VRENDER0_SOC(config, m_vr0soc, 14318180 * 3);
-	m_vr0soc->set_host_cpu_tag(m_maincpu);
+	VRENDER0_SOC(config, m_vr0soc, 14318180 * 6); // TODO : dynamic via PLL
+	m_vr0soc->set_host_space_tag(m_maincpu, AS_PROGRAM);
+	m_vr0soc->int_callback().set_inputline(m_maincpu, SE3208_INT);
 	m_vr0soc->set_external_vclk(28636360); // Assumed from the only available XTal on PCB
 
 	DS1302(config, m_ds1302, 32.768_kHz_XTAL);
 	EEPROM_93C46_16BIT(config, m_eeprom);
+
+	SPEAKER(config, "speaker", 2).front();
+	m_vr0soc->add_route(0, "speaker", 1.0, 0);
+	m_vr0soc->add_route(1, "speaker", 1.0, 1);
 }
 
 void menghong_state::crzyddz2(machine_config &config)
@@ -613,6 +621,38 @@ ROM_START( sandayi )
 	ROM_REGION( 0x0100, "pic_data", ROMREGION_ERASEFF )
 ROM_END
 
+// 漂亮金花2 (Piàoliang Jīnhuā 2)
+ROM_START( pljh2 ) // this PCB has an Amazon-LF
+	ROM_REGION32_LE( 0x1000000, "flash", ROMREGION_ERASEFF )
+	ROM_LOAD( "igsm2403.u19", 0x000000, 0x400000, CRC(2538f872) SHA1(14f9a48fc77bdea077a9d5974ad2b8c7ff4b87b2) )
+	ROM_LOAD( "igss2402.u18", 0x400000, 0x400000, CRC(a16c85f6) SHA1(4587cc9d3933fa34cb8728451812760cad2c1d36) )
+	ROM_LOAD( "igsm2401.u17", 0x800000, 0x400000, CRC(20ca030b) SHA1(791a27e19566662231c3e197e171e1e1272e7d57) )
+
+	ROM_REGION( 0x0400000, "maincpu", 0 )
+	ROM_LOAD( "igsl2404.u13", 0x000000, 0x0400000, CRC(03164a2b) SHA1(68b7479911f0cafab24bf1d58738fdaf8f939d9c) ) // 1ST AND 2ND HALF IDENTICAL
+
+	ROM_REGION( 0x4280, "pic", 0 )
+	ROM_LOAD("sl-01", 0x000000, 0x4280, NO_DUMP )
+
+	ROM_REGION( 0x0100, "pic_data", ROMREGION_ERASEFF )
+ROM_END
+
+// 挖坑 (Wākēng)
+ROM_START( wakeng )
+	ROM_REGION32_LE( 0x1000000, "flash", ROMREGION_ERASEFF )
+	ROM_LOAD( "rom.u19", 0x000000, 0x400000, CRC(87dd8b60) SHA1(1bd2c2cd644242c0f876f313db6779f3dc465f1d) )
+	ROM_LOAD( "rom.u18", 0x400000, 0x400000, CRC(d5d6b3af) SHA1(a260259c0d86a73bf53291fd5e41b66e96c75b0c) )
+	ROM_LOAD( "rom.u17", 0x800000, 0x400000, CRC(2fe34e5a) SHA1(cd9874292432007b4d47aee7bd6f871d05645719) )
+
+	ROM_REGION( 0x0400000, "maincpu", ROMREGION_ERASEFF )
+	ROM_LOAD( "rom.u13", 0x000000, 0x0200000, CRC(96654161) SHA1(882c8ce446f302ac3de9d38edfc9c2beb9751775) ) // 1xxxxxxxxxxxxxxxxxxxx = 0xFF
+
+	ROM_REGION( 0x4280, "pic", 0 )
+	ROM_LOAD("key-02", 0x000000, 0x4280, NO_DUMP )
+
+	ROM_REGION( 0x0100, "pic_data", ROMREGION_ERASEFF )
+ROM_END
+
 } // anonymous namespace
 
 
@@ -623,3 +663,5 @@ GAME( 2006,  fkddz2,    0,        crzyddz2, crzyddz2, menghong_state, empty_init
 GAME( 2005,  jpddz,     0,        crzyddz2, crzyddz2, menghong_state, empty_init,    ROT0, "Sealy", "Jipin Dou Dizhu (set 1)",  MACHINE_NOT_WORKING | MACHINE_UNEMULATED_PROTECTION ) // this one boots
 GAME( 2005,  jpddza,    jpddz,    crzyddz2, crzyddz2, menghong_state, empty_init,    ROT0, "Sealy", "Jipin Dou Dizhu (set 2)",  MACHINE_NOT_WORKING | MACHINE_UNEMULATED_PROTECTION ) // this one doesn't
 GAME( 2005,  sandayi,   0,        crzyddz2, crzyddz2, menghong_state, empty_init,    ROT0, "Sealy", "San Da Yi",                MACHINE_NOT_WORKING | MACHINE_UNEMULATED_PROTECTION )
+GAME( 200?,  pljh2,     0,        crzyddz2, crzyddz2, menghong_state, empty_init,    ROT0, "Sealy", "Piaoliang Jinhua 2",       MACHINE_NOT_WORKING | MACHINE_UNEMULATED_PROTECTION )
+GAME( 2006,  wakeng,    0,        crzyddz2, crzyddz2, menghong_state, empty_init,    ROT0, "Sealy", "Wakeng",                   MACHINE_NOT_WORKING | MACHINE_UNEMULATED_PROTECTION )

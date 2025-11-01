@@ -392,10 +392,10 @@ void validate_rgb()
 	volatile s32 expected_a, expected_r, expected_g, expected_b;
 	volatile s32 actual_a, actual_r, actual_g, actual_b;
 	volatile s32 imm;
-	rgbaint_t rgb, other;
+	rgbaint_t rgb;
 	rgb_t packed;
 	auto check_expected =
-			[&] (const char *desc)
+			[&expected_a, &expected_r, &expected_g, &expected_b, &rgb] (const char *desc)
 			{
 				const volatile s32 a = rgb.get_a32();
 				const volatile s32 r = rgb.get_r32();
@@ -1277,22 +1277,25 @@ void validate_rgb()
 
 	// test bilinear_filter and bilinear_filter_rgbaint
 	// SSE implementation carries more internal precision between the bilinear stages
-#if defined(MAME_RGB_HIGH_PRECISION)
-	const int first_shift = 1;
-#else
-	const int first_shift = 8;
-#endif
+	auto const filter_expected =
+			[] (u8 x00, u8 x01, u8 x10, u8 x11, u8 u, u8 v)
+			{
+				const unsigned shift_inner = rgbaint_t::FILTER_SHIFT_INNER;
+				const unsigned shift_outer = rgbaint_t::FILTER_SHIFT_OUTER;
+
+				const unsigned upper = (((x00 * (256U - u)) >> shift_inner) + ((x01 * u) >> shift_inner)) >> shift_outer;
+				const unsigned lower = (((x10 * (256U - u)) >> shift_inner) + ((x11 * u) >> shift_inner)) >> shift_outer;
+				return u8(((upper * (256U - v)) + (lower * v)) >> (16 - shift_inner - shift_outer));
+			};
 	for (int index = 0; index < 1000; index++)
 	{
-		u8 u, v;
 		rgbaint_t rgb_point[4];
-		u32 top_row, bottom_row;
-
 		for (int i = 0; i < 4; i++)
 		{
 			rgb_point[i].set(random_u32());
 		}
 
+		u8 u, v;
 		switch (index)
 		{
 			case 0: u = 0; v = 0; break;
@@ -1307,21 +1310,10 @@ void validate_rgb()
 				break;
 		}
 
-		top_row = (rgb_point[0].get_a() * (256 - u) + rgb_point[1].get_a() * u) >> first_shift;
-		bottom_row = (rgb_point[2].get_a() * (256 - u) + rgb_point[3].get_a() * u) >> first_shift;
-		expected_a = (top_row * (256 - v) + bottom_row * v) >> (16 - first_shift);
-
-		top_row = (rgb_point[0].get_r() * (256 - u) + rgb_point[1].get_r() * u) >> first_shift;
-		bottom_row = (rgb_point[2].get_r() * (256 - u) + rgb_point[3].get_r() * u) >> first_shift;
-		expected_r = (top_row * (256 - v) + bottom_row * v) >> (16 - first_shift);
-
-		top_row = (rgb_point[0].get_g() * (256 - u) + rgb_point[1].get_g() * u) >> first_shift;
-		bottom_row = (rgb_point[2].get_g() * (256 - u) + rgb_point[3].get_g() * u) >> first_shift;
-		expected_g = (top_row * (256 - v) + bottom_row * v) >> (16 - first_shift);
-
-		top_row = (rgb_point[0].get_b() * (256 - u) + rgb_point[1].get_b() * u) >> first_shift;
-		bottom_row = (rgb_point[2].get_b() * (256 - u) + rgb_point[3].get_b() * u) >> first_shift;
-		expected_b = (top_row * (256 - v) + bottom_row * v) >> (16 - first_shift);
+		expected_a = filter_expected(rgb_point[0].get_a(), rgb_point[1].get_a(), rgb_point[2].get_a(), rgb_point[3].get_a(), u, v);
+		expected_r = filter_expected(rgb_point[0].get_r(), rgb_point[1].get_r(), rgb_point[2].get_r(), rgb_point[3].get_r(), u, v);
+		expected_g = filter_expected(rgb_point[0].get_g(), rgb_point[1].get_g(), rgb_point[2].get_g(), rgb_point[3].get_g(), u, v);
+		expected_b = filter_expected(rgb_point[0].get_b(), rgb_point[1].get_b(), rgb_point[2].get_b(), rgb_point[3].get_b(), u, v);
 
 		imm = rgbaint_t::bilinear_filter(rgb_point[0].to_rgba(), rgb_point[1].to_rgba(), rgb_point[2].to_rgba(), rgb_point[3].to_rgba(), u, v);
 		rgb.set(imm);
@@ -2644,8 +2636,8 @@ void validity_checker::validate_inputs(device_t &root)
 						{
 							osd_printf_error("Field '%s' has non-character U+%04X in PORT_CHAR(%d)\n",
 									name,
-									(unsigned)code,
-									(int)code);
+									uint32_t(code),
+									int32_t(code));
 						}
 					}
 				}
@@ -2653,6 +2645,34 @@ void validity_checker::validate_inputs(device_t &root)
 
 			// done with this port
 			m_current_ioport = nullptr;
+		}
+
+		// validate the default settings
+		const input_device_default *def = device.input_ports_defaults();
+		if (def != nullptr)
+		{
+			for ( ; def->tag; def++)
+			{
+				if (def->defvalue & ~def->mask)
+					osd_printf_error("Default value 0x%x for field of port '%s' lies outside mask 0x%x\n", def->defvalue, def->mask);
+
+				const auto it = portlist.find(device.subtag(def->tag));
+				if (portlist.end() == it)
+				{
+					osd_printf_error("Default specified for nonexistent port '%s'\n", def->tag);
+				}
+				else
+				{
+					const auto &fields = it->second->fields();
+					if (fields.end() == std::find_if(fields.begin(), fields.end(), [def] (const ioport_field &field) { return field.mask() == def->mask; }))
+					{
+						osd_printf_error(
+								"Default value specified for field with mask 0x%x in port '%s' but no corresponding field found\n",
+								def->mask,
+								def->tag);
+					}
+				}
+			}
 		}
 
 		// done with this device
@@ -2715,9 +2735,12 @@ void validity_checker::validate_devices(machine_config &config)
 					const char *const def_bios = option.second->default_bios();
 					if (def_bios)
 						card->set_default_bios_tag(def_bios);
-					auto additions = option.second->machine_config();
+					auto const &additions = option.second->machine_config();
 					if (additions)
 						additions(card);
+					input_device_default const *input_def = option.second->input_device_defaults();
+					if (input_def)
+						card->set_input_default(input_def);
 				}
 
 				for (device_slot_interface &subslot : slot_interface_enumerator(*card))
@@ -2743,6 +2766,7 @@ void validity_checker::validate_devices(machine_config &config)
 				for (device_t &card_dev : device_enumerator(*card))
 					card_dev.config_complete();
 				validate_roms(*card);
+				validate_inputs(*card);
 
 				for (device_t &card_dev : device_enumerator(*card))
 				{

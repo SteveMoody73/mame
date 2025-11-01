@@ -1102,6 +1102,18 @@ end
 
 
 ---------------------------------------------------
+-- Texas Instruments TMS3631
+--@src/devices/sound/tms3631.h,SOUNDS["TMS3631"] = true
+---------------------------------------------------
+
+if (SOUNDS["TMS3631"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/sound/tms3631.cpp",
+		MAME_DIR .. "src/devices/sound/tms3631.h",
+	}
+end
+
+---------------------------------------------------
 -- Texas Instruments TMS5100-series speech synthesizers
 --@src/devices/sound/tms5110.h,SOUNDS["TMS5110"] = true
 ---------------------------------------------------
@@ -1190,6 +1202,18 @@ if (SOUNDS["VA_VCA"]~=null) then
 	}
 end
 
+--------------------------------------------------
+-- Virtual analog voltage-controlled filters (VCFs)
+--@src/devices/sound/va_vcf.h,SOUNDS["VA_VCF"] = true
+--------------------------------------------------
+
+if (SOUNDS["VA_VCF"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/sound/va_vcf.cpp",
+		MAME_DIR .. "src/devices/sound/va_vcf.h",
+	}
+end
+
 ---------------------------------------------------
 -- VLM5030 speech synthesizer
 --@src/devices/sound/vlm5030.h,SOUNDS["VLM5030"] = true
@@ -1227,20 +1251,6 @@ if (SOUNDS["VRENDER0"]~=null) then
 	files {
 		MAME_DIR .. "src/devices/sound/vrender0.cpp",
 		MAME_DIR .. "src/devices/sound/vrender0.h",
-	}
-end
-
-
-
----------------------------------------------------
--- WAVE file (used for cassette)
---@src/devices/sound/wave.h,SOUNDS["WAVE"] = true
----------------------------------------------------
-
-if (SOUNDS["WAVE"]~=null) then
-	files {
-		MAME_DIR .. "src/devices/sound/wave.cpp",
-		MAME_DIR .. "src/devices/sound/wave.h",
 	}
 end
 
@@ -1821,5 +1831,17 @@ if (SOUNDS["ADC"]~=null) then
 	files {
 		MAME_DIR .. "src/devices/sound/adc.cpp",
 		MAME_DIR .. "src/devices/sound/adc.h",
+	}
+end
+
+---------------------------------------------------
+-- Casio FZ-series PCM
+--@src/devices/sound/fz_pcm.h,SOUNDS["FZ_PCM"] = true
+---------------------------------------------------
+
+if (SOUNDS["FZ_PCM"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/sound/fz_pcm.cpp",
+		MAME_DIR .. "src/devices/sound/fz_pcm.h",
 	}
 end

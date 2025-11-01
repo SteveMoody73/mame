@@ -75,13 +75,14 @@ if BASE_TARGETOS=="unix" then
 end
 
 	configuration { "vs*" }
+if _OPTIONS["vs"]==nil then
 		buildoptions {
 			"/wd4100", -- warning C4100: 'xxx' : unreferenced formal parameter
 			"/wd4127", -- warning C4127: conditional expression is constant
 			"/wd4244", -- warning C4244: 'argument' : conversion from 'xxx' to 'xxx', possible loss of data
 			"/wd4456", -- warning C4456: declaration of 'xxx' hides previous local declaration
 		}
-if _OPTIONS["vs"]=="intel-15" then
+elseif _OPTIONS["vs"]=="intel-15" then
 		buildoptions {
 			"/Qwd111",              -- remark #111: statement is unreachable
 			"/Qwd1879",             -- warning #1879: unimplemented pragma ignored
@@ -135,11 +136,12 @@ project "zlib"
 	end
 
 	configuration { "vs*" }
+if _OPTIONS["vs"]==nil then
 		buildoptions {
 			"/wd4127", -- warning C4127: conditional expression is constant
 			"/wd4244", -- warning C4244: 'argument' : conversion from 'xxx' to 'xxx', possible loss of data
 		}
-if _OPTIONS["vs"]=="intel-15" then
+elseif _OPTIONS["vs"]=="intel-15" then
 		buildoptions {
 			"/Qwd111",              -- remark #111: statement is unreachable
 			"/Qwd280",              -- remark #280: selector expression is constant
@@ -188,6 +190,13 @@ project "zstd"
 		defines {
 			"NDEBUG",
 		}
+
+	configuration { "vs*" }
+if _OPTIONS["vs"]=="clangcl" then
+		buildoptions {
+			"-Wno-error=unused-function",
+		}
+end
 
 	configuration { }
 
@@ -254,12 +263,13 @@ project "softfloat"
 		}
 
 	configuration { "vs*" }
+if _OPTIONS["vs"]==nil then
 		buildoptions {
 			"/wd4244", -- warning C4244: 'argument' : conversion from 'xxx' to 'xxx', possible loss of data
 			"/wd4146", -- warning C4146: unary minus operator applied to unsigned type, result still unsigned
 			"/wd4018", -- warning C4018: 'x' : signed/unsigned mismatch
 		}
-if _OPTIONS["vs"]=="intel-15" then
+elseif _OPTIONS["vs"]=="intel-15" then
 		buildoptions {
 			"/Qwd2557",             -- remark #2557: comparison between signed and unsigned operands
 		}
@@ -307,10 +317,12 @@ if _OPTIONS["gcc"]~=nil and not string.find(_OPTIONS["gcc"], "clang") then
 end
 
 	configuration { "vs*" }
+if _OPTIONS["vs"]==nil then
 		buildoptions {
 			"/wd4701", -- warning C4701: potentially uninitialized local variable 'xxx' used
 			"/wd4703", -- warning C4703: potentially uninitialized local pointer variable 'xxx' used
 		}
+end
 
 	configuration { }
 
@@ -649,12 +661,13 @@ project "jpeg"
 	kind "StaticLib"
 
 	configuration { "vs*" }
+if _OPTIONS["vs"]==nil then
 		buildoptions {
 			"/wd4100", -- warning C4100: 'xxx' : unreferenced formal parameter
 			"/wd4127", -- warning C4127: conditional expression is constant
 			"/wd4244", -- warning C4244: 'argument' : conversion from 'xxx' to 'xxx', possible loss of data
 		}
-if _OPTIONS["vs"]=="intel-15" then
+elseif _OPTIONS["vs"]=="intel-15" then
 		buildoptions {
 			"/Qwd869",              -- remark #869: parameter "xxx" was never referenced
 		}
@@ -727,6 +740,7 @@ project "flac"
 	kind "StaticLib"
 
 	configuration { "vs*" }
+if _OPTIONS["vs"]==nil then
 		buildoptions {
 			"/wd4057", -- warning C4057: 'operator': 'identifier1' differs in indirection to slightly different base types from 'identifier2'
 			"/wd4127", -- warning C4127: conditional expression is constant
@@ -735,7 +749,7 @@ project "flac"
 			"/wd4456", -- warning C4456: declaration of 'xxx' hides previous local declaration
 			"/wd4702", -- warning C4702: unreachable code
 		}
-if _OPTIONS["vs"]=="intel-15" then
+elseif _OPTIONS["vs"]=="intel-15" then
 		buildoptions {
 			"/Qwd111",              -- remark #111: statement is unreachable
 			"/Qwd177",              -- remark #177: function "xxx" was declared but never referenced
@@ -890,19 +904,20 @@ if _OPTIONS["gcc"]~=nil then
 end
 
 	configuration { "vs*" }
+if _OPTIONS["vs"]==nil then
 		buildoptions {
 			"/wd4100", -- warning C4100: 'xxx' : unreferenced formal parameter
 			"/wd4456", -- warning C4456: declaration of 'xxx' hides previous local declaration
 			"/wd4457", -- warning C4457: declaration of 'xxx' hides function parameter
 		}
-if _OPTIONS["vs"]=="intel-15" then
+elseif _OPTIONS["vs"]=="intel-15" then
 		buildoptions {
 			"/Qwd869",              -- remark #869: parameter "xxx" was never referenced
 		}
 end
 	configuration { }
 		defines {
-			"Z7_PPMD_SUPPPORT",
+			"Z7_PPMD_SUPPORT",
 			"Z7_ST",
 		}
 
@@ -977,13 +992,14 @@ project "lua"
 		}
 
 	configuration { "vs*" }
+if _OPTIONS["vs"]==nil then
 		buildoptions {
 			"/wd4101", -- warning C4101: 'identifier': unreferenced local variable
 			"/wd4244", -- warning C4244: 'argument' : conversion from 'xxx' to 'xxx', possible loss of data
 			"/wd4702", -- warning C4702: unreachable code
 			"/wd4310", -- warning C4310: cast truncates constant value
 		}
-if _OPTIONS["vs"]=="intel-15" then
+elseif _OPTIONS["vs"]=="intel-15" then
 		buildoptions {
 			"/Qwd592", -- error #592: variable "xxx" is used before its value is set
 		}
@@ -1069,6 +1085,7 @@ project "lualibs"
 		}
 
 	configuration { "vs*" }
+if _OPTIONS["vs"]==nil then
 		buildoptions {
 			"/wd4101", -- warning C4101: 'identifier': unreferenced local variable
 			"/wd4244", -- warning C4244: 'argument' : conversion from 'xxx' to 'xxx', possible loss of data
@@ -1076,6 +1093,11 @@ project "lualibs"
 			"/wd4152", -- warning C4152: nonstandard extension, function/data pointer conversion in expression
 			"/wd4130", -- warning C4130: '==': logical operation on address of string constant
 		}
+elseif _OPTIONS["vs"]=="clangcl" then
+		buildoptions {
+			"-Wno-error=unused-variable",
+		}
+end
 
 	configuration { }
 		defines {
@@ -1134,7 +1156,8 @@ end
 	configuration { "vs*" }
 if _OPTIONS["vs"]=="clangcl" then
 		buildoptions {
-			"-Wno-implicit-int-float-conversion",
+			"-Wno-unused-but-set-variable",
+			"-Wno-unused-variable",
 		}
 end
 
@@ -1168,6 +1191,7 @@ project "portmidi"
 	}
 
 	configuration { "vs*" }
+if _OPTIONS["vs"]==nil then
 		buildoptions {
 			"/wd4100", -- warning C4100: 'xxx' : unreferenced formal parameter
 			"/wd4127", -- warning C4127: conditional expression is constant
@@ -1175,12 +1199,18 @@ project "portmidi"
 			"/wd4456", -- warning C4456: declaration of 'xxx' hides previous local declaration
 			"/wd4706", -- warning C4706: assignment within conditional expression
 		}
-if _OPTIONS["vs"]=="intel-15" then
+elseif _OPTIONS["vs"]=="intel-15" then
 		buildoptions {
 			"/Qwd188",              -- error #188: enumerated type mixed with another type
 			"/Qwd344",              -- remark #344: typedef name has already been declared (with same type)
 			"/Qwd869",              -- remark #869: parameter "xxx" was never referenced
 			"/Qwd2557",             -- remark #2557: comparison between signed and unsigned operands
+		}
+elseif _OPTIONS["vs"]=="clangcl" then
+		buildoptions {
+			"-Wno-unused-but-set-variable",
+			"-Wno-unused-function",
+			"-Wno-unused-variable",
 		}
 end
 
@@ -1469,6 +1499,7 @@ project "bgfx"
 	kind "StaticLib"
 
 	configuration { "vs*" }
+if _OPTIONS["vs"]==nil then
 		buildoptions {
 			"/wd4324", -- warning C4324: 'xxx' : structure was padded due to __declspec(align())
 			"/wd4244", -- warning C4244: 'argument' : conversion from 'xxx' to 'xxx', possible loss of data
@@ -1476,14 +1507,21 @@ project "bgfx"
 			"/wd4310", -- warning C4310: cast truncates constant value
 			"/wd4701", -- warning C4701: potentially uninitialized local variable 'xxx' used
 		}
-
-if _OPTIONS["vs"]=="intel-15" then
+elseif _OPTIONS["vs"]=="intel-15" then
 		buildoptions {
 			"/Qwd906",              -- message #906: effect of this "#pragma pack" directive is local to function "xxx"
 			"/Qwd1879",             -- warning #1879: unimplemented pragma ignored
 			"/Qwd82",               -- remark #82: storage class is not first
 		}
+elseif _OPTIONS["vs"]=="clangcl" then
+		buildoptions {
+			"-Wno-uninitialized",
+			"-Wno-unused-but-set-variable",
+			"-Wno-unused-function",
+			"-Wno-unused-variable",
+		}
 end
+
 	configuration { }
 
 	includedirs {
@@ -1504,6 +1542,7 @@ end
 		includedirs {
 			MAME_DIR .. "3rdparty/bx/include/compat/msvc",
 		}
+
 	configuration { "mingw*" }
 		includedirs {
 			MAME_DIR .. "3rdparty/bx/include/compat/mingw",
@@ -1597,9 +1636,6 @@ end
 			defines {
 				"WL_EGL_PLATFORM=1",
 			}
-			buildoptions {
-				backtick(pkgconfigcmd() .. " --cflags wayland-egl-backend"),
-			}
 		end
 	end
 
@@ -1659,6 +1695,7 @@ project "portaudio"
 	kind "StaticLib"
 
 	configuration { "vs*" }
+if _OPTIONS["vs"]==nil then
 		buildoptions {
 			"/wd4245", -- warning C4245: 'conversion' : conversion from 'type1' to 'type2', signed/unsigned mismatch
 			"/wd4244", -- warning C4244: 'argument' : conversion from 'xxx' to 'xxx', possible loss of data
@@ -1668,22 +1705,28 @@ project "portaudio"
 			"/wd4127", -- warning C4127: conditional expression is constant
 			"/wd4456", -- warning C4456: declaration of 'xxx' hides previous local declaration
 			"/wd4312", -- warning C4312: 'type cast': conversion from 'UINT' to 'HWAVEIN' of greater size
+			"/wd4204", -- warning C4204: nonstandard extension used : non-constant aggregate initializer
+			"/wd4701", -- warning C4701: potentially uninitialized local variable 'xxx' used
+			"/wd4057", -- warning C4057: 'function': 'xxx' differs in indirection to slightly different base types from 'xxx'
 		}
-	if _OPTIONS["vs"]=="clangcl" then
+elseif _OPTIONS["vs"]=="intel-15" then
 		buildoptions {
+			"/Qwd869",  -- remark #869: parameter "xxx" was never referenced
+			"/Qwd1478", -- warning #1478: function "xxx" (declared at line yyy of "zzz") was declared deprecated
+			"/Qwd2544", -- message #2544: empty dependent statement in if-statement
+			"/Qwd1879", -- warning #1879: unimplemented pragma ignored
+		}
+elseif _OPTIONS["vs"]=="clangcl" then
+		buildoptions {
+			"-Wno-missing-braces",
 			"-Wno-implicit-const-int-float-conversion",
 			"-Wno-sometimes-uninitialized",
 			"-Wno-unused-but-set-variable",
+			"-Wno-unused-function",
+			"-Wno-unused-variable",
+			"-Wno-switch",
 		}
-	end
-	if _OPTIONS["vs"]=="intel-15" then
-		buildoptions {
-			"/Qwd869",              -- remark #869: parameter "xxx" was never referenced
-			"/Qwd1478",             -- warning #1478: function "xxx" (declared at line yyy of "zzz") was declared deprecated
-			"/Qwd2544",             -- message #2544: empty dependent statement in if-statement
-			"/Qwd1879",             -- warning #1879: unimplemented pragma ignored
-		}
-	end
+end
 
 	configuration { "gmake or ninja" }
 		buildoptions_c {
@@ -1727,12 +1770,6 @@ project "portaudio"
 			}
 		end
 	end
-	configuration { "vs*" }
-		buildoptions {
-			"/wd4204", -- warning C4204: nonstandard extension used : non-constant aggregate initializer
-			"/wd4701", -- warning C4701: potentially uninitialized local variable 'xxx' used
-			"/wd4057", -- warning C4057: 'function': 'xxx' differs in indirection to slightly different base types from 'xxx'
-		}
 
 	configuration { }
 
@@ -1833,9 +1870,11 @@ project "linenoise"
 	addprojectflags()
 
 	configuration { "vs*" }
+if _OPTIONS["vs"]==nil then
 		buildoptions {
 			"/wd4701", -- warning C4701: potentially uninitialized local variable 'xxx' used
 		}
+end
 
 	configuration { }
 
@@ -1994,7 +2033,6 @@ project "asmjit"
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/arm/armformatter_p.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/arm/armformatter.cpp",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/arm/armglobals.h",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/arm/armoperand.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/arm/armutils.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/asmjit-scope-begin.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/asmjit-scope-end.h",
@@ -2005,6 +2043,20 @@ project "asmjit"
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/archcommons.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/archtraits.cpp",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/archtraits.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/arena.cpp",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/arena.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/arenabitset.cpp",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/arenabitset_p.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/arenahash.cpp",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/arenahash.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/arenalist.cpp",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/arenalist.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/arenapool.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/arenastring.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/arenatree.cpp",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/arenatree.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/arenavector.cpp",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/arenavector.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/assembler.cpp",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/assembler.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/builder_p.h",
@@ -2032,6 +2084,7 @@ project "asmjit"
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/environment.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/errorhandler.cpp",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/errorhandler.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/fixup.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/formatter_p.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/formatter.cpp",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/formatter.h",
@@ -2058,14 +2111,19 @@ project "asmjit"
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/osutils.cpp",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/osutils.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/raassignment_p.h",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/rabuilders_p.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/racfgblock_p.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/racfgbuilder_p.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/raconstraints_p.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/radefs_p.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/rainst_p.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/ralocal_p.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/ralocal.cpp",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/rapass_p.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/rapass.cpp",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/rareg_p.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/rastack_p.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/rastack.cpp",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/span.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/string.cpp",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/string.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/support_p.h",
@@ -2077,19 +2135,17 @@ project "asmjit"
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/type.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/virtmem.cpp",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/virtmem.h",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/zone.cpp",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/zone.h",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/zonehash.cpp",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/zonehash.h",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/zonelist.cpp",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/zonelist.h",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/zonestack.cpp",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/zonestack.h",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/zonestring.h",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/zonetree.cpp",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/zonetree.h",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/zonevector.cpp",
-		MAME_DIR .. "3rdparty/asmjit/src/asmjit/core/zonevector.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/host.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/ujit.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/ujit/ujitbase.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/ujit/unicompiler.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/ujit/unicompiler_a64.cpp",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/ujit/unicompiler_utils_p.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/ujit/unicompiler_x86.cpp",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/ujit/unicondition.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/ujit/uniop.h",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/ujit/vecconsttable.cpp",
+		MAME_DIR .. "3rdparty/asmjit/src/asmjit/ujit/vecconsttable.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/x86.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/x86/x86archtraits_p.h",
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/x86/x86assembler.cpp",

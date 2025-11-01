@@ -9,7 +9,8 @@
 
 #include "bus/generic/carts.h"
 #include "bus/generic/slot.h"
-#include "machine/generalplus_gpl16250soc.h"
+#include "machine/generalplus_gpl951xx_soc.h"
+#include "machine/generalplus_gpl1625x_soc.h"
 
 #include "screen.h"
 #include "speaker.h"
@@ -30,6 +31,7 @@ public:
 	}
 
 	void base(machine_config &config);
+	void base_alt_irq(machine_config &config);
 
 	void cs_map_base(address_map &map) ATTR_COLD;
 

@@ -273,20 +273,17 @@ private:
 	public:
 		struct setinfo
 		{
-			void next_color() noexcept
+			// step must be 2^x for these
+			void next_color(int step) noexcept
 			{
-				if ((m_color_count - 1) > m_color)
-					++m_color;
-				else
-					m_color = 0U;
+				m_color = (((m_color & ~(step - 1)) + step) % m_color_count) & ~(step - 1);
 			}
 
-			void prev_color() noexcept
+			void prev_color(int step) noexcept
 			{
-				if (m_color)
-					--m_color;
-				else
-					m_color = m_color_count - 1;
+				const int minuend = (m_color > 0) ? m_color : m_color_count;
+				const int step2 = minuend & (step - 1);
+				m_color = minuend - (step2 ? step2 : step);
 			}
 
 			device_palette_interface *m_palette = nullptr;
@@ -556,7 +553,7 @@ private:
 				}
 			}
 
-			bool prev_catagory() noexcept
+			bool prev_category() noexcept
 			{
 				if (!m_flags)
 				{
@@ -760,14 +757,18 @@ void gfx_viewer::palette::handle_keys(running_machine &machine)
 	int const screencount = rowcount * rowcount;
 
 	// handle keyboard navigation
+	bool const alt_pressed = machine.input().code_pressed(KEYCODE_LALT) || machine.input().code_pressed(KEYCODE_RALT);
+	bool const ctrl_pressed = machine.input().code_pressed(KEYCODE_LCONTROL) || machine.input().code_pressed(KEYCODE_RCONTROL);
+	bool const shift_pressed = machine.input().code_pressed(KEYCODE_LSHIFT) || machine.input().code_pressed(KEYCODE_RSHIFT);
+
 	if (input.pressed_repeat(IPT_UI_UP, 4))
-		m_offset -= rowcount;
+		m_offset -= shift_pressed ? 1 : rowcount;
 	if (input.pressed_repeat(IPT_UI_DOWN, 4))
-		m_offset += rowcount;
+		m_offset += shift_pressed ? 1 : rowcount;
 	if (input.pressed_repeat(IPT_UI_PAGE_UP, 6))
-		m_offset -= screencount;
+		m_offset -= screencount * (alt_pressed ? 100 : ctrl_pressed ? 10 : 1);
 	if (input.pressed_repeat(IPT_UI_PAGE_DOWN, 6))
-		m_offset += screencount;
+		m_offset += screencount * (alt_pressed ? 100 : ctrl_pressed ? 10 : 1);
 	if (input.pressed_repeat(IPT_UI_HOME, 4))
 		m_offset = 0;
 	if (input.pressed_repeat(IPT_UI_END, 4))
@@ -786,8 +787,11 @@ void gfx_viewer::palette::handle_keys(running_machine &machine)
 
 bool gfx_viewer::gfxset::handle_keys(running_machine &machine, int xcells, int ycells)
 {
-	auto &input = machine.ui_input();
+	bool const alt_pressed = machine.input().code_pressed(KEYCODE_LALT) || machine.input().code_pressed(KEYCODE_RALT);
+	bool const ctrl_pressed = machine.input().code_pressed(KEYCODE_LCONTROL) || machine.input().code_pressed(KEYCODE_RCONTROL);
 	bool const shift_pressed = machine.input().code_pressed(KEYCODE_LSHIFT) || machine.input().code_pressed(KEYCODE_RSHIFT);
+
+	auto &input = machine.ui_input();
 	bool result = false;
 
 	// handle previous/next group
@@ -828,24 +832,27 @@ bool gfx_viewer::gfxset::handle_keys(running_machine &machine, int xcells, int y
 	}
 
 	// handle navigation within the cells (up,down,pgup,pgdown)
+	int const total = gfx.elements();
+	int const screencount = xcells * ycells;
+
 	if (input.pressed_repeat(IPT_UI_UP, 4))
 	{
-		set.m_offset -= xcells;
+		set.m_offset -= shift_pressed ? 1 : xcells;
 		result = true;
 	}
 	if (input.pressed_repeat(IPT_UI_DOWN, 4))
 	{
-		set.m_offset += xcells;
+		set.m_offset += shift_pressed ? 1 : xcells;
 		result = true;
 	}
 	if (input.pressed_repeat(IPT_UI_PAGE_UP, 6))
 	{
-		set.m_offset -= xcells * ycells;
+		set.m_offset -= screencount * (alt_pressed ? 100 : ctrl_pressed ? 10 : 1);
 		result = true;
 	}
 	if (input.pressed_repeat(IPT_UI_PAGE_DOWN, 6))
 	{
-		set.m_offset += xcells * ycells;
+		set.m_offset += screencount * (alt_pressed ? 100 : ctrl_pressed ? 10 : 1);
 		result = true;
 	}
 	if (input.pressed_repeat(IPT_UI_HOME, 4))
@@ -855,14 +862,14 @@ bool gfx_viewer::gfxset::handle_keys(running_machine &machine, int xcells, int y
 	}
 	if (input.pressed_repeat(IPT_UI_END, 4))
 	{
-		set.m_offset = gfx.elements();
+		set.m_offset = total;
 		result = true;
 	}
 
 	// clamp within range
-	if (set.m_offset + xcells * ycells > ((gfx.elements() + xcells - 1) / xcells) * xcells)
+	if (set.m_offset + screencount > ((total + xcells - 1) / xcells) * xcells)
 	{
-		set.m_offset = ((gfx.elements() + xcells - 1) / xcells) * xcells - xcells * ycells;
+		set.m_offset = ((total + xcells - 1) / xcells) * xcells - screencount;
 		result = true;
 	}
 	if (set.m_offset < 0)
@@ -874,12 +881,12 @@ bool gfx_viewer::gfxset::handle_keys(running_machine &machine, int xcells, int y
 	// handle color selection (left,right)
 	if (input.pressed_repeat(IPT_UI_LEFT, 4))
 	{
-		set.prev_color();
+		set.prev_color(alt_pressed ? 0x100 : ctrl_pressed ? 0x10 : 1);
 		result = true;
 	}
 	if (input.pressed_repeat(IPT_UI_RIGHT, 4))
 	{
-		set.next_color();
+		set.next_color(alt_pressed ? 0x100 : ctrl_pressed ? 0x10 : 1);
 		result = true;
 	}
 
@@ -942,7 +949,7 @@ bool gfx_viewer::tilemap::handle_keys(running_machine &machine, float pixelscale
 	}
 
 	// handle flags (category)
-	if (input.pressed(IPT_UI_PAGE_UP) && info.prev_catagory())
+	if (input.pressed(IPT_UI_PAGE_UP) && info.prev_category())
 	{
 		result = true;
 		if (TILEMAP_DRAW_ALL_CATEGORIES == info.m_flags)
@@ -1114,7 +1121,7 @@ uint32_t gfx_viewer::handle_palette(mame_ui_manager &mui, render_container &cont
 	{
 		x0 = boxbounds.x0 + 6.0f * chwidth + float(x) * cellwidth;
 		y0 = boxbounds.y0 + 2.0f * chheight;
-		container.add_char(x0 + 0.5f * (cellwidth - chwidth), y0, chheight, aspect, rgb_t::white(), *ui_font, "0123456789ABCDEF"[x & 0xf]);
+		container.add_char(x0 + 0.5f * (cellwidth - chwidth), y0, chheight, aspect, rgb_t::white(), *ui_font, "0123456789ABCDEF"[(x + m_palette.index(0, 0)) & 0xf]);
 
 		// if we're skipping, draw a point between the character and the box to indicate which one it's referring to
 		if (rowskip)
@@ -1329,7 +1336,7 @@ uint32_t gfx_viewer::handle_gfxset(mame_ui_manager &mui, render_container &conta
 	{
 		x0 = boxbounds.x0 + 6.0f * chwidth + float(x) * cellwidth;
 		y0 = boxbounds.y0 + 2.0f * chheight;
-		container.add_char(x0 + 0.5f * (cellwidth - chwidth), y0, chheight, aspect, rgb_t::white(), *ui_font, "0123456789ABCDEF"[x & 0xf]);
+		container.add_char(x0 + 0.5f * (cellwidth - chwidth), y0, chheight, aspect, rgb_t::white(), *ui_font, "0123456789ABCDEF"[(x + set.m_offset) & 0xf]);
 
 		// if we're skipping, draw a point between the character and the box to indicate which one it's referring to
 		if (colskip)

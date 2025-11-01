@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:R. Belmont, Olivier Galibert, ElSemi, Angelo Salese
+// copyright-holders:R. Belmont, Olivier Galibert, ElSemi, Angelo Salese, Matthew Daniels
 /*********************************************************************************************************************************
 
     Sega Model 2 Geometry Engine and 3D Rasterizer Emulation
@@ -76,20 +76,18 @@
 
     - Texturing code could use a real good speed optimization.
     - The U and V coordinates provided by the game are in 13.3 fixed point format.
-    - The luma/texel combination algorithm is not known. There are currently some small color glitches here and
-    there, and this might be the culprit.
     - The log tables and distance coefficients are used to calculate the number of texels per world unit that need to
     be used to render a texture. Textures can also be provided with smaller levels of details and a LOD bit selector
     in the texture header tells the rasterizer which texture map to use. The rasterizer then can average two texture
     maps to do mip mapping. More information can be found on the 2B manual, on the 'Texturing' and 'Data Format' chapters.
-    This is currently unemulated. We always use the texture data from the bigger texture map.
-    - The rasterizer supports up to 128x128 'microtex' textures, which are supposed to be higher resolution textures used
-    to display more detail when a texture is real close to the viewer. This is currently unemulated.
+    - The rasterizer supports 128x128 'microtextures' which are typically used to add more details to a texture when it is
+	close enough to the viewer.
 
 *********************************************************************************************************************************/
 
 #include "emu.h"
 #include "model2.h"
+#include "model2rd.ipp"
 
 #include <cmath>
 #include <limits>
@@ -128,11 +126,11 @@ static inline void transform_vector( poly_vertex *vector, float *matrix )
 	vector->pz = tz;
 }
 
-static inline void normalize_vector( poly_vertex *vector )
+static inline void normalize_vector(poly_vertex *vector)
 {
-	float n = sqrt( (vector->x * vector->x) + (vector->y * vector->y) + (vector->pz * vector->pz) );
+	const float n = sqrt( (vector->x * vector->x) + (vector->y * vector->y) + (vector->pz * vector->pz) );
 
-	if ( n )
+	if (n)
 	{
 		float oon = 1.0f / n;
 		vector->x *= oon;
@@ -141,12 +139,12 @@ static inline void normalize_vector( poly_vertex *vector )
 	}
 }
 
-static inline float dot_product( poly_vertex *v1, poly_vertex *v2 )
+static inline float dot_product(const poly_vertex &v1, const poly_vertex &v2)
 {
-	return (v1->x * v2->x) + (v1->y * v2->y) + (v1->pz * v2->pz);
+	return (v1.x * v2.x) + (v1.y * v2.y) + (v1.pz * v2.pz);
 }
 
-static inline void vector_cross3( poly_vertex *dst, poly_vertex *v0, poly_vertex *v1, poly_vertex *v2 )
+static inline void vector_cross3(poly_vertex *dst, const poly_vertex *v0, const poly_vertex *v1, const poly_vertex *v2)
 {
 	poly_vertex p1, p2;
 
@@ -199,41 +197,35 @@ inline u16 model2_state::float_to_zval( float floatval )
 
 static int32_t clip_polygon(poly_vertex *v, int32_t num_vertices, poly_vertex *vout, model2_state::plane clip_plane)
 {
-	poly_vertex *cur, *out;
-	float   curdot, nextdot, scale;
-	int32_t   i, curin, nextin, nextvert, outcount;
+	int32_t outcount = 0;
 
-	outcount = 0;
+	const poly_vertex *cur = v;
+	poly_vertex *out = vout;
 
-	cur = v;
-	out = vout;
+	float curdot = dot_product(*cur, clip_plane.normal);
+	int32_t curin = (curdot >= clip_plane.distance) ? 1 : 0;
 
-	curdot = dot_product( cur, &clip_plane.normal );
-	curin = (curdot >= clip_plane.distance) ? 1 : 0;
-
-	for( i = 0; i < num_vertices; i++ )
+	for (int32_t i = 0; i < num_vertices; i++)
 	{
-		nextvert = (i + 1) % num_vertices;
+		const int32_t nextvert = (i + 1) % num_vertices;
 
 		/* if the current point is inside the plane, add it */
-		if ( curin ) memcpy( &out[outcount++], cur, sizeof( poly_vertex ) );
+		if (curin)
+			out[outcount++] = *cur;
 
-		nextdot = dot_product( &v[nextvert], &clip_plane.normal );
-		nextin = (nextdot >= clip_plane.distance) ? 1 : 0;
+		const float nextdot = dot_product(v[nextvert], clip_plane.normal);
+		const int32_t nextin = (nextdot >= clip_plane.distance) ? 1 : 0;
 
 		/* Add a clipped vertex if one end of the current edge is inside the plane and the other is outside */
-		// TODO: displaying Honey in Fighting Vipers and Bean in Sonic the Fighters somehow causes a NaN dot product here,
-		//       causing MAME to hardlock in the renderer routine. They are also causing lots of invalid polygon renders
-		//       which might be related.
-		if ( curin != nextin && std::isnan(curdot) == false && std::isnan(nextdot) == false )
+		if ((curin != nextin) && !std::isnan(curdot) && !std::isnan(nextdot))
 		{
-			scale = (clip_plane.distance - curdot) / (nextdot - curdot);
+			const float scale = (clip_plane.distance - curdot) / (nextdot - curdot);
 
 			out[outcount].x = cur->x + ((v[nextvert].x - cur->x) * scale);
 			out[outcount].y = cur->y + ((v[nextvert].y - cur->y) * scale);
 			out[outcount].pz = cur->pz + ((v[nextvert].pz - cur->pz) * scale);
-			out[outcount].pu = (u16)((float)cur->pu + (((float)v[nextvert].pu - (float)cur->pu) * scale));
-			out[outcount].pv = (u16)((float)cur->pv + (((float)v[nextvert].pv - (float)cur->pv) * scale));
+			out[outcount].pu = cur->pu + ((v[nextvert].pu - cur->pu) * scale);
+			out[outcount].pv = cur->pv + ((v[nextvert].pv - cur->pv) * scale);
 			outcount++;
 		}
 
@@ -414,6 +406,10 @@ void model2_state::model2_3d_process_quad( raster_state *raster, u32 attr )
 	/* set the luma value of this quad */
 	object.luma = (raster->command_buffer[9] >> 15) & 0xff;
 
+	/* set the texture LOD of this quad */
+	object.texlod = ((raster->command_buffer[10] >> 8) & 0x7f80) - 0x3f80;
+	object.texlod += raster->log_ram[raster->command_buffer[10] & 0x7fff];
+
 	/* determine whether we can cull this quad */
 	cull = check_culling(raster,attr,min_z,max_z);
 
@@ -490,6 +486,7 @@ void model2_state::model2_3d_process_quad( raster_state *raster, u32 attr )
 				tri->texheader[2] = object.texheader[2];
 				tri->texheader[3] = object.texheader[3];
 				tri->luma = object.luma;
+				tri->texlod = object.texlod;
 
 				/* set the viewport */
 				tri->viewport[0] = raster->viewport[0];
@@ -637,10 +634,14 @@ void model2_state::model2_3d_process_triangle( raster_state *raster, u32 attr )
 	/* update the address */
 	raster->command_buffer[1] += tho * 4;
 
-	/* set the luma value of this quad */
+	/* set the luma value of this triangle */
 	object.luma = (raster->command_buffer[9] >> 15) & 0xff;
 
-	/* determine whether we can cull this quad */
+	/* set the texture LOD of this triangle */
+	object.texlod = ((raster->command_buffer[10] >> 8) & 0x7f80) - 0x3f80;
+	object.texlod += raster->log_ram[raster->command_buffer[10] & 0x7fff];
+
+	/* determine whether we can cull this triangle */
 	cull = check_culling(raster,attr,min_z,max_z);
 
 	/* set the object's z value */
@@ -717,6 +718,7 @@ void model2_state::model2_3d_process_triangle( raster_state *raster, u32 attr )
 				tri->texheader[2] = object.texheader[2];
 				tri->texheader[3] = object.texheader[3];
 				tri->luma = object.luma;
+				tri->texlod = object.texlod;
 
 				/* set the viewport */
 				tri->viewport[0] = raster->viewport[0];
@@ -796,27 +798,41 @@ void model2_renderer::model2_3d_render(triangle *tri, const rectangle &cliprect)
 	m2_poly_extra_data& extra = poly->object_data().next();
 	u8 renderer;
 
-	/* select renderer based on attributes (bit15 = checker, bit14 = textured, bit13 = transparent */
-	renderer = (tri->texheader[0] >> 13) & 7;
+	/* select renderer based on attributes (bit14 = textured, bit13 = transparent) */
+	renderer = (tri->texheader[0] >> 13) & 3;
 
 	/* calculate and clip to viewport */
 	rectangle vp(tri->viewport[0] + m_xoffs, tri->viewport[2] + m_xoffs, (384-tri->viewport[3]) + m_yoffs, (384-tri->viewport[1]) + m_yoffs);
 	vp &= cliprect;
 
 	extra.state = &m_state;
-	extra.lumabase = ((tri->texheader[1] & 0xff) << 7) + ((tri->luma >> 5) ^ 0x7);
+	extra.checker = (tri->texheader[0] >> 15) & 1;
+	extra.lumabase = (tri->texheader[1] & 0xff) << 7;
 	extra.colorbase = (tri->texheader[3] >> 6) & 0x3ff;
+	extra.luma = tri->luma;
+	extra.texlod = tri->texlod;
 
 	if (renderer & 2)
 	{
+		extra.texmirrorx = (tri->texheader[0] >> 8) & 1;
+		extra.texmirrory = (tri->texheader[0] >> 9) & 1;
+
+		// disable smooth wrapping if mirroring is enabled
+		extra.texwrapx = (tri->texheader[0] >> 6) & 1 & ~extra.texmirrorx;
+		extra.texwrapy = (tri->texheader[0] >> 7) & 1 & ~extra.texmirrory;
+
+		extra.texsheet[0] = (tri->texheader[2] & 0x1000) ? m_state.m_textureram1 : m_state.m_textureram0;
+		extra.texsheet[1] = (tri->texheader[2] & 0x1000) ? m_state.m_textureram0 : m_state.m_textureram1;
 		extra.texwidth = 32 << ((tri->texheader[0] >> 0) & 0x7);
 		extra.texheight = 32 << ((tri->texheader[0] >> 3) & 0x7);
-		extra.texx = 32 * ((tri->texheader[2] >> 0) & 0x1f);
-		extra.texy = 32 * (((tri->texheader[2] >> 6) & 0x1f) + ( tri->texheader[2] & 0x20 ));
-		/* TODO: Virtua Striker contradicts with this. */
-		extra.texmirrorx = 0;//(tri->texheader[0] >> 9) & 1;
-		extra.texmirrory = 0;//(tri->texheader[0] >> 8) & 1;
-		extra.texsheet = (tri->texheader[2] & 0x1000) ? m_state.m_textureram1 : m_state.m_textureram0;
+		extra.texx = 32 * ((tri->texheader[2] >> 0) & 0x3f);
+		extra.texy = 32 * ((tri->texheader[2] >> 6) & 0x1f);
+
+		// microtexture parameters
+		extra.utex = (tri->texheader[0] >> 12) & 1;
+		extra.utexminlod = (tri->texheader[0] >> 10) & 3;
+		extra.utexx = ((tri->texheader[2] >> 13) & 1) * 128;
+		extra.utexy = ((tri->texheader[2] >> 14) & 3) * 128;
 
 		tri->v[0].pz = 1.0f / (tri->v[0].pz + std::numeric_limits<float>::min());
 		tri->v[0].pu = tri->v[0].pu * tri->v[0].pz * (1.0f / 8.0f);
@@ -827,36 +843,9 @@ void model2_renderer::model2_3d_render(triangle *tri, const rectangle &cliprect)
 		tri->v[2].pz = 1.0f / (tri->v[2].pz + std::numeric_limits<float>::min());
 		tri->v[2].pu = tri->v[2].pu * tri->v[2].pz * (1.0f / 8.0f);
 		tri->v[2].pv = tri->v[2].pv * tri->v[2].pz * (1.0f / 8.0f);
+	}
 
-		// Note : The class model2_renderer has an array of function pointers in it named m_renderfuncs, in theory this simply
-		//        needs to be passed into the render_triangle function as such model2_renderer::m_renderfuncs[renderer], but
-		//        I was unable to make it work when converting to the new polygon rasterizer interface.
-		switch (renderer)
-		{
-		case 0: render_triangle<3>(vp, render_delegate(&model2_renderer::model2_3d_render_0, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		case 1: render_triangle<3>(vp, render_delegate(&model2_renderer::model2_3d_render_1, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		case 2: render_triangle<3>(vp, render_delegate(&model2_renderer::model2_3d_render_2, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		case 3: render_triangle<3>(vp, render_delegate(&model2_renderer::model2_3d_render_3, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		case 4: render_triangle<3>(vp, render_delegate(&model2_renderer::model2_3d_render_4, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		case 5: render_triangle<3>(vp, render_delegate(&model2_renderer::model2_3d_render_5, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		case 6: render_triangle<3>(vp, render_delegate(&model2_renderer::model2_3d_render_6, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		case 7: render_triangle<3>(vp, render_delegate(&model2_renderer::model2_3d_render_7, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		}
-	}
-	else
-	{
-		switch (renderer)
-		{
-		case 0: render_triangle<0>(vp, render_delegate(&model2_renderer::model2_3d_render_0, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		case 1: render_triangle<0>(vp, render_delegate(&model2_renderer::model2_3d_render_1, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		case 2: render_triangle<0>(vp, render_delegate(&model2_renderer::model2_3d_render_2, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		case 3: render_triangle<0>(vp, render_delegate(&model2_renderer::model2_3d_render_3, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		case 4: render_triangle<0>(vp, render_delegate(&model2_renderer::model2_3d_render_4, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		case 5: render_triangle<0>(vp, render_delegate(&model2_renderer::model2_3d_render_5, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		case 6: render_triangle<0>(vp, render_delegate(&model2_renderer::model2_3d_render_6, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		case 7: render_triangle<0>(vp, render_delegate(&model2_renderer::model2_3d_render_7, this), tri->v[0], tri->v[1], tri->v[2]); break;
-		}
-	}
+	render_triangle<3>(vp, m_render_callbacks[renderer], tri->v[0], tri->v[1], tri->v[2]);
 }
 
 /*
@@ -906,7 +895,7 @@ inline void model2_state::model2_3d_project( triangle *tri )
 }
 
 /* 3D Rasterizer frame start: Resets frame variables */
-void model2_state::model2_3d_frame_start( void )
+void model2_state::model2_3d_frame_start()
 {
 	raster_state *raster = m_raster.get();
 
@@ -1092,7 +1081,7 @@ void model2_state::model2_3d_push( raster_state *raster, u32 input )
 				for( i = 0; i < 4; i++ )
 				{
 					/* center x */
-					raster->center[i][0] = (raster->command_buffer[2+i] >> 12) & 0xffF;
+					raster->center[i][0] = (raster->command_buffer[2+i] >> 12) & 0xfff;
 
 					if ( raster->center[i][0] & 0x800 )
 						raster->center[i][0] = -( 0x800 - (raster->center[i][0] & 0x7ff) );
@@ -1150,7 +1139,7 @@ void model2_state::model2_3d_push( raster_state *raster, u32 input )
 						if ( address & 0x800000 )
 							raster->texture_ram[address & 0xffff] = raster->command_buffer[2];
 						else
-							raster->log_ram[address & 0xffff] = raster->command_buffer[2];
+							raster->log_ram[address & 0x7fff] = raster->command_buffer[2];
 
 						/* increment the address and decrease the count */
 						raster->command_buffer[0]++;
@@ -1304,10 +1293,10 @@ void model2_state::geo_parse_np_ns( geo_state *geo, u32 *input, u32 count )
 			transform_point( &point, geo->matrix );
 
 			/* calculate the dot product of the normal and the light vector */
-			dotl = dot_product( &normal, &geo->light );
+			dotl = dot_product(normal, geo->light);
 
 			/* calculate the dot product of the normal and the point */
-			dotp = dot_product( &normal, &point );
+			dotp = dot_product(normal, point);
 
 			/* apply focus */
 			apply_focus( geo, &point );
@@ -1324,10 +1313,9 @@ void model2_state::geo_parse_np_ns( geo_state *geo, u32 *input, u32 count )
 			else luminance = fabs( dotl );
 
 			luminance = (luminance * texparam->diffuse) + texparam->ambient;
-			luma = (int32_t)luminance;
+			luminance = std::clamp(luminance, 0.0f, 255.0f);
 
-			if ( luma > 255 ) luma = 255;
-			if ( luma < 0 ) luma = 0;
+			luma = (int32_t)luminance;
 
 			/* add the face bit to the luma */
 			luma += face;
@@ -1452,10 +1440,10 @@ void model2_state::geo_parse_np_s( geo_state *geo, u32 *input, u32 count )
 			transform_point( &point, geo->matrix );
 
 			/* calculate the dot product of the normal and the light vector */
-			dotl = dot_product( &normal, &geo->light );
+			dotl = dot_product(normal, geo->light);
 
 			/* calculate the dot product of the normal and the point */
-			dotp = dot_product( &normal, &point );
+			dotp = dot_product(normal, point);
 
 			/* apply focus */
 			apply_focus( geo, &point );
@@ -1481,10 +1469,9 @@ void model2_state::geo_parse_np_s( geo_state *geo, u32 *input, u32 count )
 			specular *= texparam->specular_scale;
 
 			luminance = (luminance * texparam->diffuse) + texparam->ambient + specular;
-			luma = (int32_t)luminance;
+			luminance = std::clamp(luminance, 0.0f, 255.0f);
 
-			if ( luma > 255 ) luma = 255;
-			if ( luma < 0 ) luma = 0;
+			luma = (int32_t)luminance;
 
 			/* add the face bit to the luma */
 			luma += face;
@@ -1619,10 +1606,10 @@ void model2_state::geo_parse_nn_ns( geo_state *geo, u32 *input, u32 count )
 			normalize_vector( &normal );
 
 			/* calculate the dot product of the normal and the light vector */
-			dotl = dot_product( &normal, &geo->light );
+			dotl = dot_product(normal, geo->light);
 
 			/* calculate the dot product of the normal and the point */
-			dotp = dot_product( &normal, &point );
+			dotp = dot_product(normal, point);
 
 			/* apply focus */
 			apply_focus( geo, &point );
@@ -1639,10 +1626,9 @@ void model2_state::geo_parse_nn_ns( geo_state *geo, u32 *input, u32 count )
 			else luminance = fabs( dotl );
 
 			luminance = (luminance * texparam->diffuse) + texparam->ambient;
-			luma = (int32_t)luminance;
+			luminance = std::clamp(luminance, 0.0f, 255.0f);
 
-			if ( luma > 255 ) luma = 255;
-			if ( luma < 0 ) luma = 0;
+			luma = (int32_t)luminance;
 
 			/* add the face bit to the luma */
 			luma += face;
@@ -1810,10 +1796,10 @@ void model2_state::geo_parse_nn_s( geo_state *geo, u32 *input, u32 count )
 			normalize_vector( &normal );
 
 			/* calculate the dot product of the normal and the light vector */
-			dotl = dot_product( &normal, &geo->light );
+			dotl = dot_product(normal, geo->light);
 
 			/* calculate the dot product of the normal and the point */
-			dotp = dot_product( &normal, &point );
+			dotp = dot_product(normal, point);
 
 			/* apply focus */
 			apply_focus( geo, &point );
@@ -1839,10 +1825,9 @@ void model2_state::geo_parse_nn_s( geo_state *geo, u32 *input, u32 count )
 			specular *= texparam->specular_scale;
 
 			luminance = (luminance * texparam->diffuse) + texparam->ambient + specular;
-			luma = (int32_t)luminance;
+			luminance = std::clamp(luminance, 0.0f, 255.0f);
 
-			if ( luma > 255 ) luma = 255;
-			if ( luma < 0 ) luma = 0;
+			luma = (int32_t)luminance;
 
 			/* add the face bit to the luma */
 			luma += face;
@@ -2558,7 +2543,7 @@ u32 *model2_state::geo_process_command( geo_state *geo, u32 opcode, u32 *input, 
 	return input;
 }
 
-void model2_state::geo_parse( void )
+void model2_state::geo_parse()
 {
 	u32  address = (m_geo_read_start_address & 0x1ffff)/4;
 	u32 *input = &m_bufferram[address];
@@ -2611,16 +2596,16 @@ void model2_state::video_start()
 	/* init various video-related pointers */
 	m_palram = make_unique_clear<u16[]>(0x4000/2);
 	m_colorxlat = make_unique_clear<u16[]>(0xc000/2);
-	m_lumaram = make_unique_clear<u16[]>(0x10000/2);
+	m_lumaram = make_unique_clear<u8[]>(0x8000);
 	m_fbvramA = make_unique_clear<u16[]>(0x80000/2);
 	m_fbvramB = make_unique_clear<u16[]>(0x80000/2);
 
-	// convert (supposedly) 3d sRGB color space into linear
-	// TODO: might be slightly different algorithm (Daytona USA road/cars, VF2 character skins)
+	// convert color space; this works OK for most games
+	// real cabinets probably have their monitors calibrated depending on the game
+	// optimal settings for vf2, fvipers and schamp are bias 64, gain 51
 	for(int i=0;i<256;i++)
 	{
-		double raw_value;
-		raw_value = 255.0 * pow((double)(i) / 255.0,2.2);
+		double raw_value = std::max(((double)i - 64.0) * 255.0 / 191.0, 0.0);
 		m_gamma_table[i] = (u8)raw_value;
 //      printf("%02x: %02x %lf\n",i,m_gamma_table[i],raw_value);
 	}
@@ -2630,7 +2615,7 @@ void model2_state::video_start()
 	save_item(NAME(m_render_mode));
 	save_pointer(NAME(m_palram), 0x4000/2);
 	save_pointer(NAME(m_colorxlat), 0xc000/2);
-	save_pointer(NAME(m_lumaram), 0x10000/2);
+	save_pointer(NAME(m_lumaram), 0x8000);
 	save_pointer(NAME(m_gamma_table), 256);
 }
 
@@ -2674,8 +2659,7 @@ u32 model2_state::screen_update_model2(screen_device &screen, bitmap_rgb32 &bitm
 // TODO: fix forward declaration mess and move this function there instead
 void model2_state::tri_list_dump(FILE *dst)
 {
-	u32  i;
-
+	u32 i;
 	for( i = 0; i < m_raster->tri_list_index; i++ )
 	{
 		fprintf( dst, "index: %d\n", i );
@@ -2689,6 +2673,7 @@ void model2_state::tri_list_dump(FILE *dst)
 		fprintf( dst, "texheader - 2: %04x\n", m_raster->tri_list[i].texheader[2] );
 		fprintf( dst, "texheader - 3: %04x\n", m_raster->tri_list[i].texheader[3] );
 		fprintf( dst, "luma: %02x\n", m_raster->tri_list[i].luma );
+		fprintf( dst, "texlod: %08x\n", m_raster->tri_list[i].texlod );
 		fprintf( dst, "vp.sx: %04x\n", m_raster->tri_list[i].viewport[0] );
 		fprintf( dst, "vp.sy: %04x\n", m_raster->tri_list[i].viewport[1] );
 		fprintf( dst, "vp.ex: %04x\n", m_raster->tri_list[i].viewport[2] );
@@ -2701,5 +2686,4 @@ void model2_state::tri_list_dump(FILE *dst)
 	fprintf( dst, "min_z = %04x, max_z = %04x\n", m_raster->min_z, m_raster->max_z );
 
 	fclose( dst );
-
 }

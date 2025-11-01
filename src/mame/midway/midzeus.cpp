@@ -1535,8 +1535,8 @@ ROM_END
 
 ROM_START( mk4b )
 	ROM_REGION16_LE( 0x1000000, "dcs", ROMREGION_ERASEFF )  // sound data
-	ROM_LOAD16_BYTE( "mk4_l1.u2", 0x000000, 0x200000, CRC(daac8ab5) SHA1(b93aa205868212077a9b6ac8e93205e1ebf8c05e) ) // All sound ROMs were labeled as v1.0 & are M27C160 type
-	ROM_LOAD16_BYTE( "mk4_l1.u3", 0x400000, 0x200000, CRC(cb59413e) SHA1(f7e5c589a8f6a2e7dceee4881594e7403be4d4ad) )
+	ROM_LOAD16_BYTE( "mk4_l1.u2", 0x000000, 0x100000, CRC(5109f49d) SHA1(566f45ecdf81349c05fd42231c669614896a66c4) ) // All sound ROMs were labeled as v1.0, U2 was ROM type M27C800
+	ROM_LOAD16_BYTE( "mk4_l1.u3", 0x400000, 0x200000, CRC(cb59413e) SHA1(f7e5c589a8f6a2e7dceee4881594e7403be4d4ad) ) // ROMs U3 through U5 were ROM type M27C160
 	ROM_LOAD16_BYTE( "mk4_l1.u4", 0x800000, 0x200000, CRC(dee91696) SHA1(00a182a36a414744cd014fcfc53c2e1a66ab5189) )
 	ROM_LOAD16_BYTE( "mk4_l1.u5", 0xc00000, 0x200000, CRC(44d072be) SHA1(8a636c2801d799dfb84e69607ade76d2b49cf09f) )
 
@@ -1562,7 +1562,7 @@ ROM_START( invasnab ) // Version 5.0 Program ROMs, v4.0 Graphics ROMs, v2.0 Soun
 	ROM_LOAD16_BYTE( "invasion2.u5", 0xc00000, 0x200000, CRC(e42805c9) SHA1(e5b71eb1852809a649ac43a82168b3bdaf4b1526) )
 
 	ROM_REGION( 0x2000, "pic", 0 ) // PIC16c57 Code
-	ROM_LOAD( "pic16c57.u76", 0x00000, 0x2000, BAD_DUMP CRC(f62729c9) SHA1(9642c53dd7eceeb7eb178497d367691c44abc5c5) ) // is this even a valid dump?
+	ROM_LOAD( "468_invasion_25_u76.u76", 0x00000, 0x2000, CRC(eca69715) SHA1(b49787faf9d034ade65828ddbcd3197170a48123) ) // decapped but not hooked up
 
 	ROM_REGION32_LE( 0x1800000, "maindata", 0 )
 	ROM_LOAD32_WORD( "invasion5.u10", 0x0000000, 0x200000, CRC(8c7785d9) SHA1(701602314cd4eba4215c47ea0ae75fd4eddad43b) ) // ROMs U10 & U11 were labeled as v5.0
@@ -1585,7 +1585,7 @@ ROM_START( invasnab4 ) // Version 4.0 Program ROMs & Graphics ROMs, v2.0 Sound R
 	ROM_LOAD16_BYTE( "invasion2.u5", 0xc00000, 0x200000, CRC(e42805c9) SHA1(e5b71eb1852809a649ac43a82168b3bdaf4b1526) )
 
 	ROM_REGION( 0x2000, "pic", 0 ) // PIC16c57 Code
-	ROM_LOAD( "pic16c57.u76", 0x00000, 0x2000, BAD_DUMP CRC(f62729c9) SHA1(9642c53dd7eceeb7eb178497d367691c44abc5c5) ) // is this even a valid dump?
+	ROM_LOAD( "468_invasion_25_u76.u76", 0x00000, 0x2000, CRC(eca69715) SHA1(b49787faf9d034ade65828ddbcd3197170a48123) ) // decapped but not hooked up
 
 	ROM_REGION32_LE( 0x1800000, "maindata", 0 )
 	ROM_LOAD32_WORD( "invasion4.u10", 0x0000000, 0x200000, CRC(b3ce958b) SHA1(ed51c167d85bc5f6155b8046ec056a4f4ad5cf9d) ) // These ROM were all labeled as v4.0
@@ -1608,7 +1608,7 @@ ROM_START( invasnab3 ) // Version 3.0 Program ROMs & v2.0 Graphics ROMs, v2.0 So
 	ROM_LOAD16_BYTE( "invasion2.u5", 0xc00000, 0x200000, CRC(e42805c9) SHA1(e5b71eb1852809a649ac43a82168b3bdaf4b1526) )
 
 	ROM_REGION( 0x2000, "pic", 0 ) // PIC16c57 Code
-	ROM_LOAD( "pic16c57.u76", 0x00000, 0x2000, BAD_DUMP CRC(f62729c9) SHA1(9642c53dd7eceeb7eb178497d367691c44abc5c5) ) // is this even a valid dump?
+	ROM_LOAD( "468_invasion_25_u76.u76", 0x00000, 0x2000, CRC(eca69715) SHA1(b49787faf9d034ade65828ddbcd3197170a48123) ) // decapped but not hooked up
 
 	ROM_REGION32_LE( 0x1800000, "maindata", 0 )
 	ROM_LOAD32_WORD( "invasion3.u10", 0x0000000, 0x200000, CRC(8404830e) SHA1(808fea45fb09fb7bf60f9f1e195a51d39e9966f5) ) // ROMs U10 through U13 were labeled as v3.0 Dated 8/30

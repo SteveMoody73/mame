@@ -4,6 +4,10 @@
 /*
 The MIDIverb is a digital delay & reverb unit.
 
+The MIDIFEX is a digital effects unit, primarily implementing echoes. The
+MIDIFEX is just a MIDIverb with a different DSP ROM, and different labeling on
+the case. The rest of the hardware and the MCU firmware are the same.
+
 The computer portion of the device is very simple. The firmware runs on a
 80C31 microcontroller. It reads the 4 buttons, drives the two 7-segment
 displays, and listens to MIDI for program changes. It also controls which
@@ -46,7 +50,7 @@ Audio inputs are emulated using MAME's audio input capabilities.
 
 #include "emu.h"
 
-#include "cpu/mcs51/mcs51.h"
+#include "cpu/mcs51/i80c51.h"
 #include "bus/midi/midiinport.h"
 #include "bus/midi/midioutport.h"
 #include "machine/rescap.h"
@@ -56,6 +60,7 @@ Audio inputs are emulated using MAME's audio input capabilities.
 #include "video/pwm.h"
 #include "speaker.h"
 
+#include "alesis_midifex.lh"
 #include "alesis_midiverb.lh"
 
 #define LOG_PROGRAM_CHANGE (1U << 1)
@@ -259,7 +264,7 @@ u16 midiverb_dsp_device::analog_to_digital(float sample) const
 	const float transformed = std::clamp(sample, -DAC_MAX_V, DAC_MAX_V) / DAC_MAX_V;
 
 	// Quantize to 12 bits, keeping in mind that the range is -1 - 1 (reason
-	// for "/ 2"). Then convert to 13 bits ("* 2"). Bit 0 is always set ("+ 1).
+	// for "/ 2"). Then convert to 13 bits ("* 2"). Bit 0 is always set ("+ 1").
 	const s16 quantized = floorf(transformed * ((1 << 12) / 2 - 1)) * 2 + 1;
 	assert(quantized > -4096 && quantized < 4096);
 
@@ -299,6 +304,7 @@ public:
 	}
 
 	void midiverb(machine_config &config) ATTR_COLD;
+	void midifex(machine_config &config) ATTR_COLD;
 
 	DECLARE_INPUT_CHANGED_MEMBER(mix_changed);
 
@@ -329,8 +335,6 @@ private:
 	required_device<mixer_device> m_right_out;
 
 	bool m_midi_rxd_bit = true; // Start high for serial idle.
-	u8 m_digit_latch_inv = 0x00;
-	u8 m_digit_mask = 0x00;
 
 	enum
 	{
@@ -354,8 +358,7 @@ void midiverb_state::digit_select_w(u8 data)
 	// The digit select signals (bit 0 and 1) are active-low. They connect to
 	// the base of PNP transistors (2N4403, Q4 and Q3 for DS1 and DS2
 	// respectively). When low, power is connected to the MAN4710 anode inputs.
-	m_digit_mask = ~data & 0x03;
-	m_digit_device->matrix(m_digit_mask, m_digit_latch_inv);
+	m_digit_device->write_my(~data & 0x03);
 }
 
 void midiverb_state::digit_latch_w(u8 data)
@@ -367,8 +370,7 @@ void midiverb_state::digit_latch_w(u8 data)
 
 	// Inverting because segment LEDs are active-low, but pwm_display_device
 	// expects active-high.
-	m_digit_latch_inv = ~descrambled & 0x7f;
-	m_digit_device->matrix(m_digit_mask, m_digit_latch_inv);
+	m_digit_device->write_mx(~descrambled & 0x7f);
 }
 
 void midiverb_state::digit_out_update_w(offs_t offset, u8 data)
@@ -528,8 +530,6 @@ void midiverb_state::machine_start()
 {
 	m_digit_out.resolve();
 	save_item(NAME(m_midi_rxd_bit));
-	save_item(NAME(m_digit_latch_inv));
-	save_item(NAME(m_digit_mask));
 }
 
 void midiverb_state::machine_reset()
@@ -541,7 +541,7 @@ void midiverb_state::midiverb(machine_config &config)
 {
 	I80C31(config, m_maincpu, 6_MHz_XTAL);  // U55.
 	m_maincpu->set_addrmap(AS_PROGRAM, &midiverb_state::program_map);
-	m_maincpu->set_addrmap(AS_IO, &midiverb_state::external_memory_map);
+	m_maincpu->set_addrmap(AS_DATA, &midiverb_state::external_memory_map);
 
 	m_maincpu->port_out_cb<1>().set(FUNC(midiverb_state::digit_select_w)).mask(0x03);  // P1.0-P1.1
 	m_maincpu->port_out_cb<1>().append(m_dsp, FUNC(midiverb_dsp_device::program_select_w)).rshift(2);  // P1.2-P1.7
@@ -560,6 +560,12 @@ void midiverb_state::midiverb(machine_config &config)
 	config.set_default_layout(layout_alesis_midiverb);
 
 	configure_audio(config);
+}
+
+void midiverb_state::midifex(machine_config &config)
+{
+	midiverb(config);
+	config.set_default_layout(layout_alesis_midifex);
 }
 
 DECLARE_INPUT_CHANGED_MEMBER(midiverb_state::mix_changed)
@@ -590,6 +596,15 @@ ROM_START(midiverb)
 	// "MVOBJ 2-6-86" label.
 ROM_END
 
+ROM_START(midifex)
+	ROM_REGION(0x2000, MAINCPU_TAG, 0)  // U54. 2764 ROM.
+	ROM_LOAD("mvop_4-7-86.u54", 0x000000, 0x002000, CRC(14d6596d) SHA1(c6dc579d8086556b2dd4909c8deb3c7006293816))
+
+	ROM_REGION(0x4000, "dsp_microcode", 0)  // U51, 27128, 16K ROM.
+	ROM_LOAD("midifex_7-17-86.u51", 0x000000, 0x004000, CRC(098cc1b4) SHA1(5144ded869c3abda05a1392c31a7bdeeb166b106))
+ROM_END
+
 }  // anonymous namespace
 
 SYST(1986, midiverb, 0, 0, midiverb, midiverb, midiverb_state, empty_init, "Alesis", "MIDIverb", MACHINE_SUPPORTS_SAVE)
+SYST(1986, midifex, 0, 0, midifex, midiverb, midiverb_state, empty_init, "Alesis", "MIDIFEX", MACHINE_SUPPORTS_SAVE)

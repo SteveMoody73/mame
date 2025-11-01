@@ -102,8 +102,8 @@ void pc9801_state::draw_text(bitmap_rgb32 &bitmap, uint32_t addr, int y, int wd,
 	uint8_t lastul = 0;
 	uint16_t lasttile = -1;
 
-	int scroll_start = 33 - (m_txt_scroll_reg[4] & 0x1f);
-	int scroll_end = scroll_start + m_txt_scroll_reg[5];
+	int scroll_start = (32 - m_txt_scroll_reg[4]) & 0x1f;
+	int scroll_end = scroll_start + m_txt_scroll_reg[5] + 1;
 	int scroll = m_txt_scroll_reg[3] % 20;
 	int line = y / lr;
 	// TODO: accurate blink rate
@@ -396,7 +396,8 @@ uint8_t pc9801_state::pc9801_a0_r(offs_t offset)
 	{
 		switch((offset & 0xe) + 1)
 		{
-			case 0x09://cg window font read
+			// cg window font read
+			case 0x09:
 			{
 				uint32_t pcg_offset;
 

@@ -16,7 +16,7 @@ Public documentation:
 
 - US Patent 4933980
 
-Games using ADSR: gyruss
+Games using ADSR: gyruss (though easier to test with software on Spectrum/MSX)
 
 A list with more games using ADSR can be found here:
       http://mametesters.org/view.php?id=3043
@@ -1337,13 +1337,6 @@ void ay8910_device::ay8910_reset_ym()
 	//#define AY_EACOARSE    (12)
 	//#define AY_EASHAPE (13)
 #endif
-}
-
-void ay8910_device::set_volume(int channel,int volume)
-{
-	for (int ch = 0; ch < m_streams; ch++)
-		if (channel == ch || m_streams == 1 || channel == ALL_8910_CHANNELS)
-			set_output_gain(ch, volume / 100.0);
 }
 
 void ay8910_device::ay_set_clock(int clock)

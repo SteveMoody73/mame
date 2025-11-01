@@ -1016,6 +1016,18 @@ end
 
 --------------------------------------------------
 --
+--@src/lib/formats/fz1_dsk.h,FORMATS["FZ1_DSK"] = true
+--------------------------------------------------
+
+if opt_tool(FORMATS, "FZ1_DSK") then
+	files {
+		MAME_DIR.. "src/lib/formats/fz1_dsk.cpp",
+		MAME_DIR.. "src/lib/formats/fz1_dsk.h",
+	}
+end
+
+--------------------------------------------------
+--
 --@src/lib/formats/g64_dsk.h,FORMATS["G64_DSK"] = true
 --------------------------------------------------
 
@@ -1768,6 +1780,18 @@ if opt_tool(FORMATS, "ROLAND_DSK") then
 	files {
 		MAME_DIR.. "src/lib/formats/roland_dsk.cpp",
 		MAME_DIR.. "src/lib/formats/roland_dsk.h",
+	}
+end
+
+--------------------------------------------------
+--
+--@src/lib/formats/rx01_dsk.h,FORMATS["RX01_DSK"] = true
+--------------------------------------------------
+
+if opt_tool(FORMATS, "RX01_DSK") then
+	files {
+		MAME_DIR.. "src/lib/formats/rx01_dsk.cpp",
+		MAME_DIR.. "src/lib/formats/rx01_dsk.h",
 	}
 end
 

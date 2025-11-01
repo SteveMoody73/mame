@@ -230,7 +230,7 @@ stored output value.
 ``start`` tells where to start (default index 0), ``count`` how many
 (default up to the end of the buffer).
 
-``copy`` does the same as fill but gets its value from the indentical
+``copy`` does the same as fill but gets its value from the identical
 position in an input channel.
 
 Note that clamping should not be used unless it actually happens in
@@ -242,6 +242,7 @@ can be avoided later in the chain.
 ~~~~~~~~~~
 
 .. code-block:: C++
+
     u32 sample_rate() const;
     attotime sample_period() const;
 
