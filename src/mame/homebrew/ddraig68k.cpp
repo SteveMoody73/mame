@@ -183,8 +183,8 @@ void rosco_m68k_state::mem_map(address_map &map)
 {
 	map(0x000000, 0x8fffff).ram().share("ram"); /* 9MB RAM */
 	map(0xf80000, 0xffffff).rom().region("monitor", 0); /* 512KB ROM */
-	map(0xf7f000, 0xf7f01f).rw("duart", FUNC(xr68c681_device::read), FUNC(xr68c681_device::write)).umask16(0x00ff);
-	map(0xf7f300, 0xf8001f).rw("ata", FUNC(ata_interface_device::cs0_r), FUNC(ata_interface_device::cs0_w)).umask16(0xffff);
+	map(0xf7f000, 0xf7f01f).rw("duart", FUNC(xr68c681_device::read), FUNC(xr68c681_device::write)).umask16(0xff00);
+	map(0xf7f300, 0xf7f31f).rw("ata", FUNC(ata_interface_device::cs0_r), FUNC(ata_interface_device::cs0_w)).umask16(0xffff);
 	map(0xf7f380, 0xf7f39f).rw("ata", FUNC(ata_interface_device::cs1_r), FUNC(ata_interface_device::cs1_w)).umask16(0xffff);
 
 	// Unmapped areas to bus error...
