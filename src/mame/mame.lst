@@ -20243,6 +20243,9 @@ d6809
 @source:homebrew/dcebridge.cpp
 dcebridge
 
+@source:homebrew/ddraig68k.cpp
+ddraig68k
+
 @source:homebrew/gigatron.cpp
 gigatron
 
